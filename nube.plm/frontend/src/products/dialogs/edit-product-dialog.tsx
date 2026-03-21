@@ -3,8 +3,9 @@
  */
 
 import { useState, useEffect } from 'react';
-// @ts-ignore - SDK types are resolved at build time
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@rubix/sdk';
+// Use plugin's own UI components
+import { Button } from '@/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/ui/zero-dialog';
 import { Product, ProductFormData, ProductFormErrors } from '../common/types';
 import { validateProductForm } from '../common/utils';
 import { ProductFormFields } from '../components';

@@ -3,7 +3,7 @@
  */
 
 // @ts-ignore - SDK types are resolved at build time
-import { Input, Label } from '@rubix/sdk';
+import { Input, Label } from '@rubix-sdk/frontend/common/ui';
 import { ProductFormData, ProductFormErrors, PRODUCT_STATUSES } from '../../types';
 
 interface ProductFormFieldsProps {

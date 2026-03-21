@@ -3,8 +3,10 @@
  */
 
 import { useState } from 'react';
-// @ts-ignore - SDK types are resolved at build time
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@rubix/sdk';
+// Import from plugin's own UI components - no SDK dependency for UI
+import { Button } from '@/ui/button';
+// ZERO-DEPENDENCY Dialog (no Radix UI, no external libs)
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/ui/zero-dialog';
 
 interface DeleteProductDialogProps {
   open: boolean;

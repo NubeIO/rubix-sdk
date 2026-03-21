@@ -24,13 +24,16 @@ export default defineConfig({
           singleton: true,
           requiredVersion: '19.0.0',
         },
+        // Only share React - plugin bundles its own UI components
       },
     }),
   ],
   resolve: {
     alias: {
-      // @rubix/sdk → rubix-plugin/frontend-sdk (generated RAS client)
-      '@rubix/sdk': path.resolve(__dirname, '../../frontend-sdk'),
+      // @rubix-sdk/frontend → rubix-sdk/frontend-sdk (source - fine for non-UI utilities)
+      '@rubix-sdk/frontend': path.resolve(__dirname, '../../frontend-sdk'),
+      // @/ → plugin src folder (for local UI components)
+      '@': path.resolve(__dirname, './src'),
     },
   },
   base: '/api/v1/ext/nube.plm/',

@@ -1,14 +1,19 @@
 {
-  "name": "@rubix/plugin-ui",
+  "name": "@rubix-sdk/frontend",
   "version": "1.0.0",
-  "description": "Reusable UI components and utilities for Rubix plugins",
+  "description": "Shared UI components and utilities for Rubix and plugins",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js",
+    "./common": "./dist/common/index.js",
+    "./common/ui": "./dist/common/ui/index.js",
+    "./common/utils": "./dist/common/utils/index.js",
+    "./settings": "./dist/settings/index.js",
     "./globals.css": "./dist/globals.css",
     "./plugin-client": "./dist/plugin-client.js",
+    "./ras": "./dist/ras/index.js",
     "./types": "./types/index.ts"
   },
   "scripts": {
@@ -18,7 +23,12 @@
   },
   "peerDependencies": {
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "lucide-react": "^0.400.0",
+    "@radix-ui/react-dialog": "^1.1.0",
+    "@radix-ui/react-popover": "^1.1.0",
+    "@radix-ui/react-select": "^2.1.0",
+    "@radix-ui/react-slot": "^1.2.0"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -30,6 +40,9 @@
     "@types/node": "^25.5.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "lucide-react": "^0.577.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "tailwindcss": "^4.0.0-alpha.25",
     "tsup": "^8.3.5",
     "typescript": "^5.6.3"

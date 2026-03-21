@@ -5,9 +5,11 @@
  */
 
 import { useState } from 'react';
+// Use plugin's own Button to avoid SDK Slot issues
+import { Button } from '@/ui/button';
 // @ts-ignore - SDK types are resolved at build time
-import { Button, Skeleton } from '@rubix/sdk';
-import '@rubix/sdk/globals.css';
+import { Skeleton } from '@rubix-sdk/frontend/common/ui';
+import '@rubix-sdk/frontend/globals.css';
 
 import { Product } from '../common/types';
 import { useProducts } from '../common/hooks';

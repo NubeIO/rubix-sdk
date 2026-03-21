@@ -2,7 +2,7 @@
  * Product domain types
  */
 
-import type { Node } from '@rubix/sdk/ras/types';
+import type { Node } from '@rubix-sdk/frontend/ras';
 
 export interface Product extends Node {
   settings?: ProductSettings;

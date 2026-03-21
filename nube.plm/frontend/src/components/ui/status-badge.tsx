@@ -3,7 +3,7 @@
  */
 
 // @ts-ignore - SDK types are resolved at build time
-import { Badge } from '@rubix/sdk';
+import { Badge } from '@rubix-sdk/frontend/common/ui';
 import { ProductStatus } from '../../types';
 
 interface StatusBadgeProps {

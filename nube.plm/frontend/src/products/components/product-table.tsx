@@ -3,7 +3,7 @@
  */
 
 // @ts-ignore - SDK types are resolved at build time
-import { Button } from '@rubix/sdk';
+import { Button } from '@rubix-sdk/frontend/common/ui';
 import { Product } from '../common/types';
 import { formatPrice, formatProductCode } from '../common/utils';
 import { EditIcon, TrashIcon } from '../../shared/components/icons';

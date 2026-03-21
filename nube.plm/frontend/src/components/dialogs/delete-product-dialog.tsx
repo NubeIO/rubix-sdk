@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 // @ts-ignore - SDK types are resolved at build time
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@rubix/sdk';
+import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@rubix-sdk/frontend/common/ui';
 import { Product } from '../../types';
 
 interface DeleteProductDialogProps {

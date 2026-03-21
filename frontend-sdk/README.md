@@ -1,196 +1,256 @@
-# Rubix Plugin UI SDK
+# Rubix Frontend SDK
 
-Reusable UI components and utilities for building Rubix plugins with consistent styling.
+**Shared UI components, utilities, and settings SDK for Rubix and plugins.**
 
 ## Features
 
-- ✅ **Design System** - CSS variables matching rubix's theme (light/dark mode)
-- ✅ **UI Components** - Button, Card, Input, Label, Badge, Dialog, Skeleton
+- ✅ **Common UI** - shadcn/ui components (Button, Card, Dialog, Input, etc.)
+- ✅ **Settings SDK** - Multi-schema settings support for plugins
 - ✅ **Plugin Client** - Type-safe API wrapper for node operations
+- ✅ **RAS Client** - Advanced API client with full type safety
 - ✅ **TypeScript** - Full type definitions included
-- ✅ **Zero Config** - Just import and use
+- ✅ **Design System** - CSS variables for light/dark mode
+
+## Package Structure
+
+```
+@rubix-sdk/frontend/
+├── common/              # Shared UI primitives
+│   ├── ui/             # shadcn/ui components
+│   └── utils/          # Utilities (cn, etc.)
+├── settings/           # Settings SDK for plugins
+│   ├── components/     # SchemaSelector, SchemaChanger
+│   └── hooks/          # useMultiSchema
+├── plugin-client/      # Plugin client utilities
+├── ras/               # RAS API client
+└── globals.css        # Global styles
+```
 
 ## Installation
 
-In your plugin's `vite.config.ts`, add an alias:
+```bash
+# In your plugin or application
+pnpm add @rubix-sdk/frontend
 
-```typescript
-import path from 'path';
-import { defineConfig } from 'vite';
-
-export default defineConfig({
-  resolve: {
-    alias: {
-      '@rubix/plugin-ui': path.resolve(__dirname, '../frontend-sdk'),
-    },
-  },
-});
+# Peer dependencies
+pnpm add react react-dom lucide-react
 ```
 
 ## Quick Start
 
+### 1. Common UI Components
+
 ```tsx
-import { Button, Card, CardHeader, CardTitle, CardContent } from '@rubix/plugin-ui';
-import { createPluginClient } from '@rubix/plugin-ui';
-import type { PluginWidgetProps } from '@rubix/plugin-ui/types';
-import '@rubix/plugin-ui/styles.css';
+import { Button, Card, Input, Dialog } from '@rubix-sdk/frontend/common/ui';
+import { cn } from '@rubix-sdk/frontend/common/utils';
+import '@rubix-sdk/frontend/globals.css';
 
-export default function MyWidget(props: PluginWidgetProps) {
-  const client = createPluginClient(props);
-
+export function MyComponent() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>My Widget</CardTitle>
+        <CardTitle>My Plugin</CardTitle>
       </CardHeader>
       <CardContent>
-        <Button onClick={() => console.log('Clicked!')}>
-          Click me
-        </Button>
+        <Input placeholder="Enter value" />
+        <Button className={cn('mt-4')}>Submit</Button>
       </CardContent>
     </Card>
   );
 }
 ```
 
+### 2. Multi-Schema Settings (Plugins)
+
+```tsx
+import { SchemaSelector, useMultiSchema } from '@rubix-sdk/frontend/settings';
+import { Dialog, Button } from '@rubix-sdk/frontend/common/ui';
+
+export function ProductSettings() {
+  const { schemas, selectedSchema, selectSchema, isSelecting } = useMultiSchema({
+    schemas: [
+      { name: 'hardware', displayName: 'Hardware Product', isDefault: true },
+      { name: 'software', displayName: 'Software Product' }
+    ],
+  });
+
+  return (
+    <Dialog open={true}>
+      {isSelecting && (
+        <SchemaSelector schemas={schemas} onSelect={selectSchema} />
+      )}
+    </Dialog>
+  );
+}
+```
+
 ## Components
 
-### Button
+### Available Components
 
-```tsx
-<Button variant="default" size="md">Save</Button>
-<Button variant="destructive">Delete</Button>
-<Button variant="outline">Cancel</Button>
+**Layout:**
+- `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`
+- `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogFooter`
+- `Popover`, `PopoverContent`, `PopoverTrigger`
+
+**Forms:**
+- `Input`, `Label`, `Select`, `SelectTrigger`, `SelectContent`, `SelectItem`
+
+**Feedback:**
+- `Button`, `Badge`, `Skeleton`
+
+**Utils:**
+- `cn()` - classnames utility (clsx + tailwind-merge)
+
+## Settings SDK API
+
+### `useMultiSchema(options)`
+
+Hook for managing multi-schema settings state.
+
+**Options:**
+```ts
+{
+  schemas: SchemaInfo[];
+  defaultSchema?: string;
+  onSchemaChange?: (name: string) => void;
+}
 ```
 
-**Variants:** `default`, `destructive`, `outline`, `secondary`, `ghost`, `link`
-**Sizes:** `sm`, `md`, `lg`
-
-### Card
-
-```tsx
-<Card>
-  <CardHeader>
-    <CardTitle>Title</CardTitle>
-    <CardDescription>Description</CardDescription>
-  </CardHeader>
-  <CardContent>Content here</CardContent>
-  <CardFooter>Footer actions</CardFooter>
-</Card>
+**Returns:**
+```ts
+{
+  selectedSchema: string | null;
+  isSelecting: boolean;
+  availableSchemas: SchemaInfo[];
+  supportsMultiple: boolean;
+  currentSchemaInfo: SchemaInfo | undefined;
+  selectSchema: (name: string) => void;
+  startSelection: () => void;
+  cancelSelection: () => void;
+  resetToDefault: () => void;
+}
 ```
 
-### Input & Label
+### `<SchemaSelector>`
+
+Component for selecting from multiple schemas.
 
 ```tsx
-<div>
-  <Label htmlFor="name">Name</Label>
-  <Input id="name" type="text" placeholder="Enter name" />
-</div>
+<SchemaSelector
+  schemas={schemas}
+  selectedSchema={selectedSchema}
+  onSelect={selectSchema}
+  title="Select Configuration Type"
+  description="Choose the type that matches your use case."
+/>
 ```
 
-### Badge
+### `<SchemaChanger>`
+
+Display current schema with ability to change it.
 
 ```tsx
-<Badge variant="default">Active</Badge>
-<Badge variant="success">Success</Badge>
-<Badge variant="warning">Warning</Badge>
-<Badge variant="destructive">Error</Badge>
+<SchemaChanger
+  currentSchema={currentSchemaInfo}
+  onChangeRequest={startSelection}
+  label="Configuration Type"
+/>
 ```
 
-### Dialog
+## Examples
+
+### Example: PLM Product Settings
 
 ```tsx
-<Dialog open={open} onOpenChange={setOpen}>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Confirm Action</DialogTitle>
-      <DialogDescription>Are you sure?</DialogDescription>
-    </DialogHeader>
-    <DialogFooter>
-      <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-      <Button onClick={handleConfirm}>Confirm</Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-```
+import { SchemaSelector, SchemaChanger, useMultiSchema } from '@rubix-sdk/frontend/settings';
+import { Dialog, Button, Input } from '@rubix-sdk/frontend/common/ui';
 
-### Skeleton
+export function PLMProductSettings({ productId }: { productId: string }) {
+  const {
+    schemas,
+    selectedSchema,
+    isSelecting,
+    currentSchemaInfo,
+    selectSchema,
+    startSelection,
+  } = useMultiSchema({
+    schemas: [
+      { name: 'hardware', displayName: 'Hardware Product', isDefault: true },
+      { name: 'software', displayName: 'Software Product' },
+    ],
+  });
 
-```tsx
-{loading && <Skeleton className="h-4 w-full" />}
+  if (isSelecting) {
+    return <SchemaSelector schemas={schemas} onSelect={selectSchema} />;
+  }
+
+  return (
+    <div className="space-y-4">
+      <SchemaChanger
+        currentSchema={currentSchemaInfo!}
+        onChangeRequest={startSelection}
+      />
+
+      {selectedSchema === 'hardware' && (
+        <div className="space-y-3">
+          <Input placeholder="SKU" />
+          <Input placeholder="Weight (kg)" type="number" />
+          <Button>Save Hardware Product</Button>
+        </div>
+      )}
+
+      {selectedSchema === 'software' && (
+        <div className="space-y-3">
+          <Input placeholder="Version" />
+          <Input placeholder="License Type" />
+          <Button>Save Software Product</Button>
+        </div>
+      )}
+    </div>
+  );
+}
 ```
 
 ## Plugin Client
 
 ```tsx
-import { createPluginClient } from '@rubix/plugin-ui';
+import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
 
-const client = createPluginClient({ orgId, deviceId, baseUrl, token });
+export default function MyWidget(props: PluginWidgetProps) {
+  const client = createPluginClient(props);
 
-// Query nodes
-const products = await client.queryNodes({
-  filter: 'type is "plm.product"'
-});
-
-// Create node
-const newProduct = await client.createNode({
-  type: 'plm.product',
-  name: 'Widget Pro',
-  settings: { productCode: 'WGT-001' }
-});
-
-// Update node
-await client.updateNode(nodeId, { name: 'Updated Name' });
-
-// Delete node
-await client.deleteNode(nodeId);
+  const data = await client.queryNodes({ filter: 'type is "plm.product"' });
+}
 ```
 
-See [plugin-client/README.md](./plugin-client/README.md) for full API documentation.
+## Development
 
-## Design Tokens
+```bash
+# Install dependencies
+pnpm install
 
-The SDK uses CSS variables that automatically adapt to light/dark mode:
+# Build
+pnpm build
 
-```css
---rubix-background
---rubix-foreground
---rubix-primary
---rubix-secondary
---rubix-muted
---rubix-destructive
---rubix-border
---rubix-radius
+# Watch mode
+pnpm dev
+
+# Type check
+pnpm typecheck
 ```
 
-Use these in your custom styles:
+## Migration from `@rubix/plugin-ui`
 
-```tsx
-<div style={{
-  background: 'var(--rubix-background)',
-  color: 'var(--rubix-foreground)',
-  borderRadius: 'var(--rubix-radius)'
-}}>
-  Custom styled content
-</div>
+If you're migrating from the old package:
+
+```diff
+- import { Button } from '@rubix/plugin-ui';
++ import { Button } from '@rubix-sdk/frontend/common/ui';
+
+- import { createPluginClient } from '@rubix/plugin-ui';
++ import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
 ```
-
-## TypeScript Types
-
-```tsx
-import type {
-  PluginWidgetProps,
-  PluginPageProps,
-  RubixNode,
-  ButtonVariant,
-  BadgeVariant,
-} from '@rubix/plugin-ui/types';
-```
-
-## Examples
-
-See the PLM plugin for a complete example:
-`/home/user/code/go/nube/rubix-plugin/nube.plm/`
 
 ## License
 

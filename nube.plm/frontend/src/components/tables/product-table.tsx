@@ -3,7 +3,7 @@
  */
 
 // @ts-ignore - SDK types are resolved at build time
-import { Button } from '@rubix/sdk';
+import { Button } from '@rubix-sdk/frontend/common/ui';
 import { Product, DisplaySettings } from '../../types';
 import { formatPrice, formatProductCode } from '../../lib/utils';
 import { CELL_PADDING } from '../../lib/constants';

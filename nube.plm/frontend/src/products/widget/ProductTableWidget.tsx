@@ -7,8 +7,8 @@
 
 import { useState } from 'react';
 // @ts-ignore - SDK types are resolved at build time
-import { Button, Skeleton } from '@rubix/sdk';
-import '@rubix/sdk/globals.css';
+import { Button, Skeleton } from '@rubix-sdk/frontend/common/ui';
+import '@rubix-sdk/frontend/globals.css';
 
 import { Product } from '../common/types';
 import { useProducts } from '../common/hooks';

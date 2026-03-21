@@ -2,7 +2,7 @@
  * Product API methods
  */
 
-import { createPluginClient } from '@rubix/sdk/plugin-client';
+import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
 import { Product, ProductFormData } from './types';
 
 export interface PLMClientConfig {
