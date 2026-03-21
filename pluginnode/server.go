@@ -9,6 +9,7 @@ import (
 
 	"github.com/NubeIO/rubix-sdk/converters"
 	"github.com/NubeIO/rubix-sdk/natslib"
+	"github.com/NubeIO/rubix-sdk/nodedeps"
 	pluginv1 "github.com/NubeIO/rubix-sdk/proto/go/plugin/v1"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
@@ -229,6 +230,8 @@ func (ps *PluginServer) handleRPC(msg *nats.Msg) {
 		respData, err = ps.handleProcessProto(&protoReq)
 	case MethodGetSchema:
 		respData, err = ps.handleGetSchemaProto(&protoReq)
+	case MethodListSchemas:
+		respData, err = ps.handleListSchemasProto(&protoReq)
 	case MethodInit:
 		respData, err = ps.handleInitProto(&protoReq)
 	case MethodClose:
@@ -483,10 +486,12 @@ func (ps *PluginServer) handleGetSchemaProto(rpcReq *pluginv1.RPCRequest) ([]byt
 		return nil, fmt.Errorf("getSchema requires payload with nodeType")
 	}
 
-	nodeType := converters.ProtoToGetSchemaRequest(&protoSchemaReq)
+	nodeType := protoSchemaReq.NodeType
+	schemaName := protoSchemaReq.SchemaName
 
 	ps.log.Debug().
 		Str("nodeType", nodeType).
+		Str("schemaName", schemaName).
 		Msg("← SERVER: creating node for schema extraction")
 
 	// Create temporary node instance to get schema (don't call Init)
@@ -498,13 +503,30 @@ func (ps *PluginServer) handleGetSchemaProto(rpcReq *pluginv1.RPCRequest) ([]byt
 		return nil, fmt.Errorf("unknown node type: %s", nodeType)
 	}
 
-	// Extract schema if the node provides one
+	// Extract schema - check for MultipleSettingsProvider first
 	var schemaMap map[string]interface{}
-	if sp, ok := node.(SettingsSchemaProvider); ok {
+	var err error
+
+	// Import nodedeps for MultipleSettingsProvider
+	if msp, ok := node.(interface {
+		GetSettingsSchema(name string) (map[string]interface{}, error)
+	}); ok && schemaName != "" {
+		// Node supports multiple schemas and a specific schema was requested
+		schemaMap, err = msp.GetSettingsSchema(schemaName)
+		if err != nil {
+			ps.log.Error().Err(err).Str("schemaName", schemaName).Msg("← SERVER: failed to get named schema")
+			return nil, fmt.Errorf("get schema %s: %w", schemaName, err)
+		}
+		ps.log.Debug().
+			Str("schemaName", schemaName).
+			Int("schemaKeys", len(schemaMap)).
+			Msg("← SERVER: extracted named schema from node")
+	} else if sp, ok := node.(SettingsSchemaProvider); ok {
+		// Fall back to default schema
 		schemaMap = sp.SettingsSchema()
 		ps.log.Debug().
 			Int("schemaKeys", len(schemaMap)).
-			Msg("← SERVER: extracted schema from node")
+			Msg("← SERVER: extracted default schema from node")
 	} else {
 		ps.log.Debug().Msg("← SERVER: node does not implement SettingsSchemaProvider")
 	}
@@ -528,6 +550,97 @@ func (ps *PluginServer) handleGetSchemaProto(rpcReq *pluginv1.RPCRequest) ([]byt
 		Msg("→ SERVER: returning GetSchema proto response")
 
 	return schemaProto, nil
+}
+
+func (ps *PluginServer) handleListSchemasProto(rpcReq *pluginv1.RPCRequest) ([]byte, error) {
+	ps.log.Debug().
+		Int("payloadSize", len(rpcReq.Payload)).
+		Msg("← SERVER: received ListSchemas proto request")
+
+	// Parse ListSchemasRequest from proto payload
+	var protoListReq pluginv1.ListSchemasRequest
+	if len(rpcReq.Payload) > 0 {
+		if err := proto.Unmarshal(rpcReq.Payload, &protoListReq); err != nil {
+			ps.log.Error().Err(err).Msg("← SERVER: failed to unmarshal ListSchemasRequest proto")
+			return nil, fmt.Errorf("unmarshal ListSchemasRequest proto: %w", err)
+		}
+	} else {
+		ps.log.Error().Msg("← SERVER: ListSchemas missing payload")
+		return nil, fmt.Errorf("listSchemas requires payload with nodeType")
+	}
+
+	nodeType := protoListReq.NodeType
+
+	ps.log.Debug().
+		Str("nodeType", nodeType).
+		Msg("← SERVER: creating node for schema list extraction")
+
+	// Create temporary node instance (don't call Init)
+	node := ps.cfg.Factory(nodeType)
+	if node == nil {
+		ps.log.Error().
+			Str("nodeType", nodeType).
+			Msg("← SERVER: unknown node type")
+		return nil, fmt.Errorf("unknown node type: %s", nodeType)
+	}
+
+	// Check if node supports multiple schemas
+	var schemaInfos []*pluginv1.SchemaInfo
+	supportsMultiple := false
+
+	// Try to call ListSettingsSchemas via duck typing
+	type MultipleSchemaProvider interface {
+		ListSettingsSchemas() []nodedeps.SettingsSchemaInfo
+	}
+
+	if msp, ok := node.(MultipleSchemaProvider); ok {
+		// Node implements MultipleSettingsProvider
+		supportsMultiple = true
+		schemas := msp.ListSettingsSchemas()
+		schemaInfos = make([]*pluginv1.SchemaInfo, len(schemas))
+		for i, s := range schemas {
+			schemaInfos[i] = &pluginv1.SchemaInfo{
+				Name:        s.Name,
+				DisplayName: s.DisplayName,
+				Description: s.Description,
+				IsDefault:   s.IsDefault,
+			}
+		}
+		ps.log.Debug().
+			Int("schemaCount", len(schemas)).
+			Msg("← SERVER: node supports multiple schemas")
+	} else {
+		// Node only supports single schema - return default entry
+		schemaInfos = []*pluginv1.SchemaInfo{
+			{
+				Name:        "default",
+				DisplayName: "Default Settings",
+				Description: "Default settings schema",
+				IsDefault:   true,
+			},
+		}
+		ps.log.Debug().Msg("← SERVER: node supports single schema only")
+	}
+
+	// Build proto response
+	protoListResp := &pluginv1.ListSchemasResponse{
+		Schemas:          schemaInfos,
+		SupportsMultiple: supportsMultiple,
+	}
+
+	// Marshal proto response
+	listProto, err := proto.Marshal(protoListResp)
+	if err != nil {
+		ps.log.Error().Err(err).Msg("← SERVER: failed to marshal ListSchemas proto")
+		return nil, fmt.Errorf("marshal ListSchemas proto: %w", err)
+	}
+
+	ps.log.Debug().
+		Int("listProtoSize", len(listProto)).
+		Bool("supportsMultiple", supportsMultiple).
+		Msg("→ SERVER: returning ListSchemas proto response")
+
+	return listProto, nil
 }
 
 func (ps *PluginServer) handleInitProto(rpcReq *pluginv1.RPCRequest) ([]byte, error) {

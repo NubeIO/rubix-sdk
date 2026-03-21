@@ -64,6 +64,20 @@
       "settingsSchemaFile": "product-table-widget-settings.yaml"
     }
   ],
+  "pages": [
+    {
+      "pageId": "products-manager",
+      "title": "Product Management",
+      "icon": "package",
+      "description": "Manage PLM products",
+      "enabled": true,
+      "isDefault": true,
+      "order": 10,
+      "props": {
+        "exposedPath": "./Page"
+      }
+    }
+  ],
   "execPath": "./nube.plm",
   "args": []
 }

@@ -13,6 +13,7 @@ export default defineConfig({
       filename: 'remoteEntry.js',
       exposes: {
         './ProductTableWidget': './src/products/widget/ProductTableWidget.tsx',
+        './Page': './src/products/page/ProductsPage.tsx',
       },
       shared: {
         react: {

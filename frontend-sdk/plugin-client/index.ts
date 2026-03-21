@@ -52,6 +52,14 @@ export interface QueryNodesOptions {
   runtime?: boolean;
 }
 
+export interface NodeRef {
+  refName: string;
+  toNodeId: string;
+  toNodeName?: string;
+  order?: number;
+  metadata?: Record<string, unknown>;
+}
+
 export interface CreateNodeInput {
   type: string;
   name: string;
@@ -60,6 +68,7 @@ export interface CreateNodeInput {
   data?: Record<string, unknown>;
   ui?: Record<string, unknown>;
   position?: { x: number; y: number };
+  refs?: NodeRef[];
 }
 
 export interface UpdateNodeInput {
@@ -159,7 +168,7 @@ export class PluginClient {
       const result = await this.client.nodes.get({
         orgId: this.config.orgId,
         deviceId: this.config.deviceId,
-        nodeId,
+        id: nodeId,
       });
       return result as Node;
     } catch (err: any) {
@@ -201,6 +210,7 @@ export class PluginClient {
           data: input.data,
           ui: input.ui,
           position: input.position,
+          refs: input.refs,
         },
       });
       return result as Node;
@@ -229,7 +239,7 @@ export class PluginClient {
       const result = await this.client.nodes.update({
         orgId: this.config.orgId,
         deviceId: this.config.deviceId,
-        nodeId,
+        id: nodeId,
         body: {
           name: input.name,
           parentId: input.parentId,
@@ -262,7 +272,7 @@ export class PluginClient {
       await this.client.nodes.delete({
         orgId: this.config.orgId,
         deviceId: this.config.deviceId,
-        nodeId,
+        id: nodeId,
       });
     } catch (err: any) {
       throw new PluginClientError(

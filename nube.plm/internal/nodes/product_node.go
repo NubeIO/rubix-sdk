@@ -54,34 +54,9 @@ func (n *ProductNode) GetConstraints() nodedeps.NodeConstraints {
 	}
 }
 
-// SettingsSchema returns the JSON Schema for product settings
+// SettingsSchema returns the default JSON Schema for product settings (hardware)
+// This is the backwards-compatible method for nodes that don't support multiple schemas
 func (n *ProductNode) SettingsSchema() map[string]interface{} {
-	return map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
-			"productCode": map[string]interface{}{
-				"type":        "string",
-				"title":       "Product Code",
-				"description": "Unique product identifier (SKU)",
-			},
-			"description": map[string]interface{}{
-				"type":        "string",
-				"title":       "Description",
-				"description": "Product description",
-			},
-			"status": map[string]interface{}{
-				"type":        "string",
-				"title":       "Status",
-				"description": "Product lifecycle status",
-				"enum":        []interface{}{"Design", "Prototype", "Production", "Discontinued"},
-				"default":     "Design",
-			},
-			"price": map[string]interface{}{
-				"type":        "number",
-				"title":       "Price",
-				"description": "Product price",
-				"minimum":     0,
-			},
-		},
-	}
+	// Return hardware schema as default
+	return buildHardwareProductSchema()
 }

@@ -48,6 +48,13 @@ export interface QueryNodesOptions {
     ports?: string[];
     runtime?: boolean;
 }
+export interface NodeRef {
+    refName: string;
+    toNodeId: string;
+    toNodeName?: string;
+    order?: number;
+    metadata?: Record<string, unknown>;
+}
 export interface CreateNodeInput {
     type: string;
     name: string;
@@ -59,6 +66,7 @@ export interface CreateNodeInput {
         x: number;
         y: number;
     };
+    refs?: NodeRef[];
 }
 export interface UpdateNodeInput {
     name?: string;

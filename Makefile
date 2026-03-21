@@ -1,4 +1,4 @@
-.PHONY: demo-gen demo-build sdk-switch sdk-unswitch sdk-release-patch sdk-release-minor sdk-release-major sdk-status proto-switch proto-unswitch proto-release-patch proto-release-minor proto-release-major proto-status proto-init paths generate-proto test verify help
+.PHONY: demo-gen demo-build sdk-switch sdk-unswitch sdk-release-patch sdk-release-minor sdk-release-major sdk-status proto-switch proto-unswitch proto-release-patch proto-release-minor proto-release-major proto-status proto-init paths generate-proto test verify new-branch help
 .DEFAULT_GOAL := help
 
 help: ## Show this help message
@@ -30,6 +30,12 @@ help: ## Show this help message
 	@echo ""
 	@echo "Configuration:"
 	@echo "  make paths               Show configured repository paths"
+	@echo ""
+	@echo "Branch Management:"
+	@echo "  make new-branch BRANCH=feature-name              Create branch in SDK only"
+	@echo "  make new-branch BRANCH=feature-name PROTO=yes    Create branch in SDK + Proto"
+	@echo "  make new-branch BRANCH=feature-name RUBIX=yes    Create branch in SDK + Rubix"
+	@echo "  make new-branch BRANCH=name PROTO=yes RUBIX=yes  Create branch in all repos"
 	@echo ""
 	@echo "Proto/Testing:"
 	@echo "  make generate-proto      Regenerate proto code from rubix-proto"
@@ -97,6 +103,73 @@ proto-init: ## Initialize Proto CHANGELOG.md
 
 paths: ## Show configured repository paths
 	@./scripts/sdk-version.sh paths
+
+# Branch Management
+# ==================
+
+BRANCH ?=
+PROTO ?= no
+RUBIX ?= no
+
+new-branch: ## Create new branch across repositories (BRANCH=name PROTO=yes RUBIX=yes)
+	@if [ -z "$(BRANCH)" ]; then \
+		echo "❌ ERROR: BRANCH parameter is required"; \
+		echo ""; \
+		echo "Usage:"; \
+		echo "  make new-branch BRANCH=feature-name              # SDK only"; \
+		echo "  make new-branch BRANCH=feature-name PROTO=yes    # SDK + Proto"; \
+		echo "  make new-branch BRANCH=feature-name RUBIX=yes    # SDK + Rubix"; \
+		echo "  make new-branch BRANCH=name PROTO=yes RUBIX=yes  # All repos"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "  Creating Branch: $(BRANCH)"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "📦 SDK Repository..."
+	@if git show-ref --verify --quiet refs/heads/$(BRANCH); then \
+		echo "  ⚠️  Branch '$(BRANCH)' already exists in SDK"; \
+		git checkout $(BRANCH); \
+	else \
+		git checkout -b $(BRANCH); \
+		echo "  ✅ Created and checked out branch '$(BRANCH)' in SDK"; \
+	fi
+	@echo ""
+	@if [ "$(PROTO)" = "yes" ]; then \
+		echo "📦 Proto Repository..."; \
+		cd $$(./scripts/sdk-version.sh paths | grep "Proto Path:" | awk '{print $$3}') && \
+		if git show-ref --verify --quiet refs/heads/$(BRANCH); then \
+			echo "  ⚠️  Branch '$(BRANCH)' already exists in Proto"; \
+			git checkout $(BRANCH); \
+		else \
+			git checkout -b $(BRANCH); \
+			echo "  ✅ Created and checked out branch '$(BRANCH)' in Proto"; \
+		fi; \
+		echo ""; \
+	fi
+	@if [ "$(RUBIX)" = "yes" ]; then \
+		echo "📦 Rubix Repository..."; \
+		cd $$(./scripts/sdk-version.sh paths | grep "Rubix Path:" | awk '{print $$3}') && \
+		if git show-ref --verify --quiet refs/heads/$(BRANCH); then \
+			echo "  ⚠️  Branch '$(BRANCH)' already exists in Rubix"; \
+			git checkout $(BRANCH); \
+		else \
+			git checkout -b $(BRANCH); \
+			echo "  ✅ Created and checked out branch '$(BRANCH)' in Rubix"; \
+		fi; \
+		echo ""; \
+	fi
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "  ✅ Branch Creation Complete!"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "Summary:"
+	@echo "  SDK:   $(BRANCH) ✅"
+	@if [ "$(PROTO)" = "yes" ]; then echo "  Proto: $(BRANCH) ✅"; fi
+	@if [ "$(RUBIX)" = "yes" ]; then echo "  Rubix: $(BRANCH) ✅"; fi
+	@echo ""
 
 # Proto Generation & Testing
 # ===========================

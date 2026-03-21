@@ -46,6 +46,14 @@ make paths                                            # Show configured reposito
 cp scripts/path-example.yaml scripts/path.yaml        # Create custom path config
 ```
 
+### Branch Management
+```bash
+make new-branch BRANCH=feature-name                   # Create branch in SDK only
+make new-branch BRANCH=feature-name PROTO=yes         # Create branch in SDK + Proto
+make new-branch BRANCH=feature-name RUBIX=yes         # Create branch in SDK + Rubix
+make new-branch BRANCH=feature-name PROTO=yes RUBIX=yes  # Create branch in all repos
+```
+
 ## Repository Paths
 
 ### Default Paths
@@ -306,6 +314,55 @@ If your custom paths aren't being recognized:
    ```bash
    ls -la /your/custom/path
    ```
+
+## Branch Management
+
+When working on features that span multiple repositories, you can create synchronized branches:
+
+### Create Branch in SDK Only
+```bash
+make new-branch BRANCH=my-feature
+```
+
+### Create Branch in SDK + Proto
+```bash
+make new-branch BRANCH=proto-updates PROTO=yes
+```
+
+### Create Branch in SDK + Rubix
+```bash
+make new-branch BRANCH=sdk-changes RUBIX=yes
+```
+
+### Create Branch in All Repositories
+```bash
+make new-branch BRANCH=major-refactor PROTO=yes RUBIX=yes
+```
+
+**What it does:**
+- Creates a new git branch with the specified name
+- Automatically checks out the new branch
+- Handles existing branches gracefully (checks out if already exists)
+- Works across SDK, Proto, and Rubix repositories based on your flags
+
+**Example Workflow:**
+```bash
+# Create feature branch across all repos
+make new-branch BRANCH=add-lifecycle-support PROTO=yes RUBIX=yes
+
+# Make your changes in each repo
+# ... edit files ...
+
+# Commit changes in each repo
+cd /home/user/code/go/nube/rubix-sdk && git add -A && git commit -m "Add lifecycle support"
+cd /home/user/code/go/nube/rubix-proto && git add -A && git commit -m "Add lifecycle proto"
+cd /home/user/code/go/nube/rubix && git add -A && git commit -m "Implement lifecycle handlers"
+
+# Push branches
+cd /home/user/code/go/nube/rubix-sdk && git push -u origin add-lifecycle-support
+cd /home/user/code/go/nube/rubix-proto && git push -u origin add-lifecycle-support
+cd /home/user/code/go/nube/rubix && git push -u origin add-lifecycle-support
+```
 
 ## Manual Control
 

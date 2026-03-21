@@ -2,9 +2,9 @@
  * Product domain types
  */
 
-export interface Product {
-  id: string;
-  name: string;
+import type { Node } from '@rubix/sdk/ras/types';
+
+export interface Product extends Node {
   settings?: ProductSettings;
 }
 

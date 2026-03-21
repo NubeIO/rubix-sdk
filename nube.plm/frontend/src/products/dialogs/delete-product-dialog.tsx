@@ -5,22 +5,31 @@
 import { useState } from 'react';
 // @ts-ignore - SDK types are resolved at build time
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@rubix/sdk';
-import { Product } from '../common/types';
 
 interface DeleteProductDialogProps {
   open: boolean;
-  product: Product;
+  productId: string;
+  productName: string;
+  productCode?: string;
   onClose: () => void;
   onConfirm: (productId: string) => Promise<void>;
 }
 
-export function DeleteProductDialog({ open, product, onClose, onConfirm }: DeleteProductDialogProps) {
+export function DeleteProductDialog({
+  open,
+  productId,
+  productName,
+  productCode,
+  onClose,
+  onConfirm
+}: DeleteProductDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleConfirm = async () => {
+    console.log('[DeleteProductDialog] Confirming delete - ID:', productId);
     setIsDeleting(true);
     try {
-      await onConfirm(product.id);
+      await onConfirm(productId);
       onClose();
     } catch (err: any) {
       alert(err.message || 'Failed to delete product');
@@ -42,9 +51,9 @@ export function DeleteProductDialog({ open, product, onClose, onConfirm }: Delet
         </DialogHeader>
 
         <p className="text-sm text-[var(--rubix-muted-foreground)]">
-          Are you sure you want to delete <strong>{product.name}</strong>
-          {product.settings?.productCode && (
-            <span> ({product.settings.productCode})</span>
+          Are you sure you want to delete <strong>{productName}</strong>
+          {productCode && (
+            <span> ({productCode})</span>
           )}
           ? This action cannot be undone.
         </p>

@@ -43,6 +43,9 @@ export class ProductsAPI {
   async queryProducts(): Promise<Product[]> {
     const filter = 'type is "plm.product"';
     const nodes = await this.client.queryNodes({ filter });
+    console.log('[ProductsAPI] Query result:', nodes);
+    console.log('[ProductsAPI] First product:', nodes[0]);
+    console.log('[ProductsAPI] First product ID:', nodes[0]?.id);
     return nodes as Product[];
   }
 

@@ -20,7 +20,7 @@ interface ProductTableProps {
   products: Product[];
   displaySettings: ProductTableDisplaySettings;
   onEdit: (product: Product) => void;
-  onDelete: (product: Product) => void;
+  onDelete: (productId: string, productName: string, productCode?: string) => void;
 }
 
 const CELL_PADDING = {
@@ -122,7 +122,7 @@ export function ProductTable({
                   <EditIcon size={displaySettings.compactMode ? 12 : 14} />
                 </Button>
                 <Button
-                  onClick={() => onDelete(product)}
+                  onClick={() => onDelete(product.id, product.name, product.settings?.productCode)}
                   size={displaySettings.compactMode ? 'sm' : 'sm'}
                   variant="outline"
                   title="Delete product"
