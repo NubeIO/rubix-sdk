@@ -1,5 +1,36 @@
 # rubix-plugin Changelog
 
+## v0.0.1 - 2026-03-21
+
+### Added
+- **SDK Version Management Script** (`scripts/sdk-version.sh`)
+  - Switch between local and released SDK versions
+  - Automated release workflow with version bumping
+  - Automatic CHANGELOG updates
+  - GitHub release creation
+  - Auto-update rubix go.mod after release
+
+### Makefile Targets
+- `make sdk-switch` - Switch rubix to use local SDK for development
+- `make sdk-unswitch` - Switch back to released SDK version
+- `make sdk-release-patch` - Create patch release (v0.0.1 → v0.0.2)
+- `make sdk-release-minor` - Create minor release (v0.0.1 → v0.1.0)
+- `make sdk-release-major` - Create major release (v0.0.1 → v1.0.0)
+- `make sdk-status` - Show current SDK version status
+
+### Workflow
+1. Development: `make sdk-switch` to use local SDK
+2. Test changes in rubix with local SDK
+3. When ready to release: `make sdk-release-patch`
+4. Script automatically:
+   - Updates CHANGELOG
+   - Creates git tag
+   - Pushes to GitHub
+   - Creates GitHub release
+   - Updates rubix go.mod to new version
+
+---
+
 ## 2026-03-20 - NATS Subject Builder
 
 ### Added
