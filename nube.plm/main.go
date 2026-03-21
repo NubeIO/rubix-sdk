@@ -74,6 +74,8 @@ func main() {
 			return &nodes.ProductsCollectionNode{}
 		case "plm.product":
 			return &nodes.ProductNode{}
+		case "plm.prototest":
+			return &nodes.ProtoTestNode{}
 		default:
 			return nil
 		}

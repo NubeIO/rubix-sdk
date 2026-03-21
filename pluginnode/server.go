@@ -7,9 +7,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/NubeIO/rubix-sdk/converters"
 	"github.com/NubeIO/rubix-sdk/natslib"
+	pluginv1 "github.com/NubeIO/rubix-sdk/proto/go/plugin/v1"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
+	"google.golang.org/protobuf/proto"
 )
 
 // ============================================================
@@ -208,37 +211,48 @@ func (ps *PluginServer) Emit(nodeID, portHandle string, value PortValue) error {
 // ============================================================
 
 func (ps *PluginServer) handleRPC(msg *nats.Msg) {
-	var req RPCRequest
-	if err := json.Unmarshal(msg.Data, &req); err != nil {
-		ps.replyError(msg, fmt.Errorf("parse request: %w", err))
+	// Unmarshal proto RPC request envelope
+	var protoReq pluginv1.RPCRequest
+	if err := proto.Unmarshal(msg.Data, &protoReq); err != nil {
+		ps.replyProtoError(msg, fmt.Errorf("parse proto request: %w", err))
 		return
 	}
-	ps.log.Debug().Str("method", string(req.Method)).Str("nodeId", req.NodeID).Msg("← RPC")
+	ps.log.Debug().Str("method", protoReq.Method).Str("nodeId", protoReq.NodeId).Msg("← proto RPC")
 
 	var (
-		resp RPCResponse
-		err  error
+		respData []byte
+		err      error
 	)
-	switch req.Method {
-	case MethodInit:
-		resp, err = ps.handleInit(req)
-	case MethodGetSchema:
-		resp, err = ps.handleGetSchema(req)
+
+	switch RPCMethod(protoReq.Method) {
 	case MethodProcess:
-		resp, err = ps.handleProcess(req)
+		respData, err = ps.handleProcessProto(&protoReq)
+	case MethodGetSchema:
+		respData, err = ps.handleGetSchemaProto(&protoReq)
+	case MethodInit:
+		respData, err = ps.handleInitProto(&protoReq)
 	case MethodClose:
-		resp, err = ps.handleClose(req)
+		respData, err = ps.handleCloseProto(&protoReq)
 	case MethodPing:
-		resp = RPCResponse{Success: true, Data: PingResponse{NodeID: req.NodeID, Status: "running", Version: ps.cfg.Version}}
+		respData, err = ps.handlePingProto(&protoReq)
 	default:
-		err = fmt.Errorf("unknown method: %s", req.Method)
+		err = fmt.Errorf("unknown method: %s", protoReq.Method)
 	}
+
 	if err != nil {
-		ps.replyError(msg, err)
+		ps.replyProtoError(msg, err)
 		return
 	}
-	data, _ := json.Marshal(resp)
-	msg.Respond(data)
+
+	// Build proto RPC response envelope
+	protoResp := &pluginv1.RPCResponse{
+		Success:   true,
+		Data:      respData,
+		RequestId: protoReq.RequestId,
+	}
+
+	respBytes, _ := proto.Marshal(protoResp)
+	msg.Respond(respBytes)
 }
 
 func (ps *PluginServer) handleInit(req RPCRequest) (RPCResponse, error) {
@@ -351,6 +365,400 @@ func (ps *PluginServer) handleClose(req RPCRequest) (RPCResponse, error) {
 	}
 	delete(ps.nodes, req.NodeID)
 	return RPCResponse{Success: true}, nil
+}
+
+// ============================================================
+// Proto RPC handlers
+// ============================================================
+
+func (ps *PluginServer) handleProcessProto(rpcReq *pluginv1.RPCRequest) ([]byte, error) {
+	// Unmarshal ProcessRequest from payload
+	var processReq pluginv1.ProcessRequest
+	if err := proto.Unmarshal(rpcReq.Payload, &processReq); err != nil {
+		return nil, fmt.Errorf("unmarshal ProcessRequest: %w", err)
+	}
+
+	// Get node instance
+	node, ok := ps.nodes[rpcReq.NodeId]
+	if !ok {
+		return nil, fmt.Errorf("node not found: %s", rpcReq.NodeId)
+	}
+
+	// Convert proto inputs to map[string]PortValue
+	inputMap := converters.ProtoValuesToMap(processReq.Inputs)
+	inputs := make(map[string]PortValue, len(inputMap))
+	for k, v := range inputMap {
+		pv, err := interfaceToPortValue(v)
+		if err != nil {
+			return nil, fmt.Errorf("convert input %s: %w", k, err)
+		}
+		inputs[k] = pv
+	}
+
+	// Call user's Process() function
+	outputs, err := node.Process(context.Background(), inputs)
+	if err != nil {
+		// Return error in proto response (not as RPC error)
+		processResp := &pluginv1.ProcessResponse{
+			Outputs: nil,
+			Error:   err.Error(),
+		}
+		return proto.Marshal(processResp)
+	}
+
+	// Convert outputs to proto
+	outputMap := make(map[string]interface{}, len(outputs))
+	for k, v := range outputs {
+		outputMap[k] = portValueToInterface(v)
+	}
+	protoOutputs, err := converters.MapToProtoValues(outputMap)
+	if err != nil {
+		return nil, fmt.Errorf("convert outputs to proto: %w", err)
+	}
+
+	// Build proto ProcessResponse
+	processResp := &pluginv1.ProcessResponse{
+		Outputs: protoOutputs,
+	}
+
+	// Marshal and return
+	return proto.Marshal(processResp)
+}
+
+// interfaceToPortValue converts interface{} to PortValue
+func interfaceToPortValue(v interface{}) (PortValue, error) {
+	if v == nil {
+		return PortValue{}, nil
+	}
+
+	switch val := v.(type) {
+	case float64:
+		return NumVal(val), nil
+	case float32:
+		return NumVal(float64(val)), nil
+	case int:
+		return NumVal(float64(val)), nil
+	case int64:
+		return NumVal(float64(val)), nil
+	case string:
+		return StrVal(val), nil
+	case bool:
+		return BoolVal(val), nil
+	default:
+		return PortValue{}, fmt.Errorf("unsupported type for PortValue: %T", v)
+	}
+}
+
+// portValueToInterface extracts the value from PortValue as interface{}
+func portValueToInterface(pv PortValue) interface{} {
+	if pv.ValueNum != nil {
+		return *pv.ValueNum
+	}
+	if pv.ValueStr != nil {
+		return *pv.ValueStr
+	}
+	if pv.ValueBool != nil {
+		return *pv.ValueBool
+	}
+	if pv.ValueJSON != nil {
+		return pv.ValueJSON
+	}
+	return nil
+}
+
+func (ps *PluginServer) handleGetSchemaProto(rpcReq *pluginv1.RPCRequest) ([]byte, error) {
+	ps.log.Debug().
+		Int("payloadSize", len(rpcReq.Payload)).
+		Msg("← SERVER: received GetSchema proto request")
+
+	// Parse GetSchemaRequest from proto payload
+	var protoSchemaReq pluginv1.GetSchemaRequest
+	if len(rpcReq.Payload) > 0 {
+		if err := proto.Unmarshal(rpcReq.Payload, &protoSchemaReq); err != nil {
+			ps.log.Error().Err(err).Msg("← SERVER: failed to unmarshal GetSchemaRequest proto")
+			return nil, fmt.Errorf("unmarshal GetSchemaRequest proto: %w", err)
+		}
+	} else {
+		ps.log.Error().Msg("← SERVER: GetSchema missing payload")
+		return nil, fmt.Errorf("getSchema requires payload with nodeType")
+	}
+
+	nodeType := converters.ProtoToGetSchemaRequest(&protoSchemaReq)
+
+	ps.log.Debug().
+		Str("nodeType", nodeType).
+		Msg("← SERVER: creating node for schema extraction")
+
+	// Create temporary node instance to get schema (don't call Init)
+	node := ps.cfg.Factory(nodeType)
+	if node == nil {
+		ps.log.Error().
+			Str("nodeType", nodeType).
+			Msg("← SERVER: unknown node type")
+		return nil, fmt.Errorf("unknown node type: %s", nodeType)
+	}
+
+	// Extract schema if the node provides one
+	var schemaMap map[string]interface{}
+	if sp, ok := node.(SettingsSchemaProvider); ok {
+		schemaMap = sp.SettingsSchema()
+		ps.log.Debug().
+			Int("schemaKeys", len(schemaMap)).
+			Msg("← SERVER: extracted schema from node")
+	} else {
+		ps.log.Debug().Msg("← SERVER: node does not implement SettingsSchemaProvider")
+	}
+
+	// Convert to proto
+	protoSchemaResp, err := converters.GetSchemaResponseToProto(schemaMap)
+	if err != nil {
+		ps.log.Error().Err(err).Msg("← SERVER: failed to convert schema to proto")
+		return nil, fmt.Errorf("convert schema to proto: %w", err)
+	}
+
+	// Marshal proto response
+	schemaProto, err := proto.Marshal(protoSchemaResp)
+	if err != nil {
+		ps.log.Error().Err(err).Msg("← SERVER: failed to marshal schema proto")
+		return nil, fmt.Errorf("marshal schema proto: %w", err)
+	}
+
+	ps.log.Debug().
+		Int("schemaProtoSize", len(schemaProto)).
+		Msg("→ SERVER: returning GetSchema proto response")
+
+	return schemaProto, nil
+}
+
+func (ps *PluginServer) handleInitProto(rpcReq *pluginv1.RPCRequest) ([]byte, error) {
+	ps.log.Debug().
+		Int("payloadSize", len(rpcReq.Payload)).
+		Str("nodeId", rpcReq.NodeId).
+		Msg("← SERVER: received Init proto request")
+
+	// Parse InitRequest from proto payload
+	var protoInitReq pluginv1.InitRequest
+	if len(rpcReq.Payload) > 0 {
+		if err := proto.Unmarshal(rpcReq.Payload, &protoInitReq); err != nil {
+			ps.log.Error().Err(err).Msg("← SERVER: failed to unmarshal InitRequest proto")
+			return nil, fmt.Errorf("unmarshal InitRequest proto: %w", err)
+		}
+	} else {
+		ps.log.Error().Msg("← SERVER: Init missing payload")
+		return nil, fmt.Errorf("init requires payload with NodeSpec")
+	}
+
+	// Convert proto to internal spec map
+	specMap, err := converters.ProtoToInitRequest(&protoInitReq)
+	if err != nil {
+		ps.log.Error().Err(err).Msg("← SERVER: failed to convert proto init request")
+		return nil, fmt.Errorf("convert proto init request: %w", err)
+	}
+
+	// Build NodeSpec from map
+	initReq := InitRequest{
+		Spec: NodeSpec{
+			ID:       specMap["id"].(string),
+			Type:     specMap["type"].(string),
+			Settings: specMap["settings"].(map[string]interface{}),
+		},
+	}
+
+	ps.log.Debug().
+		Str("nodeType", initReq.Spec.Type).
+		Str("nodeId", rpcReq.NodeId).
+		Msg("← SERVER: creating and initializing node")
+
+	// Create node instance
+	node := ps.cfg.Factory(initReq.Spec.Type)
+	if node == nil {
+		ps.log.Error().
+			Str("nodeType", initReq.Spec.Type).
+			Msg("← SERVER: unknown node type")
+		return nil, fmt.Errorf("unknown node type: %s", initReq.Spec.Type)
+	}
+
+	// Initialize the node
+	if err := node.Init(initReq.Spec); err != nil {
+		ps.log.Error().Err(err).
+			Str("nodeType", initReq.Spec.Type).
+			Msg("← SERVER: node Init() failed")
+		return nil, fmt.Errorf("node init: %w", err)
+	}
+
+	// Store node in registry
+	ps.nodes[rpcReq.NodeId] = node
+
+	ps.log.Debug().
+		Str("nodeId", rpcReq.NodeId).
+		Msg("← SERVER: node initialized, checking for autonomous emission")
+
+	// Handle autonomous emission support
+	if en, ok := node.(EmittingNode); ok {
+		ps.mu.Lock()
+		ps.emittingNodes[rpcReq.NodeId] = en
+		ps.nodeStates[rpcReq.NodeId] = "stopped"
+		ps.mu.Unlock()
+
+		if ps.cfg.AutoStartNodes {
+			nodeID := rpcReq.NodeId
+			ec := EmitContext{
+				NodeID: nodeID,
+				Emit: func(port string, val PortValue) error {
+					return ps.Emit(nodeID, port, val)
+				},
+				Logger: ps.log,
+			}
+			if err := en.StartEmitting(ec); err != nil {
+				ps.log.Warn().Err(err).Str("nodeId", nodeID).Msg("auto-start emit failed")
+			} else {
+				ps.mu.Lock()
+				ps.nodeStates[nodeID] = "running"
+				ps.mu.Unlock()
+				ps.log.Info().Str("nodeId", nodeID).Msg("auto-started emitting node")
+			}
+		}
+	}
+
+	// Get ports from the initialized node
+	inputs, outputs := node.GetPorts()
+
+	ps.log.Debug().
+		Int("inputs", len(inputs)).
+		Int("outputs", len(outputs)).
+		Msg("← SERVER: extracted ports from node")
+
+	// Get schema if available
+	var schema map[string]interface{}
+	if sp, ok := node.(SettingsSchemaProvider); ok {
+		schema = sp.SettingsSchema()
+		ps.log.Debug().
+			Int("schemaKeys", len(schema)).
+			Msg("← SERVER: extracted schema from node")
+	}
+
+	// Convert ports to interface{} slices for converter
+	inputsInterface := make([]interface{}, len(inputs))
+	for i, p := range inputs {
+		inputsInterface[i] = map[string]interface{}{
+			"handle":  p.Handle,
+			"name":    p.Name,
+			"type":    p.Type,
+			"kind":    p.Kind,
+			"persist": p.Persist,
+		}
+	}
+
+	outputsInterface := make([]interface{}, len(outputs))
+	for i, p := range outputs {
+		outputsInterface[i] = map[string]interface{}{
+			"handle":  p.Handle,
+			"name":    p.Name,
+			"type":    p.Type,
+			"kind":    p.Kind,
+			"persist": p.Persist,
+		}
+	}
+
+	// Convert to proto
+	protoInitResp, err := converters.InitResponseToProto(inputsInterface, outputsInterface, schema)
+	if err != nil {
+		ps.log.Error().Err(err).Msg("← SERVER: failed to convert init response to proto")
+		return nil, fmt.Errorf("convert init response to proto: %w", err)
+	}
+
+	// Marshal proto response
+	initProto, err := proto.Marshal(protoInitResp)
+	if err != nil {
+		ps.log.Error().Err(err).Msg("← SERVER: failed to marshal init proto response")
+		return nil, fmt.Errorf("marshal init proto response: %w", err)
+	}
+
+	ps.log.Debug().
+		Int("initProtoSize", len(initProto)).
+		Msg("→ SERVER: returning Init proto response")
+
+	return initProto, nil
+}
+
+func (ps *PluginServer) handleCloseProto(rpcReq *pluginv1.RPCRequest) ([]byte, error) {
+	ps.log.Debug().
+		Str("nodeId", rpcReq.NodeId).
+		Msg("← SERVER: received Close proto request")
+
+	// Get node from registry
+	node, ok := ps.nodes[rpcReq.NodeId]
+	if !ok {
+		ps.log.Error().
+			Str("nodeId", rpcReq.NodeId).
+			Msg("← SERVER: node not found")
+		return nil, fmt.Errorf("node not found: %s", rpcReq.NodeId)
+	}
+
+	// Stop emitting if this is an emitting node
+	if en, ok := ps.emittingNodes[rpcReq.NodeId]; ok {
+		ps.log.Debug().
+			Str("nodeId", rpcReq.NodeId).
+			Msg("← SERVER: stopping emitting node")
+		en.StopEmitting()
+		ps.mu.Lock()
+		delete(ps.emittingNodes, rpcReq.NodeId)
+		delete(ps.nodeStates, rpcReq.NodeId)
+		ps.mu.Unlock()
+	}
+
+	// Call node's Close method
+	if err := node.Close(); err != nil {
+		ps.log.Error().Err(err).
+			Str("nodeId", rpcReq.NodeId).
+			Msg("← SERVER: node Close() failed")
+		return nil, fmt.Errorf("close: %w", err)
+	}
+
+	// Remove from registry
+	delete(ps.nodes, rpcReq.NodeId)
+
+	ps.log.Debug().
+		Str("nodeId", rpcReq.NodeId).
+		Msg("→ SERVER: node closed successfully")
+
+	// Close has no response data (return empty bytes)
+	return []byte{}, nil
+}
+
+func (ps *PluginServer) handlePingProto(rpcReq *pluginv1.RPCRequest) ([]byte, error) {
+	ps.log.Debug().
+		Str("nodeId", rpcReq.NodeId).
+		Msg("← SERVER: received Ping proto request")
+
+	// Get node from registry (if nodeId is provided)
+	var status string
+	if rpcReq.NodeId != "" && rpcReq.NodeId != "__ping__" {
+		if _, ok := ps.nodes[rpcReq.NodeId]; ok {
+			status = "running"
+		} else {
+			status = "not_found"
+		}
+	} else {
+		// General plugin ping (not node-specific)
+		status = "running"
+	}
+
+	// Convert to proto
+	protoPingResp := converters.PingResponseToProto(rpcReq.NodeId, status, ps.cfg.Version)
+
+	// Marshal proto response
+	pingProto, err := proto.Marshal(protoPingResp)
+	if err != nil {
+		ps.log.Error().Err(err).Msg("← SERVER: failed to marshal ping proto")
+		return nil, fmt.Errorf("marshal ping proto: %w", err)
+	}
+
+	ps.log.Debug().
+		Str("status", status).
+		Msg("→ SERVER: returning Ping proto response")
+
+	return pingProto, nil
 }
 
 // ============================================================
@@ -555,6 +963,16 @@ func (ps *PluginServer) handleNodeControl(msg *nats.Msg) {
 func (ps *PluginServer) replyError(msg *nats.Msg, err error) {
 	ps.log.Error().Err(err).Msg("RPC error")
 	data, _ := json.Marshal(RPCResponse{Success: false, Error: err.Error()})
+	msg.Respond(data)
+}
+
+func (ps *PluginServer) replyProtoError(msg *nats.Msg, err error) {
+	ps.log.Error().Err(err).Msg("proto RPC error")
+	protoResp := &pluginv1.RPCResponse{
+		Success: false,
+		Error:   err.Error(),
+	}
+	data, _ := proto.Marshal(protoResp)
 	msg.Respond(data)
 }
 
