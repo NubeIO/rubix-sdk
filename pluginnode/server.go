@@ -7,9 +7,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/NubeIO/rubix-sdk/converters"
 	"github.com/NubeIO/rubix-sdk/natslib"
+	pluginv1 "github.com/NubeIO/rubix-sdk/proto/go/plugin/v1"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
+	"google.golang.org/protobuf/proto"
 )
 
 // ============================================================
@@ -208,37 +211,52 @@ func (ps *PluginServer) Emit(nodeID, portHandle string, value PortValue) error {
 // ============================================================
 
 func (ps *PluginServer) handleRPC(msg *nats.Msg) {
-	var req RPCRequest
-	if err := json.Unmarshal(msg.Data, &req); err != nil {
-		ps.replyError(msg, fmt.Errorf("parse request: %w", err))
+	// Unmarshal proto RPC request envelope
+	var protoReq pluginv1.RPCRequest
+	if err := proto.Unmarshal(msg.Data, &protoReq); err != nil {
+		ps.replyProtoError(msg, fmt.Errorf("parse proto request: %w", err))
 		return
 	}
-	ps.log.Debug().Str("method", string(req.Method)).Str("nodeId", req.NodeID).Msg("← RPC")
+	ps.log.Debug().Str("method", protoReq.Method).Str("nodeId", protoReq.NodeId).Msg("← proto RPC")
 
 	var (
-		resp RPCResponse
-		err  error
+		respData []byte
+		err      error
 	)
-	switch req.Method {
-	case MethodInit:
-		resp, err = ps.handleInit(req)
-	case MethodGetSchema:
-		resp, err = ps.handleGetSchema(req)
+
+	switch RPCMethod(protoReq.Method) {
 	case MethodProcess:
-		resp, err = ps.handleProcess(req)
+		respData, err = ps.handleProcessProto(&protoReq)
+	case MethodInit:
+		// TODO: Implement proto init handler
+		err = fmt.Errorf("init not yet implemented for proto (coming soon)")
+	case MethodGetSchema:
+		// TODO: Implement proto schema handler
+		err = fmt.Errorf("getSchema not yet implemented for proto (coming soon)")
 	case MethodClose:
-		resp, err = ps.handleClose(req)
+		// TODO: Implement proto close handler
+		err = fmt.Errorf("close not yet implemented for proto (coming soon)")
 	case MethodPing:
-		resp = RPCResponse{Success: true, Data: PingResponse{NodeID: req.NodeID, Status: "running", Version: ps.cfg.Version}}
+		// TODO: Implement proto ping handler
+		err = fmt.Errorf("ping not yet implemented for proto (coming soon)")
 	default:
-		err = fmt.Errorf("unknown method: %s", req.Method)
+		err = fmt.Errorf("unknown method: %s", protoReq.Method)
 	}
+
 	if err != nil {
-		ps.replyError(msg, err)
+		ps.replyProtoError(msg, err)
 		return
 	}
-	data, _ := json.Marshal(resp)
-	msg.Respond(data)
+
+	// Build proto RPC response envelope
+	protoResp := &pluginv1.RPCResponse{
+		Success:   true,
+		Data:      respData,
+		RequestId: protoReq.RequestId,
+	}
+
+	respBytes, _ := proto.Marshal(protoResp)
+	msg.Respond(respBytes)
 }
 
 func (ps *PluginServer) handleInit(req RPCRequest) (RPCResponse, error) {
@@ -351,6 +369,105 @@ func (ps *PluginServer) handleClose(req RPCRequest) (RPCResponse, error) {
 	}
 	delete(ps.nodes, req.NodeID)
 	return RPCResponse{Success: true}, nil
+}
+
+// ============================================================
+// Proto RPC handlers
+// ============================================================
+
+func (ps *PluginServer) handleProcessProto(rpcReq *pluginv1.RPCRequest) ([]byte, error) {
+	// Unmarshal ProcessRequest from payload
+	var processReq pluginv1.ProcessRequest
+	if err := proto.Unmarshal(rpcReq.Payload, &processReq); err != nil {
+		return nil, fmt.Errorf("unmarshal ProcessRequest: %w", err)
+	}
+
+	// Get node instance
+	node, ok := ps.nodes[rpcReq.NodeId]
+	if !ok {
+		return nil, fmt.Errorf("node not found: %s", rpcReq.NodeId)
+	}
+
+	// Convert proto inputs to map[string]PortValue
+	inputMap := converters.ProtoValuesToMap(processReq.Inputs)
+	inputs := make(map[string]PortValue, len(inputMap))
+	for k, v := range inputMap {
+		pv, err := interfaceToPortValue(v)
+		if err != nil {
+			return nil, fmt.Errorf("convert input %s: %w", k, err)
+		}
+		inputs[k] = pv
+	}
+
+	// Call user's Process() function
+	outputs, err := node.Process(context.Background(), inputs)
+	if err != nil {
+		// Return error in proto response (not as RPC error)
+		processResp := &pluginv1.ProcessResponse{
+			Outputs: nil,
+			Error:   err.Error(),
+		}
+		return proto.Marshal(processResp)
+	}
+
+	// Convert outputs to proto
+	outputMap := make(map[string]interface{}, len(outputs))
+	for k, v := range outputs {
+		outputMap[k] = portValueToInterface(v)
+	}
+	protoOutputs, err := converters.MapToProtoValues(outputMap)
+	if err != nil {
+		return nil, fmt.Errorf("convert outputs to proto: %w", err)
+	}
+
+	// Build proto ProcessResponse
+	processResp := &pluginv1.ProcessResponse{
+		Outputs: protoOutputs,
+	}
+
+	// Marshal and return
+	return proto.Marshal(processResp)
+}
+
+// interfaceToPortValue converts interface{} to PortValue
+func interfaceToPortValue(v interface{}) (PortValue, error) {
+	if v == nil {
+		return PortValue{}, nil
+	}
+
+	switch val := v.(type) {
+	case float64:
+		return NumVal(val), nil
+	case float32:
+		return NumVal(float64(val)), nil
+	case int:
+		return NumVal(float64(val)), nil
+	case int64:
+		return NumVal(float64(val)), nil
+	case string:
+		return StrVal(val), nil
+	case bool:
+		return BoolVal(val), nil
+	default:
+		return PortValue{}, fmt.Errorf("unsupported type for PortValue: %T", v)
+	}
+}
+
+// portValueToInterface extracts the value from PortValue as interface{}
+func portValueToInterface(pv PortValue) interface{} {
+	if pv.ValueNum != nil {
+		return *pv.ValueNum
+	}
+	if pv.ValueStr != nil {
+		return *pv.ValueStr
+	}
+	if pv.ValueBool != nil {
+		return *pv.ValueBool
+	}
+	if pv.ValueJSON != nil {
+		return pv.ValueJSON
+	}
+	return nil
 }
 
 // ============================================================
@@ -555,6 +672,16 @@ func (ps *PluginServer) handleNodeControl(msg *nats.Msg) {
 func (ps *PluginServer) replyError(msg *nats.Msg, err error) {
 	ps.log.Error().Err(err).Msg("RPC error")
 	data, _ := json.Marshal(RPCResponse{Success: false, Error: err.Error()})
+	msg.Respond(data)
+}
+
+func (ps *PluginServer) replyProtoError(msg *nats.Msg, err error) {
+	ps.log.Error().Err(err).Msg("proto RPC error")
+	protoResp := &pluginv1.RPCResponse{
+		Success: false,
+		Error:   err.Error(),
+	}
+	data, _ := proto.Marshal(protoResp)
 	msg.Respond(data)
 }
 
