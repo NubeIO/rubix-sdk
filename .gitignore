@@ -50,3 +50,5 @@ nubeio-example/frontend/.__mf__temp
 nubeio-example/dist-frontend
 nubeio-taskmanager/frontend/node_modules
 nubeio-taskmanager/dist-frontend
+nube.plm/rubix-plm-plugin
+scripts/path.yaml

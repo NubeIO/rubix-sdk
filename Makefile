@@ -1,4 +1,4 @@
-.PHONY: demo-gen demo-build sdk-switch sdk-unswitch sdk-release-patch sdk-release-minor sdk-release-major sdk-status generate-proto test verify help
+.PHONY: demo-gen demo-build sdk-switch sdk-unswitch sdk-release-patch sdk-release-minor sdk-release-major sdk-status proto-switch proto-unswitch proto-release-patch proto-release-minor proto-release-major proto-status proto-init paths generate-proto test verify help
 .DEFAULT_GOAL := help
 
 help: ## Show this help message
@@ -15,9 +15,21 @@ help: ## Show this help message
 	@echo "  make sdk-release-minor   Release minor version (v0.0.1 → v0.1.0)"
 	@echo "  make sdk-release-major   Release major version (v0.0.1 → v1.0.0)"
 	@echo ""
+	@echo "Proto Version Management:"
+	@echo "  make proto-status        Check current Proto version and mode"
+	@echo "  make proto-switch        Switch to local Proto (development)"
+	@echo "  make proto-unswitch      Switch back to released version"
+	@echo "  make proto-release-patch Release patch version (v0.0.1 → v0.0.2)"
+	@echo "  make proto-release-minor Release minor version (v0.0.1 → v0.1.0)"
+	@echo "  make proto-release-major Release major version (v0.0.1 → v1.0.0)"
+	@echo "  make proto-init          Initialize Proto CHANGELOG.md"
+	@echo ""
 	@echo "Demo/Development:"
 	@echo "  make demo-gen            Run fake plugin generator demo"
 	@echo "  make demo-build          Build fake plugin generator"
+	@echo ""
+	@echo "Configuration:"
+	@echo "  make paths               Show configured repository paths"
 	@echo ""
 	@echo "Proto/Testing:"
 	@echo "  make generate-proto      Regenerate proto code from rubix-proto"
@@ -55,6 +67,36 @@ sdk-release-minor: ## Create minor release (v0.0.1 → v0.1.0)
 
 sdk-release-major: ## Create major release (v0.0.1 → v1.0.0)
 	@./scripts/sdk-version.sh release major
+
+# Proto Version Management
+# =========================
+
+proto-status: ## Show current Proto version and mode
+	@./scripts/sdk-version.sh status --repo=proto
+
+proto-switch: ## Switch rubix to use local Proto for development
+	@./scripts/sdk-version.sh switch --repo=proto
+
+proto-unswitch: ## Switch rubix back to released Proto version
+	@./scripts/sdk-version.sh unswitch --repo=proto
+
+proto-release-patch: ## Create Proto patch release (v0.0.1 → v0.0.2)
+	@./scripts/sdk-version.sh release patch --repo=proto
+
+proto-release-minor: ## Create Proto minor release (v0.0.1 → v0.1.0)
+	@./scripts/sdk-version.sh release minor --repo=proto
+
+proto-release-major: ## Create Proto major release (v0.0.1 → v1.0.0)
+	@./scripts/sdk-version.sh release major --repo=proto
+
+proto-init: ## Initialize Proto CHANGELOG.md
+	@./scripts/sdk-version.sh init-changelog --repo=proto
+
+# Configuration
+# ==============
+
+paths: ## Show configured repository paths
+	@./scripts/sdk-version.sh paths
 
 # Proto Generation & Testing
 # ===========================

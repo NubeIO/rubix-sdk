@@ -1,0 +1,26 @@
+# Path Configuration for SDK/Proto Version Management
+#
+# SETUP:
+#   1. Copy this file to 'path.yaml' in the same directory
+#      cp path-example.yaml path.yaml
+#
+#   2. Customize the paths below to match your local setup
+#
+#   3. The script will use these paths, or fall back to defaults if not found
+#
+# NOTE:
+#   - You can use absolute paths or paths with ~ for home directory
+#   - Relative paths are NOT recommended
+#   - The path.yaml file is gitignored, so your local settings won't be committed
+
+# SDK repository path
+# Default: /home/user/code/go/nube/rubix-sdk
+sdk_path: /home/user/code/go/nube/rubix-sdk
+
+# Proto repository path
+# Default: /home/user/code/go/nube/rubix-proto
+proto_path: /home/user/code/go/nube/rubix-proto
+
+# Main Rubix application path
+# Default: /home/user/code/go/nube/rubix
+rubix_path: /home/user/code/go/nube/rubix

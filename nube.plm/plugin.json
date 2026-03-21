@@ -9,7 +9,8 @@
   "nodeTypes": [
     "plm.service",
     "plm.products",
-    "plm.product"
+    "plm.product",
+    "plm.prototest"
   ],
   "_futureNodeTypes": [
     "plm.production-runs",
@@ -25,7 +26,8 @@
     "nodeTypes": [
       "plm.service",
       "plm.products",
-      "plm.product"
+      "plm.product",
+      "plm.prototest"
     ],
     "_comment": "Add other node types here when implementing additional collections",
     "hooks": {

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/NubeDev/rubix-plugin/natslib"
-	"github.com/NubeDev/rubix-plugin/natssubject"
+	"github.com/NubeIO/rubix-sdk/natslib"
+	"github.com/NubeIO/rubix-sdk/natssubject"
 )
 
 // BOMItem represents a single item in an exploded BOM
