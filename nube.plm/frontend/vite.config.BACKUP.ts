@@ -4,18 +4,6 @@ import { federation } from '@module-federation/vite';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
-/**
- * ✅ PRODUCTION: Isolated React Plugin Configuration (Mount/Unmount Pattern)
- *
- * This configuration does NOT share React/ReactDOM.
- * Plugin bundles its own React + Radix UI + shadcn components.
- *
- * How it works: Plugin exports mount/unmount functions instead of React components.
- * Plugin creates AND renders elements with its own React instance.
- *
- * Trade-off: ~200KB extra bundle size per plugin
- * Benefit: Can use EXACT same shadcn/ui components as host ✅
- */
 export default defineConfig({
   plugins: [
     react(),
@@ -26,18 +14,28 @@ export default defineConfig({
       exposes: {
         './ProductTableWidget': './src/products/widget/ProductTableWidget.tsx',
         './Page': './src/products/page/ProductsPage.tsx',
-        './ProofShared': './src/test/ProveItsShared.tsx',
+        './HeadlessTest': './src/test/HeadlessDialogTest.tsx',
       },
       shared: {
-        // DON'T share React - let plugin bundle its own
-        // This makes plugin completely isolated
+        react: {
+          singleton: true,
+          requiredVersion: '19.0.0',
+        },
+        'react-dom': {
+          singleton: true,
+          requiredVersion: '19.0.0',
+        },
+        // Only share React - plugin bundles its own UI components
       },
+      // IMPORTANT: Generate runtime-compatible format
       runtimePlugins: [],
     }),
   ],
   resolve: {
     alias: {
+      // @rubix-sdk/frontend → rubix-sdk/frontend-sdk (source - fine for non-UI utilities)
       '@rubix-sdk/frontend': path.resolve(__dirname, '../../frontend-sdk'),
+      // @/ → plugin src folder (for local UI components)
       '@': path.resolve(__dirname, './src'),
     },
   },
@@ -46,6 +44,6 @@ export default defineConfig({
     target: 'esnext',
     outDir: '../dist-frontend',
     emptyOutDir: true,
-    modulePreload: false,
+    modulePreload: false, // Disable module preload for MF
   },
 });

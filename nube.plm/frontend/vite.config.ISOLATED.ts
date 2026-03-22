@@ -5,16 +5,16 @@ import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
 /**
- * ✅ PRODUCTION: Isolated React Plugin Configuration (Mount/Unmount Pattern)
+ * EXPERIMENTAL: Fully Isolated Plugin Configuration
  *
  * This configuration does NOT share React/ReactDOM.
  * Plugin bundles its own React + Radix UI + shadcn components.
  *
- * How it works: Plugin exports mount/unmount functions instead of React components.
- * Plugin creates AND renders elements with its own React instance.
+ * Theory: If plugin has its own React instance, Radix UI should work
+ * because the plugin creates AND renders elements with the same React.
  *
- * Trade-off: ~200KB extra bundle size per plugin
- * Benefit: Can use EXACT same shadcn/ui components as host ✅
+ * Trade-off: Bigger bundle size (~200KB extra for React)
+ * Benefit: Can use EXACT same shadcn/ui components as host
  */
 export default defineConfig({
   plugins: [
@@ -26,7 +26,7 @@ export default defineConfig({
       exposes: {
         './ProductTableWidget': './src/products/widget/ProductTableWidget.tsx',
         './Page': './src/products/page/ProductsPage.tsx',
-        './ProofShared': './src/test/ProveItsShared.tsx',
+        './HeadlessTest': './src/test/HeadlessDialogTest.tsx',
       },
       shared: {
         // DON'T share React - let plugin bundle its own

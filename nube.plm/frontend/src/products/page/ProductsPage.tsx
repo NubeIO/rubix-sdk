@@ -4,6 +4,7 @@
  * Accessible via right-click → "Open page" on PLM nodes
  */
 
+import { createRoot, type Root } from 'react-dom/client';
 import { useState } from 'react';
 // Use plugin's own Button to avoid SDK Slot issues
 import { Button } from '@/ui/button';
@@ -15,7 +16,11 @@ import { Product } from '../common/types';
 import { useProducts } from '../common/hooks';
 import { PlusIcon } from '../../shared/components/icons';
 import { ProductTable } from '../components';
-import { CreateProductDialog, EditProductDialog, DeleteProductDialog } from '../dialogs';
+import {
+  DeleteProductDialogSDK as DeleteProductDialog,
+  CreateProductDialogSDK,
+  EditProductDialogSDK,
+} from '../dialogs';
 
 export interface ProductsPageProps {
   orgId: string;
@@ -24,7 +29,7 @@ export interface ProductsPageProps {
   token?: string;
 }
 
-export default function ProductsPage({
+function ProductsPage({
   orgId,
   deviceId,
   baseUrl,
@@ -124,11 +129,13 @@ export default function ProductsPage({
             </div>
           </div>
 
+          {/* TODO: Re-implement with multi-settings SDK
           <CreateProductDialog
             open={createDialogOpen}
             onClose={() => setCreateDialogOpen(false)}
             onSubmit={createProduct}
           />
+          */}
         </div>
       </div>
     );
@@ -165,17 +172,27 @@ export default function ProductsPage({
           />
         </div>
 
-        {/* Dialogs */}
-        <CreateProductDialog
+        {/* Create Product Dialog */}
+        <CreateProductDialogSDK
+          orgId={orgId}
+          deviceId={deviceId}
+          baseUrl={baseUrl}
+          token={token}
+          productsCollectionId={productsCollectionId || ''}
           open={createDialogOpen}
           onClose={() => setCreateDialogOpen(false)}
           onSubmit={createProduct}
         />
 
+        {/* Edit Product Dialog */}
         {editingProduct && (
-          <EditProductDialog
-            open={true}
+          <EditProductDialogSDK
+            orgId={orgId}
+            deviceId={deviceId}
+            baseUrl={baseUrl}
+            token={token}
             product={editingProduct}
+            open={true}
             onClose={() => setEditingProduct(null)}
             onSubmit={updateProduct}
           />
@@ -195,3 +212,16 @@ export default function ProductsPage({
     </div>
   );
 }
+
+// Export mount/unmount API for Module Federation
+export default {
+  mount: (container: HTMLElement, props?: ProductsPageProps) => {
+    const root = createRoot(container);
+    root.render(<ProductsPage {...(props || {})} />);
+    return root;
+  },
+
+  unmount: (root: Root) => {
+    root.unmount();
+  },
+};

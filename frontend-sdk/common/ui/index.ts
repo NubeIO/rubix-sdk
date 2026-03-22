@@ -21,3 +21,7 @@ export type { SkeletonProps } from './skeleton';
 export { Popover, PopoverContent, PopoverTrigger } from './popover';
 
 export { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from './select';
+
+export { Textarea } from './textarea';
+
+export { Checkbox } from './checkbox';

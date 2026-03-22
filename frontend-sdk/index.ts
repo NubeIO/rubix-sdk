@@ -45,7 +45,9 @@
 
 // Re-export everything from submodules
 export * from './common';
-export * from './settings';
+export * from './components';
+// Note: Settings components now exported from ./components/settings
+// export * from './settings';  // Old settings hooks - kept for backward compat
 
 // Plugin Client
 export { createPluginClient } from './plugin-client';

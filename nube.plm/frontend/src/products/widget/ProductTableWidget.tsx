@@ -14,7 +14,11 @@ import { Product } from '../common/types';
 import { useProducts } from '../common/hooks';
 import { PlusIcon } from '../../shared/components/icons';
 import { ProductTable } from '../components';
-import { CreateProductDialog, EditProductDialog, DeleteProductDialog } from '../dialogs';
+import {
+  DeleteProductDialogSDK as DeleteProductDialog,
+  CreateProductDialogSDK,
+  EditProductDialogSDK,
+} from '../dialogs';
 
 export interface WidgetSettings {
   display?: {
@@ -129,11 +133,13 @@ export default function ProductTableWidget({
           </Button>
         </div>
 
+        {/* TODO: Re-implement with multi-settings SDK
         <CreateProductDialog
           open={createDialogOpen}
           onClose={() => setCreateDialogOpen(false)}
           onSubmit={createProduct}
         />
+        */}
       </div>
     );
   }
@@ -160,17 +166,27 @@ export default function ProductTableWidget({
         onDelete={(product) => setDeletingProduct(product)}
       />
 
-      {/* Dialogs */}
-      <CreateProductDialog
+      {/* Create Product Dialog */}
+      <CreateProductDialogSDK
+        orgId={orgId || ''}
+        deviceId={deviceId || ''}
+        baseUrl={baseUrl}
+        token={token}
+        productsCollectionId={productsCollectionId || ''}
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
         onSubmit={createProduct}
       />
 
+      {/* Edit Product Dialog */}
       {editingProduct && (
-        <EditProductDialog
-          open={true}
+        <EditProductDialogSDK
+          orgId={orgId || ''}
+          deviceId={deviceId || ''}
+          baseUrl={baseUrl}
+          token={token}
           product={editingProduct}
+          open={true}
           onClose={() => setEditingProduct(null)}
           onSubmit={updateProduct}
         />
@@ -179,7 +195,9 @@ export default function ProductTableWidget({
       {deletingProduct && (
         <DeleteProductDialog
           open={true}
-          product={deletingProduct}
+          productId={deletingProduct.id}
+          productName={deletingProduct.name}
+          productCode={deletingProduct.settings?.productCode}
           onClose={() => setDeletingProduct(null)}
           onConfirm={deleteProduct}
         />

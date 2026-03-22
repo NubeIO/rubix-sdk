@@ -74,7 +74,21 @@
       "isDefault": true,
       "order": 10,
       "props": {
-        "exposedPath": "./Page"
+        "exposedPath": "./Page",
+        "useMountPattern": true
+      }
+    },
+    {
+      "pageId": "proof-shared",
+      "title": "✅ PROOF: Shared Component",
+      "icon": "check-circle-2",
+      "description": "Proves plugin uses EXACT SAME DeleteDialog as host",
+      "enabled": true,
+      "isDefault": false,
+      "order": 11,
+      "props": {
+        "exposedPath": "./ProofShared",
+        "useMountPattern": true
       }
     }
   ],
