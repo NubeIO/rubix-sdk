@@ -122,7 +122,12 @@ export function ProductTable({
                   <EditIcon size={displaySettings.compactMode ? 12 : 14} />
                 </Button>
                 <Button
-                  onClick={() => onDelete(product.id, product.name, product.settings?.productCode)}
+                  onClick={() => {
+                    console.log('[ProductTable] Delete clicked - Product:', product);
+                    console.log('[ProductTable] Product ID:', product.id);
+                    console.log('[ProductTable] Product Name:', product.name);
+                    onDelete(product.id, product.name, product.settings?.productCode);
+                  }}
                   size={displaySettings.compactMode ? 'sm' : 'sm'}
                   variant="outline"
                   title="Delete product"

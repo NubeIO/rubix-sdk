@@ -61,15 +61,57 @@ export function useProductSchemas(options: UseProductSchemasOptions): UseProduct
     try {
       const client = createPluginClient({ orgId, deviceId, baseUrl, token });
 
-      // If no nodeId provided, use a placeholder node ID
-      // (schema fetching doesn't require a specific node, just the type)
-      const targetNodeId = nodeId || 'template';
+      // Use multi-settings API if no nodeId (works with node type, not instance)
+      if (!nodeId) {
+        console.log('[useProductSchemas] No nodeId - fetching schemas from multi-settings API');
+
+        // Step 1: Get list of available schemas
+        const schemaList = await client.listNodeTypeSchemas('plm.product');
+        console.log('[useProductSchemas] Schema list:', schemaList);
+
+        if (!schemaList.schemas || schemaList.schemas.length === 0) {
+          throw new Error('No schemas available for plm.product node type');
+        }
+
+        // Step 2: Fetch each schema definition
+        const schemasWithData: SchemaInfoWithSchema[] = [];
+
+        for (const schemaInfo of schemaList.schemas) {
+          try {
+            const schema = await client.getNodeTypeSchema('plm.product', schemaInfo.name);
+
+            if (schema) {
+              schemasWithData.push({
+                name: schemaInfo.name,
+                displayName: schemaInfo.displayName,
+                description: schemaInfo.description,
+                isDefault: schemaInfo.isDefault,
+                schema: schema,
+              });
+            }
+          } catch (err) {
+            console.error(`[useProductSchemas] Failed to fetch schema '${schemaInfo.name}':`, err);
+            // Continue with other schemas
+          }
+        }
+
+        if (schemasWithData.length === 0) {
+          throw new Error('Failed to fetch any schema definitions');
+        }
+
+        setSchemas(schemasWithData);
+        setLoading(false);
+        return;
+      }
+
+      const targetNodeId = nodeId;
 
       // Step 1: Get list of available schemas
-      const listResponse = await client.request<SchemasListResponse>(
-        `/nodes/${targetNodeId}/settings-schemas-list`
+      const response = await client.request<{data: SchemasListResponse, meta?: any}>(
+        `/nodes/${targetNodeId}/settings-schema/list`
       );
 
+      const listResponse = response.data;
       console.log('[useProductSchemas] Schema list:', listResponse);
 
       if (!listResponse.schemas || listResponse.schemas.length === 0) {
@@ -81,12 +123,12 @@ export function useProductSchemas(options: UseProductSchemasOptions): UseProduct
 
       for (const schemaInfo of listResponse.schemas) {
         try {
-          const schemaResponse = await client.request<any>(
+          const schemaResponse = await client.request<{data: {schema: any}, meta?: any}>(
             `/nodes/${targetNodeId}/settings-schema/${schemaInfo.name}`
           );
 
-          // The response might be wrapped in a "schema" field or be the schema directly
-          const schemaData = schemaResponse.schema || schemaResponse;
+          // Unwrap the response - API returns {data: {schema: {...}}, meta: {...}}
+          const schemaData = schemaResponse.data.schema;
 
           schemasWithData.push({
             name: schemaInfo.name,

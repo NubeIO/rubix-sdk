@@ -38,21 +38,47 @@ export function useProducts(config: UseProductsConfig): UseProductsResult {
     config.token
   );
 
+  console.log('[useProducts] Hierarchy state:', {
+    collections,
+    hierarchyLoading,
+    hierarchyError,
+  });
+
   const fetchProducts = useCallback(async () => {
+    console.log('[useProducts] fetchProducts called', {
+      orgId: config.orgId,
+      deviceId: config.deviceId,
+      baseUrl: config.baseUrl,
+      hasToken: !!config.token,
+    });
+
     if (!config.orgId || !config.deviceId) {
+      console.warn('[useProducts] Missing orgId or deviceId');
       setLoading(false);
       return;
     }
 
     try {
+      console.log('[useProducts] Creating ProductsAPI...');
       const api = new ProductsAPI(config);
+      console.log('[useProducts] Calling queryProducts...');
       const products = await api.queryProducts();
+      console.log('[useProducts] Got products:', {
+        count: products.length,
+        products: products,
+      });
       setProducts(products);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch products');
-      console.error('[useProducts] Fetch error:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Failed to fetch products';
+      setError(errorMsg);
+      console.error('[useProducts] Fetch error:', {
+        error: err,
+        message: errorMsg,
+        stack: err instanceof Error ? err.stack : undefined,
+      });
     } finally {
+      console.log('[useProducts] Setting loading=false');
       setLoading(false);
     }
   }, [config.orgId, config.deviceId, config.baseUrl, config.token]);
@@ -103,7 +129,7 @@ export function useProducts(config: UseProductsConfig): UseProductsResult {
     return () => clearInterval(intervalId);
   }, [config.autoRefresh, config.refreshInterval, fetchProducts]);
 
-  return {
+  const result = {
     products,
     loading,
     error,
@@ -115,4 +141,15 @@ export function useProducts(config: UseProductsConfig): UseProductsResult {
     hierarchyLoading,
     hierarchyError,
   };
+
+  console.log('[useProducts] Returning result:', {
+    productsCount: products.length,
+    loading,
+    error,
+    productsCollectionId: collections.products || null,
+    hierarchyLoading,
+    hierarchyError,
+  });
+
+  return result;
 }

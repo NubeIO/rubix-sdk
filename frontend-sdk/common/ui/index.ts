@@ -25,3 +25,6 @@ export { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSepa
 export { Textarea } from './textarea';
 
 export { Checkbox } from './checkbox';
+
+export { RefreshButton } from './refresh-button';
+export type { RefreshButtonProps } from './refresh-button';

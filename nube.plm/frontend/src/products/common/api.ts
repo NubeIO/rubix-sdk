@@ -46,6 +46,8 @@ export class ProductsAPI {
     console.log('[ProductsAPI] Query result:', nodes);
     console.log('[ProductsAPI] First product:', nodes[0]);
     console.log('[ProductsAPI] First product ID:', nodes[0]?.id);
+    console.log('[ProductsAPI] First product name:', nodes[0]?.name);
+    console.log('[ProductsAPI] First product settings:', nodes[0]?.settings);
     return nodes as Product[];
   }
 
@@ -76,15 +78,13 @@ export function formDataToProductInput(
   formData: ProductFormData,
   parentId: string
 ): CreateProductInput {
+  // Extract settings from the nested structure (from MultiSettingsDialog)
+  const settings = (formData as any).settings;
+
   return {
     name: formData.name,
     parentId,
-    settings: {
-      productCode: formData.productCode,
-      description: formData.description || undefined,
-      status: formData.status,
-      price: formData.price ? parseFloat(formData.price) : undefined,
-    },
+    settings: settings, // Pass through all settings from the schema
   };
 }
 

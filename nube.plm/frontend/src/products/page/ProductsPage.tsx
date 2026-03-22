@@ -9,7 +9,7 @@ import { useState } from 'react';
 // Use plugin's own Button to avoid SDK Slot issues
 import { Button } from '@/ui/button';
 // @ts-ignore - SDK types are resolved at build time
-import { Skeleton } from '@rubix-sdk/frontend/common/ui';
+import { Skeleton, RefreshButton } from '@rubix-sdk/frontend/common/ui';
 import '@rubix-sdk/frontend/globals.css';
 
 import { Product } from '../common/types';
@@ -35,6 +35,13 @@ function ProductsPage({
   baseUrl,
   token,
 }: ProductsPageProps) {
+  console.log('[ProductsPage] Render with props:', {
+    orgId,
+    deviceId,
+    baseUrl,
+    hasToken: !!token,
+  });
+
   // Products CRUD (includes PLM hierarchy initialization)
   const {
     products,
@@ -43,6 +50,7 @@ function ProductsPage({
     createProduct,
     updateProduct,
     deleteProduct,
+    refetch,
     productsCollectionId,
     hierarchyLoading,
     hierarchyError,
@@ -55,6 +63,16 @@ function ProductsPage({
     refreshInterval: 30000, // 30 seconds
   });
 
+  console.log('[ProductsPage] useProducts result:', {
+    productsCount: products.length,
+    products,
+    productsLoading,
+    productsError,
+    hierarchyLoading,
+    hierarchyError,
+    productsCollectionId,
+  });
+
   // Dialog state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -63,11 +81,28 @@ function ProductsPage({
     name: string;
     code?: string;
   } | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Computed
   const canCreate = !!(orgId && deviceId && baseUrl && productsCollectionId);
   const loading = hierarchyLoading || productsLoading;
   const error = hierarchyError || productsError;
+
+  // Refresh handler with minimum 500ms animation
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    const startTime = Date.now();
+
+    await refetch();
+
+    // Ensure minimum 500ms animation for visual feedback
+    const elapsed = Date.now() - startTime;
+    if (elapsed < 500) {
+      await new Promise(resolve => setTimeout(resolve, 500 - elapsed));
+    }
+
+    setIsRefreshing(false);
+  };
 
   // Full page display settings (show all columns)
   const displaySettings = {
@@ -107,41 +142,36 @@ function ProductsPage({
     );
   }
 
-  // Empty state
-  if (products.length === 0) {
-    return (
-      <div className="p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold">Products</h1>
-          </div>
-
-          <div className="border rounded-lg p-12 text-center">
-            <div className="max-w-md mx-auto">
-              <h3 className="text-lg font-semibold mb-2">No products yet</h3>
-              <p className="text-muted-foreground mb-6">
-                Get started by creating your first product
-              </p>
-              <Button onClick={() => setCreateDialogOpen(true)} disabled={!canCreate}>
-                <PlusIcon size={16} />
-                Create Product
-              </Button>
-            </div>
-          </div>
-
-          {/* TODO: Re-implement with multi-settings SDK
-          <CreateProductDialog
-            open={createDialogOpen}
-            onClose={() => setCreateDialogOpen(false)}
-            onSubmit={createProduct}
+  // Empty state - render UI only (dialogs rendered at bottom)
+  const emptyStateContent = products.length === 0 ? (
+    <div className="border rounded-lg p-12 text-center">
+      <div className="max-w-md mx-auto">
+        <h3 className="text-lg font-semibold mb-2">No products yet</h3>
+        <p className="text-muted-foreground mb-6">
+          Get started by creating your first product
+        </p>
+        <div className="flex gap-2 justify-center">
+          <RefreshButton
+            onRefresh={handleRefresh}
+            isRefreshing={isRefreshing}
           />
-          */}
+          <Button
+            onClick={() => {
+              console.log('[ProductsPage] Create button clicked (empty state)');
+              console.log('[ProductsPage] canCreate:', canCreate);
+              setCreateDialogOpen(true);
+            }}
+            disabled={!canCreate}
+          >
+            <PlusIcon size={16} />
+            Create Product
+          </Button>
         </div>
       </div>
-    );
-  }
+    </div>
+  ) : null;
 
-  // Main content
+  // Main layout - render dialogs regardless of empty/full state
   return (
     <div className="p-8 h-full overflow-auto">
       <div className="max-w-7xl mx-auto">
@@ -149,39 +179,68 @@ function ProductsPage({
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold">Products</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {products.length} product{products.length !== 1 ? 's' : ''}
-            </p>
+            {products.length > 0 && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {products.length} product{products.length !== 1 ? 's' : ''}
+              </p>
+            )}
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)} disabled={!canCreate}>
-            <PlusIcon size={16} />
-            Create Product
-          </Button>
+          {products.length > 0 && (
+            <div className="flex gap-2 items-center">
+              <RefreshButton
+                onRefresh={handleRefresh}
+                isRefreshing={isRefreshing}
+              />
+              <Button
+                onClick={() => {
+                  console.log('[ProductsPage] Create button clicked (main content)');
+                  console.log('[ProductsPage] canCreate:', canCreate);
+                  setCreateDialogOpen(true);
+                }}
+                disabled={!canCreate}
+              >
+                <PlusIcon size={16} />
+                Create Product
+              </Button>
+            </div>
+          )}
         </div>
 
-        {/* Table */}
-        <div className="border rounded-lg">
-          <ProductTable
-            products={products}
-            displaySettings={displaySettings}
-            onEdit={(product) => setEditingProduct(product)}
-            onDelete={(productId, productName, productCode) => {
-              console.log('[ProductsPage] Delete clicked - ID:', productId, 'Name:', productName);
-              setDeletingProduct({ id: productId, name: productName, code: productCode });
-            }}
-          />
-        </div>
+        {/* Content - empty state or table */}
+        {products.length === 0 ? (
+          emptyStateContent
+        ) : (
+          <div className="border rounded-lg">
+            <ProductTable
+              products={products}
+              displaySettings={displaySettings}
+              onEdit={(product) => setEditingProduct(product)}
+              onDelete={(productId, productName, productCode) => {
+                console.log('[ProductsPage] Delete clicked - ID:', productId, 'Name:', productName);
+                setDeletingProduct({ id: productId, name: productName, code: productCode });
+              }}
+            />
+          </div>
+        )}
 
-        {/* Create Product Dialog */}
+        {/* Dialogs - always rendered */}
         <CreateProductDialogSDK
           orgId={orgId}
           deviceId={deviceId}
           baseUrl={baseUrl}
           token={token}
           productsCollectionId={productsCollectionId || ''}
+          templateNodeId={products[0]?.id} // Use first product as template for schemas
           open={createDialogOpen}
-          onClose={() => setCreateDialogOpen(false)}
-          onSubmit={createProduct}
+          onClose={() => {
+            console.log('[ProductsPage] Create dialog closed');
+            setCreateDialogOpen(false);
+          }}
+          onSubmit={async (data) => {
+            console.log('[ProductsPage] Create product submitted:', data);
+            await createProduct(data);
+            setCreateDialogOpen(false);
+          }}
         />
 
         {/* Edit Product Dialog */}
@@ -198,14 +257,18 @@ function ProductsPage({
           />
         )}
 
+        {/* Delete Product Dialog */}
         {deletingProduct && (
           <DeleteProductDialog
             open={true}
-            productId={deletingProduct.id}
+            onOpenChange={(open) => {
+              if (!open) setDeletingProduct(null);
+            }}
             productName={deletingProduct.name}
-            productCode={deletingProduct.code}
-            onClose={() => setDeletingProduct(null)}
-            onConfirm={deleteProduct}
+            onConfirm={async () => {
+              await deleteProduct(deletingProduct.id);
+              setDeletingProduct(null);
+            }}
           />
         )}
       </div>
@@ -216,12 +279,14 @@ function ProductsPage({
 // Export mount/unmount API for Module Federation
 export default {
   mount: (container: HTMLElement, props?: ProductsPageProps) => {
+    console.log('[ProductsPage] mount() called with props:', props);
     const root = createRoot(container);
     root.render(<ProductsPage {...(props || {})} />);
     return root;
   },
 
   unmount: (root: Root) => {
+    console.log('[ProductsPage] unmount() called');
     root.unmount();
   },
 };

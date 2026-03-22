@@ -15,6 +15,7 @@ export interface CreateProductDialogProps {
   baseUrl?: string;
   token?: string;
   productsCollectionId: string; // Parent ID for new products
+  templateNodeId?: string; // Optional: Existing product node to fetch schemas from
   open: boolean;
   onClose: () => void;
   onSubmit: (input: {
@@ -30,14 +31,16 @@ export function CreateProductDialogSDK({
   baseUrl,
   token,
   productsCollectionId,
+  templateNodeId,
   open,
   onClose,
   onSubmit,
 }: CreateProductDialogProps) {
-  // Fetch schemas from backend
+  // Fetch schemas from backend (use templateNodeId if provided)
   const { schemas, loading, error } = useProductSchemas({
     orgId,
     deviceId,
+    nodeId: templateNodeId,
     baseUrl,
     token,
   });
