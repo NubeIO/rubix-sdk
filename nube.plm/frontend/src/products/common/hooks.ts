@@ -3,8 +3,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Product, ProductFormData } from './types';
-import { ProductsAPI, PLMClientConfig, formDataToProductInput, formDataToUpdateInput } from './api';
+import { Product } from './types';
+import { ProductsAPI, PLMClientConfig, CreateProductInput, UpdateProductInput } from './api';
 import { usePLMHierarchy } from '../../shared/hooks/use-plm-hierarchy';
 
 export interface UseProductsConfig extends PLMClientConfig {
@@ -16,8 +16,8 @@ export interface UseProductsResult {
   products: Product[];
   loading: boolean;
   error: string | null;
-  createProduct: (formData: ProductFormData) => Promise<void>;
-  updateProduct: (productId: string, formData: ProductFormData) => Promise<void>;
+  createProduct: (input: CreateProductInput) => Promise<void>;
+  updateProduct: (productId: string, input: UpdateProductInput) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
   refetch: () => Promise<void>;
   productsCollectionId: string | null;
@@ -84,23 +84,30 @@ export function useProducts(config: UseProductsConfig): UseProductsResult {
   }, [config.orgId, config.deviceId, config.baseUrl, config.token]);
 
   const createProduct = useCallback(
-    async (formData: ProductFormData) => {
+    async (input: CreateProductInput) => {
       if (!collections.products) {
         throw new Error('Products collection not found - restart plugin');
       }
 
+      const newProductCode = typeof input.settings?.productCode === 'string'
+        ? input.settings.productCode
+        : '';
+      if (newProductCode && products.some((product) => (
+        product.settings?.productCode === newProductCode
+      ))) {
+        throw new Error(`Product code '${input.settings?.productCode}' already exists`);
+      }
+
       const api = new ProductsAPI(config);
-      const input = formDataToProductInput(formData, collections.products);
       await api.createProduct(input);
       await fetchProducts();
     },
-    [collections.products, config.orgId, config.deviceId, config.baseUrl, config.token, fetchProducts]
+    [collections.products, config.orgId, config.deviceId, config.baseUrl, config.token, fetchProducts, products]
   );
 
   const updateProduct = useCallback(
-    async (productId: string, formData: ProductFormData) => {
+    async (productId: string, input: UpdateProductInput) => {
       const api = new ProductsAPI(config);
-      const input = formDataToUpdateInput(formData);
       await api.updateProduct(productId, input);
       await fetchProducts();
     },

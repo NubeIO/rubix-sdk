@@ -3,7 +3,7 @@
  */
 
 import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
-import { Product, ProductFormData } from './types';
+import { Product, ProductFormData, ProductSettings } from './types';
 
 export interface PLMClientConfig {
   orgId: string;
@@ -15,22 +15,12 @@ export interface PLMClientConfig {
 export interface CreateProductInput {
   name: string;
   parentId: string;
-  settings: {
-    productCode: string;
-    description?: string;
-    status: string;
-    price?: number;
-  };
+  settings: ProductSettings;
 }
 
 export interface UpdateProductInput {
   name: string;
-  settings: {
-    productCode: string;
-    description?: string;
-    status: string;
-    price?: number;
-  };
+  settings: ProductSettings;
 }
 
 export class ProductsAPI {
@@ -79,7 +69,7 @@ export function formDataToProductInput(
   parentId: string
 ): CreateProductInput {
   // Extract settings from the nested structure (from MultiSettingsDialog)
-  const settings = (formData as any).settings;
+  const settings = (formData as unknown as { settings?: ProductSettings }).settings || {};
 
   return {
     name: formData.name,

@@ -40,6 +40,7 @@ export interface UseProductSchemasOptions {
   nodeId?: string; // Optional - can use any product node ID to fetch schemas (all products share same schemas)
   baseUrl?: string;
   token?: string;
+  enabled?: boolean;
 }
 
 /**
@@ -48,7 +49,7 @@ export interface UseProductSchemasOptions {
  * Uses the multi-settings API to fetch both hardware and software schemas
  */
 export function useProductSchemas(options: UseProductSchemasOptions): UseProductSchemasResult {
-  const { orgId, deviceId, nodeId, baseUrl, token } = options;
+  const { orgId, deviceId, nodeId, baseUrl, token, enabled = true } = options;
 
   const [schemas, setSchemas] = useState<SchemaInfoWithSchema[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,11 +108,7 @@ export function useProductSchemas(options: UseProductSchemasOptions): UseProduct
       const targetNodeId = nodeId;
 
       // Step 1: Get list of available schemas
-      const response = await client.request<{data: SchemasListResponse, meta?: any}>(
-        `/nodes/${targetNodeId}/settings-schema/list`
-      );
-
-      const listResponse = response.data;
+      const listResponse = await client.listNodeSchemas(targetNodeId);
       console.log('[useProductSchemas] Schema list:', listResponse);
 
       if (!listResponse.schemas || listResponse.schemas.length === 0) {
@@ -123,12 +120,11 @@ export function useProductSchemas(options: UseProductSchemasOptions): UseProduct
 
       for (const schemaInfo of listResponse.schemas) {
         try {
-          const schemaResponse = await client.request<{data: {schema: any}, meta?: any}>(
-            `/nodes/${targetNodeId}/settings-schema/${schemaInfo.name}`
-          );
+          const schemaData = await client.getNodeSchema(targetNodeId, schemaInfo.name);
 
-          // Unwrap the response - API returns {data: {schema: {...}}, meta: {...}}
-          const schemaData = schemaResponse.data.schema;
+          if (!schemaData) {
+            continue;
+          }
 
           schemasWithData.push({
             name: schemaInfo.name,
@@ -159,10 +155,10 @@ export function useProductSchemas(options: UseProductSchemasOptions): UseProduct
 
   // Auto-fetch on mount and when dependencies change
   useEffect(() => {
-    if (orgId && deviceId) {
+    if (enabled && orgId && deviceId) {
       fetchSchemas();
     }
-  }, [orgId, deviceId, nodeId, baseUrl, token]);
+  }, [enabled, orgId, deviceId, nodeId, baseUrl, token]);
 
   return {
     schemas,

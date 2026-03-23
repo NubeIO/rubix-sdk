@@ -54,10 +54,17 @@ func main() {
 	defer nc.Close()
 	logger.Info().Msg("connected to NATS")
 
+	// Shared bootstrap client for hierarchy setup and hook lookups
+	sb := natssubject.NewBuilder(*prefix, *orgID, *deviceID, "*")
+	bootstrapClient := &bootstrap.Client{
+		NC:      nc,
+		Subject: sb,
+	}
+
 	// Register node CRUD hooks via NATS FIRST (before bootstrap)
 	// This is required because bootstrap creates nodes, which triggers hooks
 	logger.Info().Msg("registering node hooks...")
-	plmHooks := hooks.NewPLMNodeHooks()
+	plmHooks := hooks.NewPLMNodeHooks(bootstrapClient)
 	hookSubjects := nodehooks.NewSubjectBuilder(*prefix, *orgID, *deviceID, *vendor, *pluginName)
 	hookHandler := nodehooks.NewNATSHandler(plmHooks, nc, hookSubjects)
 	if err := hookHandler.RegisterAll(); err != nil {
@@ -105,12 +112,6 @@ func main() {
 	// Bootstrap PLM hierarchy (service + collections)
 	// Use "*" for flowId because nodes endpoints don't include flowId in their URL path
 	// RAS routing expects: rubix.v1.{scope}.{orgId}.{deviceId}.*.nodes.create
-	sb := natssubject.NewBuilder(*prefix, *orgID, *deviceID, "*")
-	bootstrapClient := &bootstrap.Client{
-		NC:      nc,
-		Subject: sb,
-	}
-
 	// Wait for rubix core to be ready, then bootstrap hierarchy
 	logger.Info().Msg("waiting for rubix core to be ready...")
 

@@ -36,6 +36,22 @@
 
 import { RASClient, fetchAdapter } from '../ras/client';
 import type { Node } from '../ras/types';
+import {
+  createNode as createNodeHelper,
+  deleteNode as deleteNodeHelper,
+  getNode as getNodeHelper,
+  listNodes as listNodesHelper,
+  updateNode as updateNodeHelper,
+} from './node';
+import { queryNodes as queryNodesHelper } from './query';
+import {
+  getNodeSchema as getNodeSchemaHelper,
+  getNodeTypeSchema as getNodeTypeSchemaHelper,
+  listNodeSchemas as listNodeSchemasHelper,
+  listNodeTypeSchemas as listNodeTypeSchemasHelper,
+  type NodeSchemasListResponse,
+} from './schema';
+import { getPalletDetails as getPalletDetailsHelper } from './pallet';
 
 export interface PluginClientConfig {
   orgId: string;
@@ -143,18 +159,7 @@ export class PluginClient {
    */
   async queryNodes(options: QueryNodesOptions = {}): Promise<Node[]> {
     try {
-      const result = await this.client.query.create({
-        orgId: this.config.orgId,
-        deviceId: this.config.deviceId,
-        body: {
-          filter: options.filter,
-          limit: options.limit,
-          offset: options.offset,
-          ports: options.ports,
-          runtime: options.runtime,
-        },
-      });
-      return (result?.data || []) as Node[];
+      return await queryNodesHelper(this, options);
     } catch (err: any) {
       throw new PluginClientError(
         err?.details?.message || err?.message || 'Failed to query nodes',
@@ -175,12 +180,7 @@ export class PluginClient {
    */
   async getNode(nodeId: string): Promise<Node> {
     try {
-      const result = await this.client.nodes.get({
-        orgId: this.config.orgId,
-        deviceId: this.config.deviceId,
-        id: nodeId,
-      });
-      return result.data as Node;
+      return await getNodeHelper(this, nodeId);
     } catch (err: any) {
       throw new PluginClientError(
         err?.details?.message || err?.message || 'Failed to get node',
@@ -208,25 +208,8 @@ export class PluginClient {
    * ```
    */
   async createNode(input: CreateNodeInput): Promise<Node> {
-    console.log('[PluginClient] createNode called:', { type: input.type, name: input.name });
     try {
-      const result = await this.client.nodes.create({
-        orgId: this.config.orgId,
-        deviceId: this.config.deviceId,
-        body: {
-          type: input.type,
-          name: input.name,
-          parentId: input.parentId,
-          settings: input.settings,
-          data: input.data,
-          ui: input.ui,
-          position: input.position,
-          refs: input.refs,
-        },
-      });
-      console.log('[PluginClient] createNode response:', result);
-      console.log('[PluginClient] Unwrapped node:', result.data);
-      return result.data as Node;
+      return await createNodeHelper(this, input);
     } catch (err: any) {
       console.error('[PluginClient] createNode failed:', err);
       throw new PluginClientError(
@@ -250,20 +233,7 @@ export class PluginClient {
    */
   async updateNode(nodeId: string, input: UpdateNodeInput): Promise<Node> {
     try {
-      const result = await this.client.nodes.update({
-        orgId: this.config.orgId,
-        deviceId: this.config.deviceId,
-        id: nodeId,
-        body: {
-          name: input.name,
-          parentId: input.parentId,
-          settings: input.settings,
-          data: input.data,
-          ui: input.ui,
-          position: input.position,
-        },
-      });
-      return result.data as Node;
+      return await updateNodeHelper(this, nodeId, input);
     } catch (err: any) {
       throw new PluginClientError(
         err?.details?.message || err?.message || 'Failed to update node',
@@ -282,19 +252,8 @@ export class PluginClient {
    * ```
    */
   async deleteNode(nodeId: string): Promise<void> {
-    console.log('[PluginClient] deleteNode called:', {
-      nodeId,
-      orgId: this.config.orgId,
-      deviceId: this.config.deviceId,
-      url: `/orgs/${this.config.orgId}/devices/${this.config.deviceId}/nodes/${nodeId}`
-    });
     try {
-      await this.client.nodes.delete({
-        orgId: this.config.orgId,
-        deviceId: this.config.deviceId,
-        id: nodeId,
-      });
-      console.log('[PluginClient] Delete successful');
+      await deleteNodeHelper(this, nodeId);
     } catch (err: any) {
       console.error('[PluginClient] Delete failed:', err);
       throw new PluginClientError(
@@ -315,14 +274,34 @@ export class PluginClient {
    */
   async listNodes(): Promise<Node[]> {
     try {
-      const result = await this.client.nodes.list({
-        orgId: this.config.orgId,
-        deviceId: this.config.deviceId,
-      });
-      return (result?.data || []) as Node[];
+      return await listNodesHelper(this);
     } catch (err: any) {
       throw new PluginClientError(
         err?.details?.message || err?.message || 'Failed to list nodes',
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  async listNodeSchemas(nodeId: string): Promise<NodeSchemasListResponse> {
+    try {
+      return await listNodeSchemasHelper(this, nodeId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to list schemas for node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  async getNodeSchema(nodeId: string, schemaName: string): Promise<Record<string, unknown> | null> {
+    try {
+      return await getNodeSchemaHelper(this, nodeId, schemaName);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to get schema '${schemaName}' for node ${nodeId}`,
         err?.status,
         err?.details
       );
@@ -342,20 +321,9 @@ export class PluginClient {
    * console.log(schemas.supportsMultiple); // true if multiple schemas available
    * ```
    */
-  async listNodeTypeSchemas(nodeType: string): Promise<{
-    schemas: Array<{
-      name: string;
-      displayName: string;
-      description: string;
-      isDefault: boolean;
-    }>;
-    supportsMultiple: boolean;
-  }> {
+  async listNodeTypeSchemas(nodeType: string): Promise<NodeSchemasListResponse> {
     try {
-      const response = await this.request<{ data: any }>(
-        `/node-types/${nodeType}/settings-schemas/list`
-      );
-      return response.data;
+      return await listNodeTypeSchemasHelper(this, nodeType);
     } catch (err: any) {
       throw new PluginClientError(
         err?.details?.message || err?.message || `Failed to list schemas for ${nodeType}`,
@@ -378,12 +346,7 @@ export class PluginClient {
    */
   async getNodeTypeSchema(nodeType: string, schemaName?: string): Promise<Record<string, any> | null> {
     try {
-      const endpoint = schemaName
-        ? `/node-types/${nodeType}/settings-schemas/${schemaName}`
-        : `/node-types/${nodeType}/settings-schemas/default`;
-
-      const response = await this.request<{ data: { nodeType: string; schema: any } }>(endpoint);
-      return response.data.schema || null;
+      return await getNodeTypeSchemaHelper(this, nodeType, schemaName);
     } catch (err: any) {
       throw new PluginClientError(
         err?.details?.message || err?.message || `Failed to get schema for ${nodeType}`,
@@ -408,10 +371,7 @@ export class PluginClient {
    */
   async getPalletDetails(nodeType: string): Promise<PalletDetailsResponse> {
     try {
-      const response = await this.request<{ data: PalletDetailsResponse }>(
-        `/pallet/${nodeType}`
-      );
-      return response.data;
+      return await getPalletDetailsHelper(this, nodeType);
     } catch (err: any) {
       throw new PluginClientError(
         err?.details?.message || err?.message || `Failed to get pallet details for ${nodeType}`,
@@ -528,3 +488,8 @@ export function usePluginClient(config: PluginClientConfig): PluginClient {
   // Plugins can optimize with useMemo if needed
   return new PluginClient(config);
 }
+
+export * from './schema';
+export * from './pallet';
+export * from './query';
+export * from './node';

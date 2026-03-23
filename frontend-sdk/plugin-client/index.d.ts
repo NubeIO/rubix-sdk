@@ -35,6 +35,18 @@
  */
 import { RASClient } from '../ras/client';
 import type { Node } from '../ras/types';
+export interface SchemaInfo {
+    name: string;
+    displayName: string;
+    description: string;
+    isDefault: boolean;
+}
+export interface NodeSchemasListResponse {
+    schemas: SchemaInfo[];
+    supportsMultiple: boolean;
+}
+export declare function getPalletDetails(client: PluginClient, nodeType: string): Promise<PalletDetailsResponse>;
+export declare function queryNodes(client: PluginClient, options?: QueryNodesOptions): Promise<Node[]>;
 export interface PluginClientConfig {
     orgId: string;
     deviceId: string;
@@ -79,6 +91,11 @@ export interface UpdateNodeInput {
         y: number;
     };
 }
+export declare function getNode(client: PluginClient, nodeId: string): Promise<Node>;
+export declare function createNode(client: PluginClient, input: CreateNodeInput): Promise<Node>;
+export declare function updateNode(client: PluginClient, nodeId: string, input: UpdateNodeInput): Promise<Node>;
+export declare function deleteNode(client: PluginClient, nodeId: string): Promise<void>;
+export declare function listNodes(client: PluginClient): Promise<Node[]>;
 export declare class PluginClientError extends Error {
     status?: number | undefined;
     details?: unknown | undefined;
@@ -165,6 +182,8 @@ export declare class PluginClient {
      * ```
      */
     listNodes(): Promise<Node[]>;
+    listNodeSchemas(nodeId: string): Promise<NodeSchemasListResponse>;
+    getNodeSchema(nodeId: string, schemaName: string): Promise<Record<string, unknown> | null>;
     /**
      * Get the underlying RAS client for advanced usage
      *
@@ -209,3 +228,7 @@ export declare function createPluginClient(config: PluginClientConfig): PluginCl
  * ```
  */
 export declare function usePluginClient(config: PluginClientConfig): PluginClient;
+export declare function listNodeSchemas(client: PluginClient, nodeId: string): Promise<NodeSchemasListResponse>;
+export declare function getNodeSchema(client: PluginClient, nodeId: string, schemaName: string): Promise<Record<string, unknown> | null>;
+export declare function listNodeTypeSchemas(client: PluginClient, nodeType: string): Promise<NodeSchemasListResponse>;
+export declare function getNodeTypeSchema(client: PluginClient, nodeType: string, schemaName?: string): Promise<Record<string, unknown> | null>;

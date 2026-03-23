@@ -2,18 +2,22 @@
  * Product domain types
  */
 
-import type { Node } from '@rubix-sdk/frontend/ras';
-
-export interface Product extends Node {
-  settings?: ProductSettings;
-}
+import type { Node } from '../../../../../frontend-sdk/ras/types';
 
 export interface ProductSettings {
   productCode?: string;
   description?: string;
+  productType?: string;
   status?: ProductStatus;
   price?: number;
+  [key: string]: unknown;
 }
+
+export type Product = Node & {
+  id: string;
+  name: string;
+  settings?: ProductSettings;
+};
 
 export type ProductStatus = 'Design' | 'Prototype' | 'Production' | 'Discontinued';
 
@@ -28,7 +32,7 @@ export interface ProductFormData {
   name: string;
   productCode: string;
   description: string;
-  status: string;
+  status: ProductStatus;
   price: string;
 }
 

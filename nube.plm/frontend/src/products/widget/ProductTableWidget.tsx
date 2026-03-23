@@ -49,7 +49,6 @@ export default function ProductTableWidget({
   baseUrl,
   token,
   settings,
-  nodeId,
 }: ProductTableWidgetProps) {
   // Parse settings with defaults
   const showCode = settings?.display?.showCode ?? true;
@@ -163,20 +162,28 @@ export default function ProductTableWidget({
         products={products}
         displaySettings={displaySettings}
         onEdit={(product) => setEditingProduct(product)}
-        onDelete={(product) => setDeletingProduct(product)}
+        onDelete={(productId, productName, productCode) =>
+          setDeletingProduct({
+            id: productId,
+            name: productName,
+            settings: productCode ? { productCode } : {},
+          })
+        }
       />
 
       {/* Create Product Dialog */}
-      <CreateProductDialogSDK
-        orgId={orgId || ''}
-        deviceId={deviceId || ''}
-        baseUrl={baseUrl}
-        token={token}
-        productsCollectionId={productsCollectionId || ''}
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onSubmit={createProduct}
-      />
+      {createDialogOpen && (
+        <CreateProductDialogSDK
+          orgId={orgId || ''}
+          deviceId={deviceId || ''}
+          baseUrl={baseUrl}
+          token={token}
+          productsCollectionId={productsCollectionId || ''}
+          open={createDialogOpen}
+          onClose={() => setCreateDialogOpen(false)}
+          onSubmit={createProduct}
+        />
+      )}
 
       {/* Edit Product Dialog */}
       {editingProduct && (
@@ -195,11 +202,16 @@ export default function ProductTableWidget({
       {deletingProduct && (
         <DeleteProductDialog
           open={true}
-          productId={deletingProduct.id}
           productName={deletingProduct.name}
-          productCode={deletingProduct.settings?.productCode}
-          onClose={() => setDeletingProduct(null)}
-          onConfirm={deleteProduct}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeletingProduct(null);
+            }
+          }}
+          onConfirm={async () => {
+            await deleteProduct(deletingProduct.id);
+            setDeletingProduct(null);
+          }}
         />
       )}
     </div>

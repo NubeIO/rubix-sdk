@@ -9,6 +9,7 @@ import { MultiSettingsDialog } from '@rubix-sdk/frontend/components/settings';
 
 import { useProductSchemas } from '../hooks/use-product-schemas';
 import { Product } from '../common/types';
+import type { UpdateProductInput } from '../common/api';
 
 export interface EditProductDialogProps {
   orgId: string;
@@ -18,7 +19,7 @@ export interface EditProductDialogProps {
   product: Product; // Product being edited
   open: boolean;
   onClose: () => void;
-  onSubmit: (productId: string, input: { name: string; settings: Record<string, any> }) => Promise<void>;
+  onSubmit: (productId: string, input: UpdateProductInput) => Promise<void>;
 }
 
 export function EditProductDialogSDK({
@@ -38,6 +39,7 @@ export function EditProductDialogSDK({
     nodeId: product.id, // Use existing product ID
     baseUrl,
     token,
+    enabled: open,
   });
 
   // Debug logging

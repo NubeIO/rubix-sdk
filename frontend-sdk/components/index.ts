@@ -2,6 +2,18 @@
  * Reusable components for Rubix and plugins (RJSF-powered)
  */
 
+// Right-click / context menu components
+export {
+  RightClickMenu,
+  RightClickMenuItem,
+  RightClickMenuSeparator,
+} from './context-menu';
+export type {
+  RightClickMenuProps,
+  RightClickMenuItemProps,
+  RightClickMenuSeparatorProps,
+} from './context-menu';
+
 // Delete components
 export { DeleteDialog } from './delete';
 export type { DeleteDialogProps } from './delete';

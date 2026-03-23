@@ -9,6 +9,8 @@ import { MultiSettingsDialog } from '@rubix-sdk/frontend/components/settings';
 
 import { useProductSchemas } from '../hooks/use-product-schemas';
 
+import type { CreateProductInput } from '../common/api';
+
 export interface CreateProductDialogProps {
   orgId: string;
   deviceId: string;
@@ -18,11 +20,7 @@ export interface CreateProductDialogProps {
   templateNodeId?: string; // Optional: Existing product node to fetch schemas from
   open: boolean;
   onClose: () => void;
-  onSubmit: (input: {
-    name: string;
-    parentId: string;
-    settings: Record<string, any>;
-  }) => Promise<void>;
+  onSubmit: (input: CreateProductInput) => Promise<void>;
 }
 
 export function CreateProductDialogSDK({
@@ -43,6 +41,7 @@ export function CreateProductDialogSDK({
     nodeId: templateNodeId,
     baseUrl,
     token,
+    enabled: open,
   });
 
   // Debug logging

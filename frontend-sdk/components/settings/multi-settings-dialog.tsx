@@ -113,6 +113,7 @@ export function MultiSettingsDialog({
   );
   const [selectedSchemaName, setSelectedSchemaName] = React.useState(initialSchemaName);
   const [formData, setFormData] = React.useState<Record<string, any>>(currentSettings);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   // Get current schema
   const selectedSchema = schemas.find((s) => s.name === selectedSchemaName);
@@ -135,23 +136,26 @@ export function MultiSettingsDialog({
   }, [selectedSchemaName, currentSettings]);
 
   const handleSchemaSelect = (schemaName: string) => {
+    setSubmitError(null);
     setSelectedSchemaName(schemaName);
     setViewStep('configuring');
   };
 
   const handleFormSubmit = async (data: { formData?: Record<string, any> }) => {
     const settings = data.formData || {};
+    setSubmitError(null);
 
     try {
       await onSubmit(settings, selectedSchemaName);
       onOpenChange(false);
     } catch (error) {
       console.error('[MultiSettingsDialog] Submit failed:', error);
-      // Parent should handle errors via toast
+      setSubmitError(error instanceof Error ? error.message : 'Failed to save settings');
     }
   };
 
   const handleCancel = () => {
+    setSubmitError(null);
     if (onCancel) {
       onCancel();
     }
@@ -162,6 +166,12 @@ export function MultiSettingsDialog({
     console.warn('[MultiSettingsDialog] No schema found for:', selectedSchemaName);
     return null;
   }
+
+  React.useEffect(() => {
+    if (!open) {
+      setSubmitError(null);
+    }
+  }, [open]);
 
   // Step 1: Show schema selection cards (like frontend node settings)
   if (viewStep === 'selecting' && schemas.length > 1) {
@@ -221,6 +231,12 @@ export function MultiSettingsDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {submitError && (
+            <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {submitError}
+            </div>
+          )}
+
           {/* Schema indicator with Change Type button */}
           {schemas.length > 1 && (
             <div className="flex items-center justify-between gap-3 pb-3 border-b">
