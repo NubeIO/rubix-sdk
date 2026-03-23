@@ -1,58 +1,62 @@
 /**
- * Rubix Plugin UI SDK
+ * Rubix Frontend SDK
  *
- * Common UI components and utilities for building Rubix plugins.
- * Import this package to get consistent styling and behavior across all plugins.
+ * Shared UI components, utilities, and settings SDK for Rubix and plugins.
  *
- * @example
+ * @example Basic Usage (Common UI)
  * ```tsx
- * import { Button, Card, Input, createPluginClient } from '@rubix/plugin-ui';
- * import type { PluginWidgetProps } from '@rubix/plugin-ui/types';
- * import '@rubix/plugin-ui/styles.css';
+ * import { Button, Card, Input } from '@rubix-sdk/frontend/common/ui';
+ * import { cn } from '@rubix-sdk/frontend/common/utils';
+ * import '@rubix-sdk/frontend/globals.css';
  *
- * export default function MyWidget(props: PluginWidgetProps) {
- *   const client = createPluginClient(props);
- *
+ * export default function MyComponent() {
  *   return (
  *     <Card>
- *       <CardHeader>
- *         <CardTitle>My Widget</CardTitle>
- *       </CardHeader>
  *       <CardContent>
- *         <Button onClick={handleClick}>Click me</Button>
+ *         <Button>Click me</Button>
  *       </CardContent>
  *     </Card>
  *   );
  * }
  * ```
+ *
+ * @example Settings SDK (Plugins)
+ * ```tsx
+ * import { SchemaSelector, useMultiSchema } from '@rubix-sdk/frontend/settings';
+ * import { Dialog, Button } from '@rubix-sdk/frontend/common/ui';
+ *
+ * export function ProductSettings() {
+ *   const { schemas, selectedSchema, selectSchema } = useMultiSchema({
+ *     schemas: [
+ *       { name: 'hardware', displayName: 'Hardware Product', isDefault: true },
+ *       { name: 'software', displayName: 'Software Product' }
+ *     ]
+ *   });
+ *
+ *   return (
+ *     <Dialog>
+ *       <SchemaSelector schemas={schemas} onSelect={selectSchema} />
+ *       <Button>Save</Button>
+ *     </Dialog>
+ *   );
+ * }
+ * ```
  */
 
-// Components
-export { Button } from './components/button';
-export type { ButtonProps } from './components/button';
+// Re-export everything from submodules
+export * from './common';
+export * from './components';
+// Note: Settings components now exported from ./components/settings
+// export * from './settings';  // Old settings hooks - kept for backward compat
 
-export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './components/card';
-export type { CardProps, CardHeaderProps, CardTitleProps, CardDescriptionProps, CardContentProps, CardFooterProps } from './components/card';
+// Plugin Client
+export { createPluginClient } from './plugin-client';
 
-export { Input } from './components/input';
-export type { InputProps } from './components/input';
+// RAS Client
+export { RASClient, fetchAdapter } from './ras/client';
+export type { Node } from './ras/types';
 
-export { Label } from './components/label';
-export type { LabelProps } from './components/label';
-
-export { Badge } from './components/badge';
-export type { BadgeProps } from './components/badge';
-
-export { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './components/dialog';
-export type { DialogProps, DialogContentProps, DialogHeaderProps, DialogTitleProps, DialogDescriptionProps, DialogFooterProps } from './components/dialog';
-
-export { Skeleton } from './components/skeleton';
-export type { SkeletonProps } from './components/skeleton';
-
-// Plugin Client - exported separately via './plugin-client' entry
-// Use: import { createPluginClient } from '@rubix/plugin-ui/plugin-client';
-
-// Types - defined inline
+// Common types (for backward compatibility)
 export type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning';
@@ -99,10 +103,3 @@ export interface QueryResult {
   nodes: RubixNode[];
   total: number;
 }
-
-// RAS Client (for advanced usage)
-export { RASClient, fetchAdapter } from './ras/client';
-export type { Node } from './ras/types';
-
-// Utilities
-export { cn } from './lib/utils';

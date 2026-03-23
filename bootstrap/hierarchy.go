@@ -64,8 +64,8 @@ func EnsureHierarchy(ctx context.Context, client *Client, spec HierarchySpec) (*
 	}, nil
 }
 
-// queryNodes sends NATS query request and returns nodes
-func queryNodes(ctx context.Context, client *Client, filter string) ([]NodeResponse, error) {
+// QueryNodes sends a NATS query request and returns nodes.
+func QueryNodes(ctx context.Context, client *Client, filter string) ([]NodeResponse, error) {
 	subject := client.Subject.Build("query", "create")
 
 	// Extract org and device IDs from subject builder
@@ -113,6 +113,11 @@ func queryNodes(ctx context.Context, client *Client, filter string) ([]NodeRespo
 	}
 
 	return natsResponse.Data.Data, nil
+}
+
+// queryNodes is kept for existing bootstrap internals.
+func queryNodes(ctx context.Context, client *Client, filter string) ([]NodeResponse, error) {
+	return QueryNodes(ctx, client, filter)
 }
 
 // createNode sends NATS create request and returns node ID

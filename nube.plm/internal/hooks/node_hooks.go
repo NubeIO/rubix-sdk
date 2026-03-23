@@ -3,7 +3,9 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/NubeIO/rubix-sdk/bootstrap"
 	"github.com/NubeIO/rubix-sdk/nodehooks"
 	"github.com/rs/zerolog/log"
 )
@@ -12,11 +14,12 @@ import (
 // This controls CRUD operations on PLM node types (plm.product, plm.project, plm.task)
 type PLMNodeHooks struct {
 	nodehooks.NoOpHooks // Embed default implementations
+	client *bootstrap.Client
 }
 
 // NewPLMNodeHooks creates a new PLM node hooks handler
-func NewPLMNodeHooks() *PLMNodeHooks {
-	return &PLMNodeHooks{}
+func NewPLMNodeHooks(client *bootstrap.Client) *PLMNodeHooks {
+	return &PLMNodeHooks{client: client}
 }
 
 // BeforeCreate validates a node before creation
@@ -136,9 +139,16 @@ func (h *PLMNodeHooks) validateProductCreate(ctx context.Context, req *nodehooks
 		}
 	}
 
-	// TODO: Check uniqueness of productCode in database
-	// For now, we don't have DB access in this example
-	// exists := h.db.ProductCodeExists(ctx, productCode)
+	duplicateExists, err := h.productCodeExists(ctx, productCode)
+	if err != nil {
+		return nil, err
+	}
+	if duplicateExists {
+		return &nodehooks.BeforeCreateResponse{
+			Allow:  false,
+			Reason: fmt.Sprintf("productCode '%s' already exists", productCode),
+		}, nil
+	}
 
 	warnings := []string{}
 	if status == "" {
@@ -265,4 +275,26 @@ func isValidProductStatus(status string) bool {
 		"Discontinued":  true,
 	}
 	return validStatuses[status]
+}
+
+func (h *PLMNodeHooks) productCodeExists(ctx context.Context, productCode string) (bool, error) {
+	if h.client == nil {
+		return false, nil
+	}
+
+	if productCode == "" {
+		return false, nil
+	}
+
+	filter := fmt.Sprintf(`type is 'plm.product' and settings.productCode is "%s"`, escapeHaystackString(productCode))
+	nodes, err := bootstrap.QueryNodes(ctx, h.client, filter)
+	if err != nil {
+		return false, fmt.Errorf("query existing products by productCode: %w", err)
+	}
+
+	return len(nodes) > 0, nil
+}
+
+func escapeHaystackString(value string) string {
+	return strings.ReplaceAll(value, `"`, `\"`)
 }

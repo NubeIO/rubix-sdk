@@ -9,11 +9,12 @@ package pluginnode
 type RPCMethod string
 
 const (
-	MethodInit      RPCMethod = "init"
-	MethodProcess   RPCMethod = "process"
-	MethodClose     RPCMethod = "close"
-	MethodPing      RPCMethod = "ping"
-	MethodGetSchema RPCMethod = "getSchema" // Fetch settings schema without initializing node
+	MethodInit        RPCMethod = "init"
+	MethodProcess     RPCMethod = "process"
+	MethodClose       RPCMethod = "close"
+	MethodPing        RPCMethod = "ping"
+	MethodGetSchema   RPCMethod = "getSchema"   // Fetch settings schema without initializing node
+	MethodListSchemas RPCMethod = "listSchemas" // List available settings schemas
 )
 
 // RPCRequest is the envelope rubix sends via NATS request/reply.

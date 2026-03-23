@@ -7,14 +7,18 @@
 
 import { useState } from 'react';
 // @ts-ignore - SDK types are resolved at build time
-import { Button, Skeleton } from '@rubix/sdk';
-import '@rubix/sdk/globals.css';
+import { Button, Skeleton } from '@rubix-sdk/frontend/common/ui';
+import '@rubix-sdk/frontend/globals.css';
 
 import { Product } from '../common/types';
 import { useProducts } from '../common/hooks';
 import { PlusIcon } from '../../shared/components/icons';
 import { ProductTable } from '../components';
-import { CreateProductDialog, EditProductDialog, DeleteProductDialog } from '../dialogs';
+import {
+  DeleteProductDialogSDK as DeleteProductDialog,
+  CreateProductDialogSDK,
+  EditProductDialogSDK,
+} from '../dialogs';
 
 export interface WidgetSettings {
   display?: {
@@ -45,7 +49,6 @@ export default function ProductTableWidget({
   baseUrl,
   token,
   settings,
-  nodeId,
 }: ProductTableWidgetProps) {
   // Parse settings with defaults
   const showCode = settings?.display?.showCode ?? true;
@@ -129,11 +132,13 @@ export default function ProductTableWidget({
           </Button>
         </div>
 
+        {/* TODO: Re-implement with multi-settings SDK
         <CreateProductDialog
           open={createDialogOpen}
           onClose={() => setCreateDialogOpen(false)}
           onSubmit={createProduct}
         />
+        */}
       </div>
     );
   }
@@ -157,20 +162,38 @@ export default function ProductTableWidget({
         products={products}
         displaySettings={displaySettings}
         onEdit={(product) => setEditingProduct(product)}
-        onDelete={(product) => setDeletingProduct(product)}
+        onDelete={(productId, productName, productCode) =>
+          setDeletingProduct({
+            id: productId,
+            name: productName,
+            settings: productCode ? { productCode } : {},
+          })
+        }
       />
 
-      {/* Dialogs */}
-      <CreateProductDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onSubmit={createProduct}
-      />
+      {/* Create Product Dialog */}
+      {createDialogOpen && (
+        <CreateProductDialogSDK
+          orgId={orgId || ''}
+          deviceId={deviceId || ''}
+          baseUrl={baseUrl}
+          token={token}
+          productsCollectionId={productsCollectionId || ''}
+          open={createDialogOpen}
+          onClose={() => setCreateDialogOpen(false)}
+          onSubmit={createProduct}
+        />
+      )}
 
+      {/* Edit Product Dialog */}
       {editingProduct && (
-        <EditProductDialog
-          open={true}
+        <EditProductDialogSDK
+          orgId={orgId || ''}
+          deviceId={deviceId || ''}
+          baseUrl={baseUrl}
+          token={token}
           product={editingProduct}
+          open={true}
           onClose={() => setEditingProduct(null)}
           onSubmit={updateProduct}
         />
@@ -179,9 +202,16 @@ export default function ProductTableWidget({
       {deletingProduct && (
         <DeleteProductDialog
           open={true}
-          product={deletingProduct}
-          onClose={() => setDeletingProduct(null)}
-          onConfirm={deleteProduct}
+          productName={deletingProduct.name}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeletingProduct(null);
+            }
+          }}
+          onConfirm={async () => {
+            await deleteProduct(deletingProduct.id);
+            setDeletingProduct(null);
+          }}
         />
       )}
     </div>

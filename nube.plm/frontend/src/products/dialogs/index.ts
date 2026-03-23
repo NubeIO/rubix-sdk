@@ -1,7 +1,7 @@
 /**
- * Products dialogs exports
+ * Products dialogs exports - SDK components
  */
 
-export * from './create-product-dialog';
-export * from './edit-product-dialog';
-export * from './delete-product-dialog';
+export { DeleteProductDialogSDK } from './delete-product-dialog-sdk';
+export { CreateProductDialogSDK } from './create-product-dialog-sdk';
+export { EditProductDialogSDK } from './edit-product-dialog-sdk';

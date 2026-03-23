@@ -2,8 +2,8 @@
  * Product API methods
  */
 
-import { createPluginClient } from '@rubix/sdk/plugin-client';
-import { Product, ProductFormData } from './types';
+import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
+import { Product, ProductFormData, ProductSettings } from './types';
 
 export interface PLMClientConfig {
   orgId: string;
@@ -15,22 +15,12 @@ export interface PLMClientConfig {
 export interface CreateProductInput {
   name: string;
   parentId: string;
-  settings: {
-    productCode: string;
-    description?: string;
-    status: string;
-    price?: number;
-  };
+  settings: ProductSettings;
 }
 
 export interface UpdateProductInput {
   name: string;
-  settings: {
-    productCode: string;
-    description?: string;
-    status: string;
-    price?: number;
-  };
+  settings: ProductSettings;
 }
 
 export class ProductsAPI {
@@ -43,6 +33,11 @@ export class ProductsAPI {
   async queryProducts(): Promise<Product[]> {
     const filter = 'type is "plm.product"';
     const nodes = await this.client.queryNodes({ filter });
+    console.log('[ProductsAPI] Query result:', nodes);
+    console.log('[ProductsAPI] First product:', nodes[0]);
+    console.log('[ProductsAPI] First product ID:', nodes[0]?.id);
+    console.log('[ProductsAPI] First product name:', nodes[0]?.name);
+    console.log('[ProductsAPI] First product settings:', nodes[0]?.settings);
     return nodes as Product[];
   }
 
@@ -73,15 +68,13 @@ export function formDataToProductInput(
   formData: ProductFormData,
   parentId: string
 ): CreateProductInput {
+  // Extract settings from the nested structure (from MultiSettingsDialog)
+  const settings = (formData as unknown as { settings?: ProductSettings }).settings || {};
+
   return {
     name: formData.name,
     parentId,
-    settings: {
-      productCode: formData.productCode,
-      description: formData.description || undefined,
-      status: formData.status,
-      price: formData.price ? parseFloat(formData.price) : undefined,
-    },
+    settings: settings, // Pass through all settings from the schema
   };
 }
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { createPluginClient } from '@rubix/sdk/plugin-client';
+import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
 
 export interface PLMHierarchy {
   service?: string;

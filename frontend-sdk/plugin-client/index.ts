@@ -36,6 +36,22 @@
 
 import { RASClient, fetchAdapter } from '../ras/client';
 import type { Node } from '../ras/types';
+import {
+  createNode as createNodeHelper,
+  deleteNode as deleteNodeHelper,
+  getNode as getNodeHelper,
+  listNodes as listNodesHelper,
+  updateNode as updateNodeHelper,
+} from './node';
+import { queryNodes as queryNodesHelper } from './query';
+import {
+  getNodeSchema as getNodeSchemaHelper,
+  getNodeTypeSchema as getNodeTypeSchemaHelper,
+  listNodeSchemas as listNodeSchemasHelper,
+  listNodeTypeSchemas as listNodeTypeSchemasHelper,
+  type NodeSchemasListResponse,
+} from './schema';
+import { getPalletDetails as getPalletDetailsHelper } from './pallet';
 
 export interface PluginClientConfig {
   orgId: string;
@@ -52,6 +68,14 @@ export interface QueryNodesOptions {
   runtime?: boolean;
 }
 
+export interface NodeRef {
+  refName: string;
+  toNodeId: string;
+  toNodeName?: string;
+  order?: number;
+  metadata?: Record<string, unknown>;
+}
+
 export interface CreateNodeInput {
   type: string;
   name: string;
@@ -60,6 +84,7 @@ export interface CreateNodeInput {
   data?: Record<string, unknown>;
   ui?: Record<string, unknown>;
   position?: { x: number; y: number };
+  refs?: NodeRef[];
 }
 
 export interface UpdateNodeInput {
@@ -69,6 +94,16 @@ export interface UpdateNodeInput {
   data?: Record<string, unknown>;
   ui?: Record<string, unknown>;
   position?: { x: number; y: number };
+}
+
+export interface PalletDetailsResponse {
+  nodeType: string;
+  inputs: any[]; // NodePort[]
+  outputs: any[]; // NodePort[]
+  settings?: Record<string, any>; // JSON schema
+  commands?: any[]; // CommandDefinition[]
+  uiCapabilities?: any; // UICapabilities
+  help?: any; // NodeHelp
 }
 
 export class PluginClientError extends Error {
@@ -124,18 +159,7 @@ export class PluginClient {
    */
   async queryNodes(options: QueryNodesOptions = {}): Promise<Node[]> {
     try {
-      const result = await this.client.query.create({
-        orgId: this.config.orgId,
-        deviceId: this.config.deviceId,
-        body: {
-          filter: options.filter,
-          limit: options.limit,
-          offset: options.offset,
-          ports: options.ports,
-          runtime: options.runtime,
-        },
-      });
-      return (result?.data || []) as Node[];
+      return await queryNodesHelper(this, options);
     } catch (err: any) {
       throw new PluginClientError(
         err?.details?.message || err?.message || 'Failed to query nodes',
@@ -156,12 +180,7 @@ export class PluginClient {
    */
   async getNode(nodeId: string): Promise<Node> {
     try {
-      const result = await this.client.nodes.get({
-        orgId: this.config.orgId,
-        deviceId: this.config.deviceId,
-        nodeId,
-      });
-      return result as Node;
+      return await getNodeHelper(this, nodeId);
     } catch (err: any) {
       throw new PluginClientError(
         err?.details?.message || err?.message || 'Failed to get node',
@@ -190,21 +209,9 @@ export class PluginClient {
    */
   async createNode(input: CreateNodeInput): Promise<Node> {
     try {
-      const result = await this.client.nodes.create({
-        orgId: this.config.orgId,
-        deviceId: this.config.deviceId,
-        body: {
-          type: input.type,
-          name: input.name,
-          parentId: input.parentId,
-          settings: input.settings,
-          data: input.data,
-          ui: input.ui,
-          position: input.position,
-        },
-      });
-      return result as Node;
+      return await createNodeHelper(this, input);
     } catch (err: any) {
+      console.error('[PluginClient] createNode failed:', err);
       throw new PluginClientError(
         err?.details?.message || err?.message || 'Failed to create node',
         err?.status,
@@ -226,20 +233,7 @@ export class PluginClient {
    */
   async updateNode(nodeId: string, input: UpdateNodeInput): Promise<Node> {
     try {
-      const result = await this.client.nodes.update({
-        orgId: this.config.orgId,
-        deviceId: this.config.deviceId,
-        nodeId,
-        body: {
-          name: input.name,
-          parentId: input.parentId,
-          settings: input.settings,
-          data: input.data,
-          ui: input.ui,
-          position: input.position,
-        },
-      });
-      return result as Node;
+      return await updateNodeHelper(this, nodeId, input);
     } catch (err: any) {
       throw new PluginClientError(
         err?.details?.message || err?.message || 'Failed to update node',
@@ -259,12 +253,9 @@ export class PluginClient {
    */
   async deleteNode(nodeId: string): Promise<void> {
     try {
-      await this.client.nodes.delete({
-        orgId: this.config.orgId,
-        deviceId: this.config.deviceId,
-        nodeId,
-      });
+      await deleteNodeHelper(this, nodeId);
     } catch (err: any) {
+      console.error('[PluginClient] Delete failed:', err);
       throw new PluginClientError(
         err?.details?.message || err?.message || 'Failed to delete node',
         err?.status,
@@ -283,11 +274,7 @@ export class PluginClient {
    */
   async listNodes(): Promise<Node[]> {
     try {
-      const result = await this.client.nodes.list({
-        orgId: this.config.orgId,
-        deviceId: this.config.deviceId,
-      });
-      return (result?.data || []) as Node[];
+      return await listNodesHelper(this);
     } catch (err: any) {
       throw new PluginClientError(
         err?.details?.message || err?.message || 'Failed to list nodes',
@@ -295,6 +282,152 @@ export class PluginClient {
         err?.details
       );
     }
+  }
+
+  async listNodeSchemas(nodeId: string): Promise<NodeSchemasListResponse> {
+    try {
+      return await listNodeSchemasHelper(this, nodeId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to list schemas for node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  async getNodeSchema(nodeId: string, schemaName: string): Promise<Record<string, unknown> | null> {
+    try {
+      return await getNodeSchemaHelper(this, nodeId, schemaName);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to get schema '${schemaName}' for node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * List all available settings schemas for a node type
+   *
+   * This endpoint supports nodes with multiple schemas (e.g., hardware vs software products).
+   * Works with node TYPES (not instances), so it can be used before any nodes exist.
+   *
+   * @example
+   * ```ts
+   * const schemas = await client.listNodeTypeSchemas('plm.product');
+   * console.log(schemas.schemas); // [{ name: 'hardware', displayName: 'Hardware Product', ... }]
+   * console.log(schemas.supportsMultiple); // true if multiple schemas available
+   * ```
+   */
+  async listNodeTypeSchemas(nodeType: string): Promise<NodeSchemasListResponse> {
+    try {
+      return await listNodeTypeSchemasHelper(this, nodeType);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to list schemas for ${nodeType}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Get a specific settings schema by name for a node type
+   *
+   * Works with node TYPES (not instances), useful for creating first nodes.
+   *
+   * @example
+   * ```ts
+   * const schema = await client.getNodeTypeSchema('plm.product', 'hardware');
+   * console.log(schema.properties); // Schema definition
+   * ```
+   */
+  async getNodeTypeSchema(nodeType: string, schemaName?: string): Promise<Record<string, any> | null> {
+    try {
+      return await getNodeTypeSchemaHelper(this, nodeType, schemaName);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to get schema for ${nodeType}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Get pallet details for a node type (includes schema, ports, commands, etc.)
+   *
+   * This endpoint works with node TYPES, not node instances, so it can be used
+   * to get schemas even when no nodes of that type exist yet.
+   *
+   * @example
+   * ```ts
+   * const details = await client.getPalletDetails('plm.product');
+   * console.log(details.settings); // JSON schema
+   * console.log(details.inputs); // Input port definitions
+   * ```
+   */
+  async getPalletDetails(nodeType: string): Promise<PalletDetailsResponse> {
+    try {
+      return await getPalletDetailsHelper(this, nodeType);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to get pallet details for ${nodeType}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Make a custom API request
+   *
+   * @example
+   * ```ts
+   * const result = await client.request('/nodes/template/settings-schemas-list');
+   * ```
+   */
+  async request<T = any>(path: string, options?: {
+    method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+    body?: any;
+  }): Promise<T> {
+    const method = options?.method || 'GET';
+    const url = `${this.config.baseUrl}/orgs/${this.config.orgId}/devices/${this.config.deviceId}${path}`;
+
+    console.log(`[PluginClient] ${method} ${url}`);
+
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    if (this.config.token) {
+      headers['Authorization'] = `Bearer ${this.config.token}`;
+    }
+
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: options?.body ? JSON.stringify(options.body) : undefined,
+    });
+
+    console.log(`[PluginClient] Response: ${res.status} ${res.statusText}`);
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`[PluginClient] Error response:`, errorText);
+      throw new PluginClientError(
+        `Request failed: ${res.statusText}`,
+        res.status,
+        errorText
+      );
+    }
+
+    const data = await res.json();
+    console.log(`[PluginClient] Response data:`, data);
+    return data;
   }
 
   /**
@@ -355,3 +488,8 @@ export function usePluginClient(config: PluginClientConfig): PluginClient {
   // Plugins can optimize with useMemo if needed
   return new PluginClient(config);
 }
+
+export * from './schema';
+export * from './pallet';
+export * from './query';
+export * from './node';

@@ -265,6 +265,7 @@ func (x *NodePort) GetPersist() bool {
 type GetSchemaRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	NodeType      string                 `protobuf:"bytes,1,opt,name=node_type,json=nodeType,proto3" json:"node_type,omitempty"`
+	SchemaName    string                 `protobuf:"bytes,2,opt,name=schema_name,json=schemaName,proto3" json:"schema_name,omitempty"` // Optional: specific schema name (e.g., "hardware", "software")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -302,6 +303,13 @@ func (*GetSchemaRequest) Descriptor() ([]byte, []int) {
 func (x *GetSchemaRequest) GetNodeType() string {
 	if x != nil {
 		return x.NodeType
+	}
+	return ""
+}
+
+func (x *GetSchemaRequest) GetSchemaName() string {
+	if x != nil {
+		return x.SchemaName
 	}
 	return ""
 }
@@ -350,6 +358,170 @@ func (x *GetSchemaResponse) GetSettingsSchema() *structpb.Struct {
 	return nil
 }
 
+type ListSchemasRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeType      string                 `protobuf:"bytes,1,opt,name=node_type,json=nodeType,proto3" json:"node_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSchemasRequest) Reset() {
+	*x = ListSchemasRequest{}
+	mi := &file_plugin_v1_lifecycle_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSchemasRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSchemasRequest) ProtoMessage() {}
+
+func (x *ListSchemasRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_plugin_v1_lifecycle_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSchemasRequest.ProtoReflect.Descriptor instead.
+func (*ListSchemasRequest) Descriptor() ([]byte, []int) {
+	return file_plugin_v1_lifecycle_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ListSchemasRequest) GetNodeType() string {
+	if x != nil {
+		return x.NodeType
+	}
+	return ""
+}
+
+type ListSchemasResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Schemas          []*SchemaInfo          `protobuf:"bytes,1,rep,name=schemas,proto3" json:"schemas,omitempty"`
+	SupportsMultiple bool                   `protobuf:"varint,2,opt,name=supports_multiple,json=supportsMultiple,proto3" json:"supports_multiple,omitempty"` // Whether node supports multiple schemas
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ListSchemasResponse) Reset() {
+	*x = ListSchemasResponse{}
+	mi := &file_plugin_v1_lifecycle_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSchemasResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSchemasResponse) ProtoMessage() {}
+
+func (x *ListSchemasResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_plugin_v1_lifecycle_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSchemasResponse.ProtoReflect.Descriptor instead.
+func (*ListSchemasResponse) Descriptor() ([]byte, []int) {
+	return file_plugin_v1_lifecycle_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ListSchemasResponse) GetSchemas() []*SchemaInfo {
+	if x != nil {
+		return x.Schemas
+	}
+	return nil
+}
+
+func (x *ListSchemasResponse) GetSupportsMultiple() bool {
+	if x != nil {
+		return x.SupportsMultiple
+	}
+	return false
+}
+
+type SchemaInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                  // Unique identifier (e.g., "hardware", "software")
+	DisplayName   string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"` // Human-readable name (e.g., "Hardware Product")
+	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`                    // Brief description
+	IsDefault     bool                   `protobuf:"varint,4,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`      // Whether this is the default schema
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SchemaInfo) Reset() {
+	*x = SchemaInfo{}
+	mi := &file_plugin_v1_lifecycle_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SchemaInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SchemaInfo) ProtoMessage() {}
+
+func (x *SchemaInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_plugin_v1_lifecycle_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SchemaInfo.ProtoReflect.Descriptor instead.
+func (*SchemaInfo) Descriptor() ([]byte, []int) {
+	return file_plugin_v1_lifecycle_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SchemaInfo) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *SchemaInfo) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *SchemaInfo) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *SchemaInfo) GetIsDefault() bool {
+	if x != nil {
+		return x.IsDefault
+	}
+	return false
+}
+
 type CloseRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -358,7 +530,7 @@ type CloseRequest struct {
 
 func (x *CloseRequest) Reset() {
 	*x = CloseRequest{}
-	mi := &file_plugin_v1_lifecycle_proto_msgTypes[6]
+	mi := &file_plugin_v1_lifecycle_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -370,7 +542,7 @@ func (x *CloseRequest) String() string {
 func (*CloseRequest) ProtoMessage() {}
 
 func (x *CloseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_plugin_v1_lifecycle_proto_msgTypes[6]
+	mi := &file_plugin_v1_lifecycle_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -383,7 +555,7 @@ func (x *CloseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseRequest.ProtoReflect.Descriptor instead.
 func (*CloseRequest) Descriptor() ([]byte, []int) {
-	return file_plugin_v1_lifecycle_proto_rawDescGZIP(), []int{6}
+	return file_plugin_v1_lifecycle_proto_rawDescGZIP(), []int{9}
 }
 
 type CloseResponse struct {
@@ -394,7 +566,7 @@ type CloseResponse struct {
 
 func (x *CloseResponse) Reset() {
 	*x = CloseResponse{}
-	mi := &file_plugin_v1_lifecycle_proto_msgTypes[7]
+	mi := &file_plugin_v1_lifecycle_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -406,7 +578,7 @@ func (x *CloseResponse) String() string {
 func (*CloseResponse) ProtoMessage() {}
 
 func (x *CloseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_plugin_v1_lifecycle_proto_msgTypes[7]
+	mi := &file_plugin_v1_lifecycle_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -419,7 +591,7 @@ func (x *CloseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseResponse.ProtoReflect.Descriptor instead.
 func (*CloseResponse) Descriptor() ([]byte, []int) {
-	return file_plugin_v1_lifecycle_proto_rawDescGZIP(), []int{7}
+	return file_plugin_v1_lifecycle_proto_rawDescGZIP(), []int{10}
 }
 
 type PingRequest struct {
@@ -430,7 +602,7 @@ type PingRequest struct {
 
 func (x *PingRequest) Reset() {
 	*x = PingRequest{}
-	mi := &file_plugin_v1_lifecycle_proto_msgTypes[8]
+	mi := &file_plugin_v1_lifecycle_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -442,7 +614,7 @@ func (x *PingRequest) String() string {
 func (*PingRequest) ProtoMessage() {}
 
 func (x *PingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_plugin_v1_lifecycle_proto_msgTypes[8]
+	mi := &file_plugin_v1_lifecycle_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -455,7 +627,7 @@ func (x *PingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PingRequest.ProtoReflect.Descriptor instead.
 func (*PingRequest) Descriptor() ([]byte, []int) {
-	return file_plugin_v1_lifecycle_proto_rawDescGZIP(), []int{8}
+	return file_plugin_v1_lifecycle_proto_rawDescGZIP(), []int{11}
 }
 
 type PingResponse struct {
@@ -469,7 +641,7 @@ type PingResponse struct {
 
 func (x *PingResponse) Reset() {
 	*x = PingResponse{}
-	mi := &file_plugin_v1_lifecycle_proto_msgTypes[9]
+	mi := &file_plugin_v1_lifecycle_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -481,7 +653,7 @@ func (x *PingResponse) String() string {
 func (*PingResponse) ProtoMessage() {}
 
 func (x *PingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_plugin_v1_lifecycle_proto_msgTypes[9]
+	mi := &file_plugin_v1_lifecycle_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -494,7 +666,7 @@ func (x *PingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PingResponse.ProtoReflect.Descriptor instead.
 func (*PingResponse) Descriptor() ([]byte, []int) {
-	return file_plugin_v1_lifecycle_proto_rawDescGZIP(), []int{9}
+	return file_plugin_v1_lifecycle_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *PingResponse) GetNodeId() string {
@@ -538,11 +710,25 @@ const file_plugin_v1_lifecycle_proto_rawDesc = "" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x03 \x01(\tR\x04type\x12\x12\n" +
 	"\x04kind\x18\x04 \x01(\tR\x04kind\x12\x18\n" +
-	"\apersist\x18\x05 \x01(\bR\apersist\"/\n" +
+	"\apersist\x18\x05 \x01(\bR\apersist\"P\n" +
 	"\x10GetSchemaRequest\x12\x1b\n" +
-	"\tnode_type\x18\x01 \x01(\tR\bnodeType\"U\n" +
+	"\tnode_type\x18\x01 \x01(\tR\bnodeType\x12\x1f\n" +
+	"\vschema_name\x18\x02 \x01(\tR\n" +
+	"schemaName\"U\n" +
 	"\x11GetSchemaResponse\x12@\n" +
-	"\x0fsettings_schema\x18\x01 \x01(\v2\x17.google.protobuf.StructR\x0esettingsSchema\"\x0e\n" +
+	"\x0fsettings_schema\x18\x01 \x01(\v2\x17.google.protobuf.StructR\x0esettingsSchema\"1\n" +
+	"\x12ListSchemasRequest\x12\x1b\n" +
+	"\tnode_type\x18\x01 \x01(\tR\bnodeType\"y\n" +
+	"\x13ListSchemasResponse\x125\n" +
+	"\aschemas\x18\x01 \x03(\v2\x1b.rubix.plugin.v1.SchemaInfoR\aschemas\x12+\n" +
+	"\x11supports_multiple\x18\x02 \x01(\bR\x10supportsMultiple\"\x84\x01\n" +
+	"\n" +
+	"SchemaInfo\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12!\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1d\n" +
+	"\n" +
+	"is_default\x18\x04 \x01(\bR\tisDefault\"\x0e\n" +
 	"\fCloseRequest\"\x0f\n" +
 	"\rCloseResponse\"\r\n" +
 	"\vPingRequest\"Y\n" +
@@ -563,32 +749,36 @@ func file_plugin_v1_lifecycle_proto_rawDescGZIP() []byte {
 	return file_plugin_v1_lifecycle_proto_rawDescData
 }
 
-var file_plugin_v1_lifecycle_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_plugin_v1_lifecycle_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_plugin_v1_lifecycle_proto_goTypes = []any{
-	(*InitRequest)(nil),       // 0: rubix.plugin.v1.InitRequest
-	(*NodeSpec)(nil),          // 1: rubix.plugin.v1.NodeSpec
-	(*InitResponse)(nil),      // 2: rubix.plugin.v1.InitResponse
-	(*NodePort)(nil),          // 3: rubix.plugin.v1.NodePort
-	(*GetSchemaRequest)(nil),  // 4: rubix.plugin.v1.GetSchemaRequest
-	(*GetSchemaResponse)(nil), // 5: rubix.plugin.v1.GetSchemaResponse
-	(*CloseRequest)(nil),      // 6: rubix.plugin.v1.CloseRequest
-	(*CloseResponse)(nil),     // 7: rubix.plugin.v1.CloseResponse
-	(*PingRequest)(nil),       // 8: rubix.plugin.v1.PingRequest
-	(*PingResponse)(nil),      // 9: rubix.plugin.v1.PingResponse
-	(*structpb.Struct)(nil),   // 10: google.protobuf.Struct
+	(*InitRequest)(nil),         // 0: rubix.plugin.v1.InitRequest
+	(*NodeSpec)(nil),            // 1: rubix.plugin.v1.NodeSpec
+	(*InitResponse)(nil),        // 2: rubix.plugin.v1.InitResponse
+	(*NodePort)(nil),            // 3: rubix.plugin.v1.NodePort
+	(*GetSchemaRequest)(nil),    // 4: rubix.plugin.v1.GetSchemaRequest
+	(*GetSchemaResponse)(nil),   // 5: rubix.plugin.v1.GetSchemaResponse
+	(*ListSchemasRequest)(nil),  // 6: rubix.plugin.v1.ListSchemasRequest
+	(*ListSchemasResponse)(nil), // 7: rubix.plugin.v1.ListSchemasResponse
+	(*SchemaInfo)(nil),          // 8: rubix.plugin.v1.SchemaInfo
+	(*CloseRequest)(nil),        // 9: rubix.plugin.v1.CloseRequest
+	(*CloseResponse)(nil),       // 10: rubix.plugin.v1.CloseResponse
+	(*PingRequest)(nil),         // 11: rubix.plugin.v1.PingRequest
+	(*PingResponse)(nil),        // 12: rubix.plugin.v1.PingResponse
+	(*structpb.Struct)(nil),     // 13: google.protobuf.Struct
 }
 var file_plugin_v1_lifecycle_proto_depIdxs = []int32{
 	1,  // 0: rubix.plugin.v1.InitRequest.spec:type_name -> rubix.plugin.v1.NodeSpec
-	10, // 1: rubix.plugin.v1.NodeSpec.settings:type_name -> google.protobuf.Struct
+	13, // 1: rubix.plugin.v1.NodeSpec.settings:type_name -> google.protobuf.Struct
 	3,  // 2: rubix.plugin.v1.InitResponse.inputs:type_name -> rubix.plugin.v1.NodePort
 	3,  // 3: rubix.plugin.v1.InitResponse.outputs:type_name -> rubix.plugin.v1.NodePort
-	10, // 4: rubix.plugin.v1.InitResponse.settings_schema:type_name -> google.protobuf.Struct
-	10, // 5: rubix.plugin.v1.GetSchemaResponse.settings_schema:type_name -> google.protobuf.Struct
-	6,  // [6:6] is the sub-list for method output_type
-	6,  // [6:6] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	13, // 4: rubix.plugin.v1.InitResponse.settings_schema:type_name -> google.protobuf.Struct
+	13, // 5: rubix.plugin.v1.GetSchemaResponse.settings_schema:type_name -> google.protobuf.Struct
+	8,  // 6: rubix.plugin.v1.ListSchemasResponse.schemas:type_name -> rubix.plugin.v1.SchemaInfo
+	7,  // [7:7] is the sub-list for method output_type
+	7,  // [7:7] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_plugin_v1_lifecycle_proto_init() }
@@ -602,7 +792,7 @@ func file_plugin_v1_lifecycle_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_plugin_v1_lifecycle_proto_rawDesc), len(file_plugin_v1_lifecycle_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

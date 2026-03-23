@@ -2,7 +2,7 @@
  * PLM-specific API client
  */
 
-import { createPluginClient } from '@rubix/sdk/plugin-client';
+import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
 import { Product, ProductFormData } from '../../types';
 import { PLM_NODE_TYPES } from '../constants';
 

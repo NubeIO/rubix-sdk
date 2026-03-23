@@ -731,12 +731,16 @@ export interface Node {
   createdAt?: string;
   data?: Record<string, unknown>;
   id?: string;
+  name?: string;
+  category?: string;
   /** Parent node ID (extracted from parentRef) */
   parentId?: string;
   position?: { x?: number; y?: number };
   refs?: Record<string, string>;
+  settings?: Record<string, unknown>;
   tags?: Record<string, unknown>;
   type?: string;
+  ui?: Record<string, unknown>;
   updatedAt?: string;
 }
 
