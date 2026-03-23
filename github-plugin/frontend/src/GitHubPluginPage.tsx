@@ -3,78 +3,67 @@ import {
   useEffect,
   useMemo,
   useState,
-  startTransition,
   type FormEvent,
   type ReactNode,
 } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import './styles.css';
-import type { AccountNode } from './lib/github-nodes';
 import {
-  createGitHubWorkspaceBundle,
-  importGitHubSnapshotToCoreNodes,
-  listGitHubPluginNodes,
+  createGitHubAccount,
+  listGitHubAccounts,
+  type AccountNode,
   type PluginContext,
-} from './lib/github-nodes';
-import { buildIssueSummary, loadGitHubSnapshot, type GitHubSnapshot } from './lib/github';
+} from './lib/github-account';
+import {
+  getIssues,
+  getReleases,
+  getRepositories,
+  getTeams,
+  getUsers,
+  type GitHubIssue,
+  type GitHubRelease,
+  type GitHubRepository,
+  type GitHubTeam,
+  type GitHubUser,
+} from './lib/github';
 
 export interface GitHubPluginPageProps extends PluginContext {}
 
-interface WorkspaceFormState {
-  workspaceName: string;
-  description: string;
+interface AccountFormState {
+  name: string;
   orgLogin: string;
   tokenValue: string;
   baseUrl: string;
   defaultRepository: string;
   defaultIssueState: string;
+  commandsNote: string;
 }
 
-const emptySnapshot: GitHubSnapshot = {
-  repositories: [],
-  teams: [],
-  users: [],
-  issues: [],
-  releases: [],
-};
-
-const initialForm: WorkspaceFormState = {
-  workspaceName: '',
-  description: '',
+const initialForm: AccountFormState = {
+  name: '',
   orgLogin: '',
   tokenValue: '',
   baseUrl: 'https://api.github.com',
   defaultRepository: '',
   defaultIssueState: 'open',
+  commandsNote: '',
 };
 
 export function GitHubPluginApp(props: GitHubPluginPageProps) {
-  const [form, setForm] = useState<WorkspaceFormState>(initialForm);
-  const [nodes, setNodes] = useState<AccountNode[]>([]);
+  const [form, setForm] = useState<AccountFormState>(initialForm);
+  const [accounts, setAccounts] = useState<AccountNode[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
-  const [snapshot, setSnapshot] = useState<GitHubSnapshot>(emptySnapshot);
+  const [repositories, setRepositories] = useState<GitHubRepository[]>([]);
+  const [teams, setTeams] = useState<GitHubTeam[]>([]);
+  const [users, setUsers] = useState<GitHubUser[]>([]);
+  const [issues, setIssues] = useState<GitHubIssue[]>([]);
+  const [releases, setReleases] = useState<GitHubRelease[]>([]);
   const [loadingNodes, setLoadingNodes] = useState(true);
-  const [loadingSnapshot, setLoadingSnapshot] = useState(false);
+  const [runningAction, setRunningAction] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [message, setMessage] = useState<string>('');
-  const [importing, setImporting] = useState(false);
   const [repoSearch, setRepoSearch] = useState('');
   const deferredRepoSearch = useDeferredValue(repoSearch);
-
-  const accounts = useMemo(
-    () => nodes.filter((node) => node.type === 'github.account'),
-    [nodes]
-  );
-
-  const workspaceByAccountId = useMemo(() => {
-    const workspaceMap = new Map<string, string>();
-    for (const node of nodes) {
-      if (node.type === 'github.account' && node.parentId) {
-        workspaceMap.set(node.id, node.parentId);
-      }
-    }
-    return workspaceMap;
-  }, [nodes]);
 
   const selectedAccount = useMemo(
     () => accounts.find((account) => account.id === selectedAccountId) || accounts[0],
@@ -84,28 +73,23 @@ export function GitHubPluginApp(props: GitHubPluginPageProps) {
   const filteredRepositories = useMemo(() => {
     const search = deferredRepoSearch.trim().toLowerCase();
     if (!search) {
-      return snapshot.repositories;
+      return repositories;
     }
-    return snapshot.repositories.filter((repo) => {
+    return repositories.filter((repo) => {
       return (
         repo.name.toLowerCase().includes(search) ||
         repo.full_name.toLowerCase().includes(search) ||
         (repo.description || '').toLowerCase().includes(search)
       );
     });
-  }, [deferredRepoSearch, snapshot.repositories]);
-
-  const issueSummary = useMemo(() => buildIssueSummary(snapshot.issues), [snapshot.issues]);
+  }, [deferredRepoSearch, repositories]);
 
   async function refreshNodes() {
     setLoadingNodes(true);
     setError('');
     try {
-      const allNodes = await listGitHubPluginNodes(props);
-      const accountNodes = allNodes
-        .filter((node) => node.type === 'github.account')
-        .map((node) => node as AccountNode);
-      setNodes(accountNodes);
+      const accountNodes = await listGitHubAccounts(props);
+      setAccounts(accountNodes);
       if (!selectedAccountId && accountNodes[0]) {
         setSelectedAccountId(accountNodes[0].id);
       }
@@ -120,79 +104,57 @@ export function GitHubPluginApp(props: GitHubPluginPageProps) {
     void refreshNodes();
   }, []);
 
-  useEffect(() => {
-    if (!selectedAccount && accounts.length === 0) {
-      setSnapshot(emptySnapshot);
-      return;
-    }
-
-    if (!selectedAccount) {
-      return;
-    }
-
-    setSelectedAccountId(selectedAccount.id);
-    setLoadingSnapshot(true);
-    setError('');
-
-    void loadGitHubSnapshot(selectedAccount.settings || {})
-      .then((result) => {
-        startTransition(() => {
-          setSnapshot(result);
-        });
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Failed to load GitHub data');
-        setSnapshot(emptySnapshot);
-      })
-      .finally(() => {
-        setLoadingSnapshot(false);
-      });
-  }, [selectedAccount?.id]);
-
-  async function handleCreateWorkspace(event: FormEvent<HTMLFormElement>) {
+  async function handleCreateAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
     setMessage('');
 
     try {
-      await createGitHubWorkspaceBundle(props, form);
+      await createGitHubAccount(props, form);
       setForm(initialForm);
-      setMessage(`Created workspace for ${form.orgLogin}`);
+      setMessage(`Created GitHub account node for ${form.orgLogin}`);
       await refreshNodes();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create workspace');
+      setError(err instanceof Error ? err.message : 'Failed to create account');
     }
   }
 
-  async function handleImportCoreNodes() {
+  async function runAction(action: 'repos' | 'teams' | 'users' | 'issues' | 'releases') {
     if (!selectedAccount) {
+      setError('Select a GitHub account first');
       return;
     }
 
-    const workspaceId = workspaceByAccountId.get(selectedAccount.id);
-    if (!workspaceId) {
-      setError('Selected account is missing a workspace parent');
-      return;
-    }
-
-    setImporting(true);
+    setRunningAction(action);
     setError('');
     setMessage('');
 
     try {
-      const result = await importGitHubSnapshotToCoreNodes(props, {
-        workspaceId,
-        accountId: selectedAccount.id,
-        account: selectedAccount,
-        snapshot,
-      });
-      setMessage(
-        `Imported ${result.documents} documents, ${result.tickets} tickets, and ${result.releases} releases into core nodes`
-      );
+      const config = selectedAccount.settings || {};
+      if (action === 'repos') {
+        setRepositories(await getRepositories(config));
+        setMessage('Loaded repositories');
+      }
+      if (action === 'teams') {
+        setTeams(await getTeams(config));
+        setMessage('Loaded teams');
+      }
+      if (action === 'users') {
+        setUsers(await getUsers(config));
+        setMessage('Loaded users');
+      }
+      if (action === 'issues') {
+        setIssues(await getIssues(config));
+        setMessage('Loaded issues');
+      }
+      if (action === 'releases') {
+        setReleases(await getReleases(config));
+        setMessage('Loaded releases');
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to import core nodes');
+      setError(err instanceof Error ? err.message : `Failed to run ${action}`);
     } finally {
-      setImporting(false);
+      setRunningAction('');
     }
   }
 
@@ -201,18 +163,17 @@ export function GitHubPluginApp(props: GitHubPluginPageProps) {
       <div className="hero-panel">
         <div>
           <p className="eyebrow">GitHub Tasks and Reporting</p>
-          <h1>Manage many GitHub orgs with Rubix nodes</h1>
+          <h1>One GitHub account node with simple actions</h1>
           <p className="hero-copy">
-            Each GitHub org starts as a Rubix workspace plus a GitHub account node.
-            Repositories, issues, and releases can then be imported into shared
-            core nodes so the plugin stays thin and the business records stay reusable.
+            Keep this version small: create a `github.account` node, select it,
+            and run action-style fetches for repositories, users, teams, issues, and releases.
           </p>
         </div>
         <div className="hero-stats">
           <StatCard label="Accounts" value={String(accounts.length)} />
-          <StatCard label="Repos" value={String(snapshot.repositories.length)} />
-          <StatCard label="Issues" value={String(snapshot.issues.length)} />
-          <StatCard label="Releases" value={String(snapshot.releases.length)} />
+          <StatCard label="Repos" value={String(repositories.length)} />
+          <StatCard label="Issues" value={String(issues.length)} />
+          <StatCard label="Releases" value={String(releases.length)} />
         </div>
       </div>
 
@@ -220,18 +181,18 @@ export function GitHubPluginApp(props: GitHubPluginPageProps) {
         <section className="panel">
           <div className="panel-header">
             <div>
-              <h2>Create workspace bundle</h2>
-              <p>Creates `github.workspace`, `github.account`, and a `github.report` node only.</p>
+              <h2>Create GitHub Account</h2>
+              <p>Creates one `github.account` node with the settings needed for action-style fetches.</p>
             </div>
           </div>
 
-          <form className="form-grid" onSubmit={handleCreateWorkspace}>
+          <form className="form-grid" onSubmit={handleCreateAccount}>
             <label>
-              Workspace name
+              Node name
               <input
-                value={form.workspaceName}
-                onChange={(event) => setForm({ ...form, workspaceName: event.target.value })}
-                placeholder="Platform Engineering"
+                value={form.name}
+                onChange={(event) => setForm({ ...form, name: event.target.value })}
+                placeholder="GitHub Platform"
                 required
               />
             </label>
@@ -288,17 +249,17 @@ export function GitHubPluginApp(props: GitHubPluginPageProps) {
             </label>
 
             <label className="full-span">
-              Description
+              Commands note
               <textarea
-                value={form.description}
-                onChange={(event) => setForm({ ...form, description: event.target.value })}
-                placeholder="Scope of this workspace, reporting goals, or owners."
+                value={form.commandsNote}
+                onChange={(event) => setForm({ ...form, commandsNote: event.target.value })}
+                placeholder="Operator note about how this account is used."
                 rows={4}
               />
             </label>
 
             <div className="form-actions full-span">
-              <button type="submit">Create workspace bundle</button>
+              <button type="submit">Create account node</button>
               <button type="button" className="secondary-button" onClick={() => void refreshNodes()}>
                 Refresh nodes
               </button>
@@ -313,7 +274,7 @@ export function GitHubPluginApp(props: GitHubPluginPageProps) {
           <div className="panel-header">
             <div>
               <h2>Accounts</h2>
-              <p>Select a GitHub account node to inspect GitHub data and import it into core nodes.</p>
+              <p>Select a `github.account` node, then run the actions below.</p>
             </div>
           </div>
 
@@ -347,33 +308,27 @@ export function GitHubPluginApp(props: GitHubPluginPageProps) {
         <section className="panel">
           <div className="panel-header">
             <div>
-              <h2>Reporting summary</h2>
-              <p>Basic issue reporting using the selected account’s default repository.</p>
+              <h2>Actions</h2>
+              <p>These stand in for commands for now, since plugin-node commands are not wired through the SDK yet.</p>
             </div>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => void handleImportCoreNodes()}
-              disabled={!selectedAccount || importing || loadingSnapshot}
-            >
-              {importing ? 'Importing…' : 'Import into core nodes'}
+          </div>
+          <div className="form-actions">
+            <button type="button" onClick={() => void runAction('repos')} disabled={!selectedAccount || !!runningAction}>
+              {runningAction === 'repos' ? 'Loading…' : 'getRepos'}
+            </button>
+            <button type="button" onClick={() => void runAction('users')} disabled={!selectedAccount || !!runningAction}>
+              {runningAction === 'users' ? 'Loading…' : 'getUsers'}
+            </button>
+            <button type="button" onClick={() => void runAction('teams')} disabled={!selectedAccount || !!runningAction}>
+              {runningAction === 'teams' ? 'Loading…' : 'getTeams'}
+            </button>
+            <button type="button" onClick={() => void runAction('issues')} disabled={!selectedAccount || !!runningAction}>
+              {runningAction === 'issues' ? 'Loading…' : 'getIssues'}
+            </button>
+            <button type="button" onClick={() => void runAction('releases')} disabled={!selectedAccount || !!runningAction}>
+              {runningAction === 'releases' ? 'Loading…' : 'getReleases'}
             </button>
           </div>
-          {loadingSnapshot ? (
-            <p className="muted">Loading GitHub data…</p>
-          ) : (
-            <div className="stat-row">
-              <StatCard label="Total issues" value={String(issueSummary.total)} />
-              <StatCard label="Open" value={String(issueSummary.open)} />
-              <StatCard label="Closed" value={String(issueSummary.closed)} />
-              <StatCard
-                label="Top reporter"
-                value={
-                  Object.entries(issueSummary.byAssignee).sort((a, b) => b[1] - a[1])[0]?.[0] || 'n/a'
-                }
-              />
-            </div>
-          )}
         </section>
 
         <section className="panel">
@@ -405,12 +360,12 @@ export function GitHubPluginApp(props: GitHubPluginPageProps) {
           <div className="panel-header">
             <div>
               <h2>Teams</h2>
-              <p>GitHub org teams available for future mapping to `auth.team`.</p>
+              <p>Result from `getTeams`.</p>
             </div>
           </div>
           <SimpleTable
             columns={['Name', 'Slug', 'Privacy']}
-            rows={snapshot.teams.map((team) => [team.name, team.slug, team.privacy || 'n/a'])}
+            rows={teams.map((team) => [team.name, team.slug, team.privacy || 'n/a'])}
             emptyText="No teams loaded"
           />
         </section>
@@ -419,12 +374,12 @@ export function GitHubPluginApp(props: GitHubPluginPageProps) {
           <div className="panel-header">
             <div>
               <h2>Users</h2>
-              <p>Members available for future mapping to `auth.user` and assignment flows.</p>
+              <p>Result from `getUsers`.</p>
             </div>
           </div>
           <SimpleTable
             columns={['Login', 'Type', 'Profile']}
-            rows={snapshot.users.map((user) => [
+            rows={users.map((user) => [
               user.login,
               user.type || 'user',
               <a href={user.html_url} target="_blank" rel="noreferrer" key={user.id}>
@@ -439,12 +394,12 @@ export function GitHubPluginApp(props: GitHubPluginPageProps) {
           <div className="panel-header">
             <div>
               <h2>Issues</h2>
-              <p>This task view uses the default repository from the selected account and imports into `core.ticket`.</p>
+              <p>Result from `getIssues`. Requires `defaultRepository` on the selected account.</p>
             </div>
           </div>
           <SimpleTable
             columns={['Issue', 'State', 'Updated', 'Author']}
-            rows={snapshot.issues.map((issue) => [
+            rows={issues.map((issue) => [
               <a href={issue.html_url} target="_blank" rel="noreferrer" key={issue.id}>
                 #{issue.number} {issue.title}
               </a>,
@@ -460,12 +415,12 @@ export function GitHubPluginApp(props: GitHubPluginPageProps) {
           <div className="panel-header">
             <div>
               <h2>Releases</h2>
-              <p>GitHub releases can be imported into `core.release` for shared lifecycle tracking.</p>
+              <p>Result from `getReleases`. Requires `defaultRepository` on the selected account.</p>
             </div>
           </div>
           <SimpleTable
             columns={['Release', 'Status', 'Published', 'Link']}
-            rows={snapshot.releases.map((release) => [
+            rows={releases.map((release) => [
               release.name || release.tag_name,
               release.draft ? 'draft' : release.prerelease ? 'prerelease' : 'released',
               release.published_at ? new Date(release.published_at).toLocaleString() : 'n/a',

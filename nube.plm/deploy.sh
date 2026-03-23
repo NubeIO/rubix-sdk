@@ -25,6 +25,12 @@ chmod +x "${PLUGIN_DIR}/${PLUGIN_NAME}"
 echo "📄 Copying plugin.json..."
 cp plugin.json "${PLUGIN_DIR}/"
 
+echo "📄 Copying config directory..."
+if [ -d "config" ]; then
+  cp -r config "${PLUGIN_DIR}/"
+  echo "   ✓ config/nodes.yaml deployed"
+fi
+
 echo "✅ PLM plugin deployed to: ${PLUGIN_DIR}"
 echo ""
 echo "Next steps:"

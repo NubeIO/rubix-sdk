@@ -12,7 +12,7 @@ func (n *AccountNode) GetConstraints() nodedeps.NodeConstraints {
 		DeletionProhibited:  false,
 		AllowCascadeDelete:  false,
 		MustLiveUnderParent: true,
-		AllowedParents:      []string{"github.workspace"},
+		AllowedParents:      []string{"rubix.device"},
 	}
 }
 
@@ -49,14 +49,19 @@ func (n *AccountNode) SettingsSchema() map[string]interface{} {
 			},
 			"defaultRepository": map[string]interface{}{
 				"type":        "string",
-				"title":       "Default Repository",
-				"description": "Optional default repository for task and issue views.",
+				"title":       "Repository",
+				"description": "Optional repository used by issue and release actions.",
 			},
 			"defaultIssueState": map[string]interface{}{
 				"type":    "string",
 				"title":   "Default Issue State",
 				"enum":    []string{"open", "closed", "all"},
 				"default": "open",
+			},
+			"commandsNote": map[string]interface{}{
+				"type":        "string",
+				"title":       "Commands Note",
+				"description": "Optional note for operators about how this account is used.",
 			},
 		},
 	}

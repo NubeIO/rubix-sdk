@@ -1,0 +1,48 @@
+version: 1
+
+nodeTypes:
+  - type: plm.manufacturing-unit
+    baseType: core.asset
+    displayName: Manufacturing Unit
+    description: PLM-managed manufacturing equipment with serialization tracking
+    autoPluginId: true
+    autoIdentity: [asset, manufacturing, plm, unit]
+    defaults:
+      assetType: manufacturing-unit
+      status: production
+      trackSerialNumbers: true
+    validation:
+      required: [serialNumber, hardwareRevision]
+      rules:
+        serialNumber:
+          pattern: "^[A-Z]+-[A-Z]-\\d+$"
+          message: "Serial number must match format: EC-C-1402"
+          example: "EC-C-1402"
+        hardwareRevision:
+          pattern: "^rev-[a-z]$"
+          message: "Hardware revision must match format: rev-c"
+          example: "rev-c"
+        firmwareVersion:
+          pattern: "^v\\d+\\.\\d+\\.\\d+$"
+          message: "Firmware version must be semantic version (e.g., v1.2.3)"
+          example: "v1.0.0"
+        status:
+          enum: [production, testing, maintenance, decommissioned]
+          message: "Status must be one of: production, testing, maintenance, decommissioned"
+    refs:
+      required: [runRef]
+      optional: [siteRef, equipRef]
+      constraints:
+        runRef:
+          targetTypes: [plm.production-run]
+          onTargetDelete: restrict
+    uiHints:
+      icon: factory
+      color: "#3b82f6"
+      displayFields: [serialNumber, hardwareRevision, status]
+      searchFields: [serialNumber, hardwareRevision]
+      sections:
+        - name: Hardware
+          fields: [serialNumber, hardwareRevision, firmwareVersion]
+        - name: Status
+          fields: [status, assetType, trackSerialNumbers]

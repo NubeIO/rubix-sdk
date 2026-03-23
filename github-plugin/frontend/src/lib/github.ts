@@ -94,41 +94,86 @@ async function githubGET<T>(
   return res.json() as Promise<T>;
 }
 
-export async function loadGitHubSnapshot(
-  account: GitHubAccountConfig
-): Promise<GitHubSnapshot> {
+export async function getRepositories(account: GitHubAccountConfig): Promise<GitHubRepository[]> {
   const orgLogin = account.orgLogin?.trim();
   if (!orgLogin) {
     throw new Error('Missing organization login');
   }
 
-  const repositories = await githubGET<GitHubRepository[]>(
+  return githubGET<GitHubRepository[]>(
     account,
     `/orgs/${encodeURIComponent(orgLogin)}/repos?per_page=100&sort=updated`
   );
-  const teams = await githubGET<GitHubTeam[]>(
+}
+
+export async function getTeams(account: GitHubAccountConfig): Promise<GitHubTeam[]> {
+  const orgLogin = account.orgLogin?.trim();
+  if (!orgLogin) {
+    throw new Error('Missing organization login');
+  }
+
+  return githubGET<GitHubTeam[]>(
     account,
     `/orgs/${encodeURIComponent(orgLogin)}/teams?per_page=100`
   );
-  const users = await githubGET<GitHubUser[]>(
+}
+
+export async function getUsers(account: GitHubAccountConfig): Promise<GitHubUser[]> {
+  const orgLogin = account.orgLogin?.trim();
+  if (!orgLogin) {
+    throw new Error('Missing organization login');
+  }
+
+  return githubGET<GitHubUser[]>(
     account,
     `/orgs/${encodeURIComponent(orgLogin)}/members?per_page=100`
   );
+}
 
+export async function getIssues(account: GitHubAccountConfig): Promise<GitHubIssue[]> {
+  const orgLogin = account.orgLogin?.trim();
+  const repoName = account.defaultRepository?.trim();
+  if (!orgLogin) {
+    throw new Error('Missing organization login');
+  }
+  if (!repoName) {
+    throw new Error('Repository is required for getIssues');
+  }
+
+  const issues = await githubGET<GitHubIssue[]>(
+    account,
+    `/repos/${encodeURIComponent(orgLogin)}/${encodeURIComponent(repoName)}/issues?per_page=100&state=${encodeURIComponent(account.defaultIssueState || 'open')}`
+  );
+  return issues.filter((issue) => !issue.pull_request);
+}
+
+export async function getReleases(account: GitHubAccountConfig): Promise<GitHubRelease[]> {
+  const orgLogin = account.orgLogin?.trim();
+  const repoName = account.defaultRepository?.trim();
+  if (!orgLogin) {
+    throw new Error('Missing organization login');
+  }
+  if (!repoName) {
+    throw new Error('Repository is required for getReleases');
+  }
+
+  return githubGET<GitHubRelease[]>(
+    account,
+    `/repos/${encodeURIComponent(orgLogin)}/${encodeURIComponent(repoName)}/releases?per_page=100`
+  );
+}
+
+export async function loadGitHubSnapshot(
+  account: GitHubAccountConfig
+): Promise<GitHubSnapshot> {
+  const repositories = await getRepositories(account);
+  const teams = await getTeams(account);
+  const users = await getUsers(account);
   let issues: GitHubIssue[] = [];
   let releases: GitHubRelease[] = [];
-  const repoName = account.defaultRepository?.trim() || repositories[0]?.name;
-  if (repoName) {
-    issues = await githubGET<GitHubIssue[]>(
-      account,
-      `/repos/${encodeURIComponent(orgLogin)}/${encodeURIComponent(repoName)}/issues?per_page=100&state=${encodeURIComponent(account.defaultIssueState || 'open')}`
-    );
-    issues = issues.filter((issue) => !issue.pull_request);
-
-    releases = await githubGET<GitHubRelease[]>(
-      account,
-      `/repos/${encodeURIComponent(orgLogin)}/${encodeURIComponent(repoName)}/releases?per_page=100`
-    );
+  if (account.defaultRepository?.trim()) {
+    issues = await getIssues(account);
+    releases = await getReleases(account);
   }
 
   return { repositories, teams, users, issues, releases };

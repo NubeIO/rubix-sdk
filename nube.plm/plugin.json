@@ -10,7 +10,11 @@
     "plm.service",
     "plm.products",
     "plm.product",
-    "plm.prototest"
+    "plm.prototest",
+    "plm.manufacturing-unit"
+  ],
+  "coreNodeTypes": [
+    "core.asset"
   ],
   "_futureNodeTypes": [
     "plm.production-runs",

@@ -4,19 +4,17 @@
   "name": "github",
   "displayName": "GitHub Tasks and Reporting",
   "version": "0.1.0",
-  "description": "GitHub org management, tasks, and reporting plugin built on Rubix nodes.",
+  "description": "GitHub account node with simple action-style fetches for repos, users, teams, issues, and releases.",
   "category": "operations",
   "nodeTypes": [
-    "github.workspace",
-    "github.account",
-    "github.report"
+    "github.account"
   ],
   "pages": [
     {
       "pageId": "github-manager",
       "title": "GitHub Manager",
       "icon": "github",
-      "description": "Manage GitHub org workspaces, tasks, and reporting.",
+      "description": "Run simple GitHub account actions.",
       "enabled": true,
       "isDefault": true,
       "order": 10,
