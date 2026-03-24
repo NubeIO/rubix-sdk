@@ -83,6 +83,10 @@ func main() {
 			return &nodes.ProductNode{}
 		case "plm.prototest":
 			return &nodes.ProtoTestNode{}
+		case "plm.manufacturing-unit":
+			// Manufacturing unit with port profile (config/nodes.yaml)
+			// Example: testOutput = testInput + 100
+			return &nodes.ManufacturingUnitNode{}
 		default:
 			return nil
 		}

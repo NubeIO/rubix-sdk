@@ -31,7 +31,8 @@
       "plm.service",
       "plm.products",
       "plm.product",
-      "plm.prototest"
+      "plm.prototest",
+      "plm.manufacturing-unit"
     ],
     "_comment": "Add other node types here when implementing additional collections",
     "hooks": {
