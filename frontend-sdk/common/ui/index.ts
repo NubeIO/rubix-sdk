@@ -28,3 +28,6 @@ export { Checkbox } from './checkbox';
 
 export { RefreshButton } from './refresh-button';
 export type { RefreshButtonProps } from './refresh-button';
+
+export { Tabs } from './tabs';
+export type { TabsProps, Tab } from './tabs';

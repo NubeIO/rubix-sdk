@@ -17,6 +17,7 @@ import { ProductStatusBadge } from './product-status-badge';
 
 export interface ProductTableDisplaySettings {
   showCode: boolean;
+  showType: boolean;
   showStatus: boolean;
   showPrice: boolean;
   compactMode: boolean;
@@ -86,6 +87,9 @@ export function ProductTable({
             {displaySettings.showCode && (
               <th style={{ padding: cellPadding, fontWeight: 600 }}>Code</th>
             )}
+            {displaySettings.showType && (
+              <th style={{ padding: cellPadding, fontWeight: 600 }}>Type</th>
+            )}
             {displaySettings.showStatus && (
               <th style={{ padding: cellPadding, fontWeight: 600 }}>Status</th>
             )}
@@ -134,6 +138,23 @@ export function ProductTable({
               {displaySettings.showCode && (
                 <td style={{ padding: cellPadding, color: '#666' }}>
                   {formatProductCode(product.settings?.productCode)}
+                </td>
+              )}
+              {displaySettings.showType && (
+                <td style={{ padding: cellPadding }}>
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    background: product.settings?.productType === 'software' ? '#e0f2fe' : '#f0fdf4',
+                    color: product.settings?.productType === 'software' ? '#0369a1' : '#166534',
+                  }}>
+                    {product.settings?.productType ?
+                      product.settings.productType.charAt(0).toUpperCase() + product.settings.productType.slice(1)
+                      : '-'}
+                  </span>
                 </td>
               )}
               {displaySettings.showStatus && (

@@ -4,7 +4,7 @@
 
 // @ts-ignore - SDK types are resolved at build time
 import { Input, Label } from '@rubix-sdk/frontend/common/ui';
-import { ProductFormData, ProductFormErrors, PRODUCT_STATUSES } from '../common/types';
+import { ProductFormData, ProductFormErrors, PRODUCT_STATUSES, PRODUCT_TYPES } from '../common/types';
 
 interface ProductFormFieldsProps {
   formData: ProductFormData;
@@ -75,6 +75,25 @@ export function ProductFormFields({
           disabled={disabled}
           placeholder={isEditing ? undefined : 'Optional description'}
         />
+      </div>
+
+      {/* Product Type */}
+      <div>
+        <Label>
+          Product Type <span className="text-[var(--rubix-destructive)]">*</span>
+        </Label>
+        <select
+          value={formData.productType}
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange('productType', e.target.value)}
+          className="flex h-10 w-full rounded-[var(--rubix-radius-md)] border border-[var(--rubix-input)] bg-[var(--rubix-background)] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rubix-ring)] disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={disabled}
+        >
+          {PRODUCT_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {type.charAt(0).toUpperCase() + type.slice(1)}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Status */}

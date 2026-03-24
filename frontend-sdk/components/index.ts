@@ -35,3 +35,7 @@ export type {
   JSONSchema,
   JSONSchemaProperty,
 } from './settings';
+
+// Filtered table with tabs
+export { FilteredTableWithTabs } from './filtered-table';
+export type { FilteredTableWithTabsProps, FilteredTab } from './filtered-table';

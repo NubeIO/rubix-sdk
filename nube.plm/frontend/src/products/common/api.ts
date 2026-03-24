@@ -91,6 +91,7 @@ export function formDataToUpdateInput(formData: ProductFormData): UpdateProductI
     settings: {
       productCode: formData.productCode,
       description: formData.description || undefined,
+      productType: formData.productType,
       status: formData.status,
       price: formData.price ? parseFloat(formData.price) : undefined,
     },
