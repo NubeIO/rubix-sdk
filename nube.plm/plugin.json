@@ -8,13 +8,15 @@
   "category": "manufacturing",
   "nodeTypes": [
     "plm.service",
-    "plm.products",
     "plm.product",
+    "plm.products",
     "plm.prototest",
     "plm.manufacturing-unit"
   ],
   "coreNodeTypes": [
-    "core.asset"
+    "core.asset",
+    "core.service",
+    "core.product"
   ],
   "_futureNodeTypes": [
     "plm.production-runs",
@@ -29,8 +31,8 @@
   "policy": {
     "nodeTypes": [
       "plm.service",
-      "plm.products",
       "plm.product",
+      "plm.products",
       "plm.prototest",
       "plm.manufacturing-unit"
     ],

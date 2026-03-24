@@ -1,6 +1,82 @@
 version: 1
 
 nodeTypes:
+  # ---------------------------------------------------------------------------
+  # PLM Service (extends core.service)
+  # ---------------------------------------------------------------------------
+  - type: plm.service
+    baseType: core.service
+    displayName: PLM Service
+    description: Product Lifecycle Management service root
+    autoPluginId: true
+    autoIdentity: [service, plm]
+
+    defaults:
+      serviceName: "Product Lifecycle Management"
+      serviceType: "plm"
+      status: "active"
+      version: "2.0"
+      tags: "plm,lifecycle,manufacturing"
+
+    validation:
+      required: [serviceName]
+      rules:
+        serviceName:
+          pattern: "^[A-Za-z0-9 \\-_]+$"
+          message: "Service name must be alphanumeric"
+          example: "Product Lifecycle Management"
+
+    uiHints:
+      icon: package-search
+      color: "#3b82f6"
+
+  # ---------------------------------------------------------------------------
+  # PLM Product (extends core.product)
+  # ---------------------------------------------------------------------------
+  - type: plm.product
+    baseType: core.product
+    displayName: PLM Product
+    description: Product catalog with lifecycle tracking
+    autoPluginId: true
+    autoIdentity: [product, plm]
+
+    defaults:
+      category: "hardware"
+      currency: "USD"
+      availability: "in-development"
+
+    validation:
+      required: [sku, productName, manufacturer]
+      rules:
+        sku:
+          pattern: "^[A-Z0-9\\-]+$"
+          message: "SKU must contain only uppercase letters, numbers, and hyphens"
+          example: "EDGE-001"
+        productName:
+          pattern: "^[A-Za-z0-9 \\-_\\.]+$"
+          message: "Product name must be alphanumeric"
+          example: "Edge Controller"
+        manufacturer:
+          pattern: "^[A-Za-z0-9 \\-_\\.]+$"
+          message: "Manufacturer must be alphanumeric"
+          example: "NubeIO"
+        category:
+          enum: [hardware, software, hybrid, firmware, bundle]
+          message: "Invalid category"
+        availability:
+          enum: [in-development, prototype, production, discontinued, end-of-life]
+          message: "Invalid availability status"
+        price:
+          min: 0
+          message: "Price must be non-negative"
+
+    uiHints:
+      icon: package
+      color: "#10b981"
+
+  # ---------------------------------------------------------------------------
+  # Manufacturing Unit (extends core.asset)
+  # ---------------------------------------------------------------------------
   - type: plm.manufacturing-unit
     baseType: core.asset
     displayName: Manufacturing Unit

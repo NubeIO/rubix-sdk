@@ -6,6 +6,18 @@
 
 // @ts-ignore - SDK types are resolved at build time
 import { MultiSettingsDialog } from '@rubix-sdk/frontend/components/settings';
+// @ts-ignore - SDK UI components
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@rubix-sdk/frontend/common/ui/dialog';
+// @ts-ignore - SDK UI components
+import { Card } from '@rubix-sdk/frontend/common/ui/card';
+// @ts-ignore - SDK icons
+import { Loader2, AlertCircle } from 'lucide-react';
 
 import { useProductSchemas } from '../hooks/use-product-schemas';
 
@@ -89,13 +101,56 @@ export function CreateProductDialogSDK({
   // Show loading state
   if (loading) {
     console.log('[CreateProductDialogSDK] Loading schemas...');
-    return null; // Dialog will be hidden during schema loading
+    return (
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Product</DialogTitle>
+            <DialogDescription>Loading product schemas...</DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <span className="ml-3 text-muted-foreground">Loading...</span>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   // Show error state
   if (error || schemas.length === 0) {
     console.error('[CreateProductDialogSDK] Schema error:', error || 'No schemas available');
-    return null; // Could render an error dialog here
+    const errorMessage = error || 'No schemas available for plm.product node type';
+
+    return (
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Product</DialogTitle>
+            <DialogDescription>Unable to load product schemas</DialogDescription>
+          </DialogHeader>
+          <Card className="border-red-500 bg-red-50 dark:bg-red-950 p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-red-900 dark:text-red-100 mb-1">
+                  Schema Error
+                </h3>
+                <p className="text-sm text-red-800 dark:text-red-200 mb-3">{errorMessage}</p>
+                <details className="text-xs text-red-700 dark:text-red-300">
+                  <summary className="cursor-pointer font-medium hover:underline">
+                    Show Debug Info
+                  </summary>
+                  <pre className="mt-2 rounded bg-red-100 dark:bg-red-900 p-2 text-xs overflow-auto">
+                    {JSON.stringify({ orgId, deviceId, baseUrl, templateNodeId, error }, null, 2)}
+                  </pre>
+                </details>
+              </div>
+            </div>
+          </Card>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   // Find default schema
