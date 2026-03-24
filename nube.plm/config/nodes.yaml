@@ -43,32 +43,60 @@ nodeTypes:
     defaults:
       category: "hardware"
       currency: "USD"
-      availability: "in-development"
+      status: "Design"
 
     validation:
-      required: [sku, productName, manufacturer]
+      required: [productCode]
       rules:
-        sku:
-          pattern: "^[A-Z0-9\\-]+$"
-          message: "SKU must contain only uppercase letters, numbers, and hyphens"
-          example: "EDGE-001"
-        productName:
-          pattern: "^[A-Za-z0-9 \\-_\\.]+$"
-          message: "Product name must be alphanumeric"
-          example: "Edge Controller"
-        manufacturer:
-          pattern: "^[A-Za-z0-9 \\-_\\.]+$"
-          message: "Manufacturer must be alphanumeric"
-          example: "NubeIO"
+        productCode:
+          message: "Product code must be at least 3 characters"
+          example: "edge-001"
         category:
           enum: [hardware, software, hybrid, firmware, bundle]
           message: "Invalid category"
-        availability:
-          enum: [in-development, prototype, production, discontinued, end-of-life]
-          message: "Invalid availability status"
+        status:
+          enum: [Design, Prototype, Production, Discontinued]
+          message: "Invalid status"
         price:
           min: 0
           message: "Price must be non-negative"
+
+    # Child node templates - shown in "Add Child" menu
+    childTemplates:
+      - type: core.folder
+        displayName: Bill of Materials (BOM)
+        icon: list-tree
+        defaults:
+          name: "BOM"
+          description: "Components and assemblies"
+
+      - type: core.folder
+        displayName: Specifications
+        icon: file-text
+        defaults:
+          name: "Specifications"
+          description: "Technical specs and documentation"
+
+      - type: core.folder
+        displayName: Revisions
+        icon: git-branch
+        defaults:
+          name: "Revisions"
+          description: "Design revisions and versions"
+
+      - type: core.folder
+        displayName: Manufacturing
+        icon: factory
+        defaults:
+          name: "Manufacturing"
+          description: "Assembly and production instructions"
+
+      - type: core.folder
+        displayName: Testing
+        icon: check-circle
+        defaults:
+          name: "Testing"
+          description: "Test plans and results"
 
     uiHints:
       icon: package

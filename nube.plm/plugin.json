@@ -77,11 +77,26 @@
       "title": "Product Management",
       "icon": "package",
       "description": "Manage PLM products",
+      "nodeTypes": ["plm.products"],
       "enabled": true,
       "isDefault": true,
       "order": 10,
       "props": {
         "exposedPath": "./Page",
+        "useMountPattern": true
+      }
+    },
+    {
+      "pageId": "product-detail",
+      "title": "Product Details",
+      "icon": "package",
+      "description": "View product overview and BOM",
+      "nodeTypes": ["plm.product"],
+      "enabled": true,
+      "isDefault": true,
+      "order": 10,
+      "props": {
+        "exposedPath": "./ProductDetail",
         "useMountPattern": true
       }
     },

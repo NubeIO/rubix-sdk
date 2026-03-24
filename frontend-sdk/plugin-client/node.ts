@@ -71,6 +71,24 @@ export async function updateNode(
   return result.data as Node;
 }
 
+export async function updateNodeSettings(
+  client: PluginClient,
+  nodeId: string,
+  settings: Record<string, unknown>
+): Promise<Node> {
+  const rasClient = client.getRASClient();
+  const config = client.getConfig();
+
+  const result = await rasClient.nodes.settingsPatch({
+    orgId: config.orgId,
+    deviceId: config.deviceId,
+    id: nodeId,
+    body: settings,
+  });
+
+  return result.node as Node;
+}
+
 export async function deleteNode(
   client: PluginClient,
   nodeId: string

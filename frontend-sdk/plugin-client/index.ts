@@ -42,6 +42,7 @@ import {
   getNode as getNodeHelper,
   listNodes as listNodesHelper,
   updateNode as updateNodeHelper,
+  updateNodeSettings as updateNodeSettingsHelper,
 } from './node';
 import { queryNodes as queryNodesHelper } from './query';
 import {
@@ -237,6 +238,33 @@ export class PluginClient {
     } catch (err: any) {
       throw new PluginClientError(
         err?.details?.message || err?.message || 'Failed to update node',
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Update only the settings of an existing node (more efficient than updateNode)
+   *
+   * Uses PATCH endpoint that merges settings instead of replacing the entire node.
+   * Recommended for product edits where only settings change.
+   *
+   * @example
+   * ```ts
+   * await client.updateNodeSettings('node_abc123', {
+   *   productCode: 'WGT-002',
+   *   price: 149.99,
+   *   status: 'Active'
+   * });
+   * ```
+   */
+  async updateNodeSettings(nodeId: string, settings: Record<string, unknown>): Promise<Node> {
+    try {
+      return await updateNodeSettingsHelper(this, nodeId, settings);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || 'Failed to update node settings',
         err?.status,
         err?.details
       );

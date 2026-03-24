@@ -19,7 +19,7 @@ export interface CreateProductInput {
 }
 
 export interface UpdateProductInput {
-  name: string;
+  name?: string;
   settings: ProductSettings;
 }
 
@@ -52,10 +52,17 @@ export class ProductsAPI {
   }
 
   async updateProduct(productId: string, input: UpdateProductInput): Promise<Product> {
-    const node = await this.client.updateNode(productId, {
-      name: input.name,
-      settings: input.settings,
-    });
+    // Use settingsPatch endpoint for more efficient settings-only updates
+    // This uses PATCH /nodes/{id}/settings instead of PUT /nodes/{id}
+    const settingsUpdate: Record<string, unknown> = { ...input.settings };
+
+    // If name is provided and different, include it in the settings update
+    // The backend will handle synchronizing it with node.name if needed
+    if (input.name !== undefined) {
+      settingsUpdate.name = input.name;
+    }
+
+    const node = await this.client.updateNodeSettings(productId, settingsUpdate);
     return node as Product;
   }
 

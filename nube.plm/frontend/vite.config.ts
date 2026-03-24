@@ -26,6 +26,7 @@ export default defineConfig({
       exposes: {
         './ProductTableWidget': './src/products/widget/ProductTableWidget.tsx',
         './Page': './src/products/page/ProductsPage.tsx',
+        './ProductDetail': './src/products/node/ProductDetailPage.tsx',
         './ProofShared': './src/test/ProveItsShared.tsx',
       },
       shared: {
