@@ -18,7 +18,9 @@
     "baseUrl": ".",
     "paths": {
       "@rubix/sdk": ["../../frontend-sdk/index.ts"],
-      "@rubix/sdk/*": ["../../frontend-sdk/*"]
+      "@rubix/sdk/*": ["../../frontend-sdk/*"],
+      "@features/*": ["./src/features/*"],
+      "@shared/*": ["./src/shared/*"]
     },
 
     /* Linting */

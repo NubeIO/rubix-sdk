@@ -1,0 +1,219 @@
+/**
+ * Product Table Widget
+ *
+ * Feature-first architecture - all product code in products/
+ * Refactored from 962 lines monolith to ~140 line orchestrator
+ */
+
+import { useState } from 'react';
+// @ts-ignore - SDK types are resolved at build time
+import { Button, Skeleton } from '@rubix-sdk/frontend/common/ui';
+import '@rubix-sdk/frontend/globals.css';
+
+import { Product } from '@features/product/types/product.types';
+import { useProducts } from '@features/product/hooks/use-products';
+import { PlusIcon } from '@shared/components/icons';
+import { ProductTable } from '@features/product/components/ProductTable';
+import {
+  DeleteProductDialogSDK as DeleteProductDialog,
+  CreateProductDialogSDK,
+  EditProductDialogSDK,
+} from '@features/product/components';
+
+export interface WidgetSettings {
+  display?: {
+    showCode?: boolean;
+    showStatus?: boolean;
+    showPrice?: boolean;
+    compactMode?: boolean;
+  };
+  refresh?: {
+    interval?: number;
+    enableAutoRefresh?: boolean;
+  };
+}
+
+export interface ProductTableWidgetProps {
+  orgId?: string;
+  deviceId?: string;
+  baseUrl?: string;
+  token?: string;
+  settings?: WidgetSettings;
+  config?: Record<string, unknown>;
+  nodeId?: string;
+}
+
+export default function ProductTableWidget({
+  orgId,
+  deviceId,
+  baseUrl,
+  token,
+  settings,
+}: ProductTableWidgetProps) {
+  // Parse settings with defaults
+  const showCode = settings?.display?.showCode ?? true;
+  const showStatus = settings?.display?.showStatus ?? true;
+  const showPrice = settings?.display?.showPrice ?? true;
+  const compactMode = settings?.display?.compactMode ?? false;
+  const interval = (settings?.refresh?.interval ?? 30) * 1000;
+  const autoRefresh = settings?.refresh?.enableAutoRefresh ?? true;
+
+  // Products CRUD (includes PLM hierarchy initialization)
+  const {
+    products,
+    loading: productsLoading,
+    error: productsError,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    productsCollectionId,
+    hierarchyLoading,
+    hierarchyError,
+  } = useProducts({
+    orgId: orgId || '',
+    deviceId: deviceId || '',
+    baseUrl,
+    token,
+    autoRefresh,
+    refreshInterval: interval,
+  });
+
+  // Dialog state
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+
+  // Computed
+  const canCreate = !!(orgId && deviceId && baseUrl && productsCollectionId);
+  const loading = hierarchyLoading || productsLoading;
+  const error = hierarchyError || productsError;
+
+  const displaySettings = {
+    showCode,
+    showStatus,
+    showPrice,
+    compactMode,
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="p-4">
+        <div className="mb-3">
+          <Skeleton className="h-4 w-32 mb-4" />
+          <Skeleton className="h-10 w-full mb-2" />
+          <Skeleton className="h-10 w-full mb-2" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-4 text-sm">
+        <div className="text-destructive mb-3">Error: {error}</div>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (products.length === 0) {
+    return (
+      <div className="p-4">
+        <div className="text-muted-foreground text-center mb-4 text-sm">
+          No products found. Create one to get started.
+        </div>
+        <div className="text-center">
+          <Button onClick={() => setCreateDialogOpen(true)} disabled={!canCreate} size="sm">
+            <PlusIcon size={compactMode ? 12 : 14} />
+            New Product
+          </Button>
+        </div>
+
+        {/* TODO: Re-implement with multi-settings SDK
+        <CreateProductDialog
+          open={createDialogOpen}
+          onClose={() => setCreateDialogOpen(false)}
+          onSubmit={createProduct}
+        />
+        */}
+      </div>
+    );
+  }
+
+  // Main content
+  return (
+    <div className="p-4 h-full overflow-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-xs text-muted-foreground">
+          {products.length} product{products.length !== 1 ? 's' : ''}
+        </div>
+        <Button onClick={() => setCreateDialogOpen(true)} disabled={!canCreate} size="sm">
+          <PlusIcon size={14} />
+          New Product
+        </Button>
+      </div>
+
+      {/* Table */}
+      <ProductTable
+        products={products}
+        displaySettings={displaySettings}
+        onEdit={(product) => setEditingProduct(product)}
+        onDelete={(productId, productName, productCode) =>
+          setDeletingProduct({
+            id: productId,
+            name: productName,
+            settings: productCode ? { productCode } : {},
+          })
+        }
+      />
+
+      {/* Create Product Dialog */}
+      {createDialogOpen && (
+        <CreateProductDialogSDK
+          orgId={orgId || ''}
+          deviceId={deviceId || ''}
+          baseUrl={baseUrl}
+          token={token}
+          productsCollectionId={productsCollectionId || ''}
+          open={createDialogOpen}
+          onClose={() => setCreateDialogOpen(false)}
+          onSubmit={createProduct}
+        />
+      )}
+
+      {/* Edit Product Dialog */}
+      {editingProduct && (
+        <EditProductDialogSDK
+          orgId={orgId || ''}
+          deviceId={deviceId || ''}
+          baseUrl={baseUrl}
+          token={token}
+          product={editingProduct}
+          open={true}
+          onClose={() => setEditingProduct(null)}
+          onSubmit={updateProduct}
+        />
+      )}
+
+      {deletingProduct && (
+        <DeleteProductDialog
+          open={true}
+          productName={deletingProduct.name}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeletingProduct(null);
+            }
+          }}
+          onConfirm={async () => {
+            await deleteProduct(deletingProduct.id);
+            setDeletingProduct(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}

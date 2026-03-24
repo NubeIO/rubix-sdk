@@ -24,9 +24,9 @@ export default defineConfig({
       name: 'nube_plm',
       filename: 'remoteEntry.js',
       exposes: {
-        './ProductTableWidget': './src/products/widget/ProductTableWidget.tsx',
-        './Page': './src/products/page/ProductsPage.tsx',
-        './ProductDetail': './src/products/node/ProductDetailPage.tsx',
+        './ProductTableWidget': './src/features/product/widgets/ProductTableWidget.tsx',
+        './Page': './src/features/product/pages/ProductsListPage.tsx',
+        './ProductDetail': './src/features/product/pages/ProductDetailPage.tsx',
         './ProofShared': './src/test/ProveItsShared.tsx',
       },
       shared: {
@@ -40,6 +40,8 @@ export default defineConfig({
     alias: {
       '@rubix-sdk/frontend': path.resolve(__dirname, '../../frontend-sdk'),
       '@': path.resolve(__dirname, './src'),
+      '@features': path.resolve(__dirname, './src/features'),
+      '@shared': path.resolve(__dirname, './src/shared'),
     },
   },
   base: '/api/v1/ext/nube.plm/',
