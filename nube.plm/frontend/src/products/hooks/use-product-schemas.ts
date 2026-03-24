@@ -1,12 +1,10 @@
 /**
- * Hook to fetch product settings schemas
+ * Hook to fetch product settings schemas from node profiles API
  *
- * Uses local schemas defined in the plugin (no backend query needed)
- * This avoids the issue of querying node profile schemas before nodes exist.
+ * Fetches the plm.product profile and generates variant schemas for hardware/software
  */
 
 import { useState, useEffect } from 'react';
-import { PLM_PRODUCT_SCHEMAS } from '../schemas/plm-product-schemas';
 
 export interface SchemaInfo {
   name: string;
@@ -44,13 +42,159 @@ export interface UseProductSchemasOptions {
   enabled?: boolean;
 }
 
+interface NodeProfile {
+  type: string;
+  baseType: string;
+  displayName: string;
+  description: string;
+  defaults?: Record<string, any>;
+  validation?: {
+    required?: string[];
+    rules?: Record<string, ValidationRule>;
+  };
+}
+
+interface ValidationRule {
+  pattern?: string;
+  message?: string;
+  example?: string;
+  min?: number;
+  max?: number;
+  enum?: string[];
+}
+
 /**
- * Fetches product settings schemas from backend
- *
- * Uses the multi-settings API to fetch both hardware and software schemas
+ * Convert node profile validation rules to JSON Schema
+ */
+function convertProfileToJsonSchema(profile: NodeProfile): Record<string, unknown> {
+  const properties: Record<string, any> = {};
+  const required: string[] = profile.validation?.required || [];
+
+  // Convert each validation rule to JSON Schema property
+  if (profile.validation?.rules) {
+    Object.entries(profile.validation.rules).forEach(([fieldName, rule]) => {
+      const property: Record<string, any> = {
+        type: inferType(rule),
+        title: toTitleCase(fieldName),
+        description: rule.message || rule.example || '',
+      };
+
+      if (rule.pattern) {
+        property.pattern = rule.pattern;
+      }
+
+      if (rule.enum) {
+        property.enum = rule.enum;
+      }
+
+      if (rule.min !== undefined) {
+        property.minimum = rule.min;
+      }
+
+      if (rule.max !== undefined) {
+        property.maximum = rule.max;
+      }
+
+      // Add default from profile defaults
+      if (profile.defaults && profile.defaults[fieldName] !== undefined) {
+        property.default = profile.defaults[fieldName];
+      }
+
+      properties[fieldName] = property;
+    });
+  }
+
+  return {
+    type: 'object',
+    properties,
+    required,
+  };
+}
+
+/**
+ * Infer JSON Schema type from validation rule
+ */
+function inferType(rule: ValidationRule): string {
+  if (rule.enum) {
+    return 'string';
+  }
+  if (rule.min !== undefined || rule.max !== undefined) {
+    return 'number';
+  }
+  return 'string';
+}
+
+/**
+ * Convert camelCase to Title Case
+ */
+function toTitleCase(str: string): string {
+  return str
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, (s) => s.toUpperCase())
+    .trim();
+}
+
+/**
+ * Generate schema variants for hardware and software products
+ */
+function generateSchemaVariants(profile: NodeProfile): SchemaInfoWithSchema[] {
+  const baseSchema = convertProfileToJsonSchema(profile);
+  const baseProperties = (baseSchema.properties as Record<string, any>) || {};
+  const categoryProp = baseProperties.category || {};
+
+  // Hardware variant (default category)
+  const hardwareSchema = {
+    ...baseSchema,
+    properties: {
+      ...baseProperties,
+      category: {
+        ...categoryProp,
+        default: 'hardware',
+      },
+    },
+  };
+
+  // Software variant with additional license field
+  const softwareSchema = {
+    ...baseSchema,
+    properties: {
+      ...baseProperties,
+      category: {
+        ...categoryProp,
+        default: 'software',
+      },
+      licenseType: {
+        type: 'string',
+        title: 'License Type',
+        description: 'Software licensing model',
+        enum: ['perpetual', 'subscription', 'saas', 'open-source', 'trial'],
+      },
+    },
+  };
+
+  return [
+    {
+      name: 'hardware',
+      displayName: 'Hardware Product',
+      description: 'Physical products (controllers, sensors, equipment)',
+      isDefault: true,
+      schema: hardwareSchema,
+    },
+    {
+      name: 'software',
+      displayName: 'Software Product',
+      description: 'Digital products (applications, licenses, SaaS)',
+      isDefault: false,
+      schema: softwareSchema,
+    },
+  ];
+}
+
+/**
+ * Fetches product settings schemas from node profiles API
  */
 export function useProductSchemas(options: UseProductSchemasOptions): UseProductSchemasResult {
-  const { orgId, deviceId, nodeId, baseUrl, token, enabled = true } = options;
+  const { orgId, deviceId, baseUrl = '', token, enabled = true } = options;
 
   const [schemas, setSchemas] = useState<SchemaInfoWithSchema[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,24 +205,37 @@ export function useProductSchemas(options: UseProductSchemasOptions): UseProduct
     setError(null);
 
     try {
-      console.log('[useProductSchemas] Using local schemas (no backend query)');
+      const url = `${baseUrl}/orgs/${orgId}/devices/${deviceId}/node-profiles/plm.product`;
 
-      // Use local schemas defined in the plugin
-      // This avoids the backend issue with node profile schemas
-      const schemasWithData: SchemaInfoWithSchema[] = PLM_PRODUCT_SCHEMAS.map(s => ({
-        name: s.name,
-        displayName: s.displayName,
-        description: s.description,
-        isDefault: s.isDefault,
-        schema: s.schema,
-      }));
+      console.log('[useProductSchemas] Fetching profile from:', url);
 
-      console.log('[useProductSchemas] Loaded local schemas:', {
-        count: schemasWithData.length,
-        schemas: schemasWithData.map(s => s.name),
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(url, { headers });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch profile: ${response.status} ${response.statusText}`);
+      }
+
+      const profile: NodeProfile = await response.json();
+
+      console.log('[useProductSchemas] Profile loaded:', profile);
+
+      // Generate hardware and software variants from the profile
+      const schemaVariants = generateSchemaVariants(profile);
+
+      console.log('[useProductSchemas] Generated schema variants:', {
+        count: schemaVariants.length,
+        schemas: schemaVariants.map(s => s.name),
       });
 
-      setSchemas(schemasWithData);
+      setSchemas(schemaVariants);
       setLoading(false);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load schemas';
@@ -93,7 +250,7 @@ export function useProductSchemas(options: UseProductSchemasOptions): UseProduct
     if (enabled && orgId && deviceId) {
       fetchSchemas();
     }
-  }, [enabled, orgId, deviceId, nodeId, baseUrl, token]);
+  }, [enabled, orgId, deviceId, baseUrl, token]);
 
   return {
     schemas,

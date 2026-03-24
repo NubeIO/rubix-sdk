@@ -23,8 +23,8 @@ build-frontend:
 
 deploy-frontend: build-frontend
 	@echo "Deploying frontend to plugin directory..."
-	@rm -rf /home/user/code/go/nube/rubix/bin/orgs/test/plugins/nube.plm/dist-frontend
-	@cp -r dist-frontend /home/user/code/go/nube/rubix/bin/orgs/test/plugins/nube.plm/
+	@rm -rf /home/user/code/go/nube/rubix/bin/dev/orgs/test/plugins/nube.plm/dist-frontend
+	@cp -r dist-frontend /home/user/code/go/nube/rubix/bin/dev/orgs/test/plugins/nube.plm/
 	@echo "✓ Frontend deployed - just refresh your browser!"
 
 # Quick dev workflow - build + deploy in one step

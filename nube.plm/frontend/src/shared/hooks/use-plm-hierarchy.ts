@@ -39,7 +39,7 @@ export function usePLMHierarchy(
 
         // Query for service node created by nube.plm plugin
         const serviceNodes = await client.queryNodes({
-          filter: 'type is "plm.service" and plugin.id is "nube.plm"',
+          filter: 'type is "plm.service" and plugin.id is "plm"',
         });
 
         if (serviceNodes.length === 0) {
