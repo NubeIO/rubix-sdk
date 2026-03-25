@@ -27,6 +27,7 @@ export default defineConfig({
         './ProductTableWidget': './src/features/product/widgets/ProductTableWidget.tsx',
         './Page': './src/features/product/pages/ProductsListPage.tsx',
         './ProductDetail': './src/features/product/pages/ProductDetailPage.tsx',
+        './TasksPage': './src/features/task/pages/TasksPage.tsx',
         './ProofShared': './src/test/ProveItsShared.tsx',
       },
       shared: {

@@ -19,6 +19,7 @@ import { HardwareDetailsSection } from '@features/product/components/sections/Ha
 import { SoftwareDetailsSection } from '@features/product/components/sections/SoftwareDetailsSection-v2';
 import { BOMSection } from '@features/product/components/sections/BOMSection';
 import { SystemInfoSection } from '@features/product/components/sections/SystemInfoSection-v2';
+import { TasksSection } from '@features/product/components/sections/TasksSection';
 
 interface ProductDetailViewProps {
   product: Product;
@@ -185,6 +186,16 @@ export function ProductDetailView({
             isExpanded={expandedSections.has('bom')}
             onToggle={() => toggleSection('bom')}
             onBOMCostChange={handleBOMCostChange}
+          />
+
+          <TasksSection
+            product={product}
+            orgId={orgId}
+            deviceId={deviceId}
+            baseUrl={baseUrl}
+            token={token}
+            isExpanded={expandedSections.has('tasks')}
+            onToggle={() => toggleSection('tasks')}
           />
 
           <SystemInfoSection
