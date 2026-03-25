@@ -18,6 +18,7 @@ export default defineConfig({
     'react-dom',
     'lucide-react',
     /^@radix-ui\//, // Externalize ALL Radix UI packages
+    /^@tiptap\//, // Externalize Tiptap packages
   ],
   treeshake: true,
   splitting: false,

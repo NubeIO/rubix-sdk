@@ -9,6 +9,7 @@ import { ListChecks, Plus, Edit, Trash2, ExternalLink } from 'lucide-react';
 import type { Product } from '@features/product/types/product.types';
 import type { Task } from '@features/task/types/task.types';
 import { TaskStatusBadge } from '@features/task/components/TaskStatusBadge';
+import { TaskAPI, type CreateTaskInput } from '@features/task/api/task-api';
 
 interface TasksSectionProps {
   product: Product;
@@ -19,6 +20,19 @@ interface TasksSectionProps {
   isExpanded: boolean;
   onToggle: () => void;
 }
+
+const TASK_STATUSES = [
+  { value: 'todo', label: 'To Do' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'completed', label: 'Completed' },
+];
+
+const TASK_PRIORITIES = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'critical', label: 'Critical' },
+];
 
 export function TasksSection({
   product,
@@ -31,6 +45,13 @@ export function TasksSection({
 }: TasksSectionProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [taskName, setTaskName] = useState('');
+  const [taskDescription, setTaskDescription] = useState('');
+  const [taskStatus, setTaskStatus] = useState('todo');
+  const [taskPriority, setTaskPriority] = useState('medium');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isExpanded) {
@@ -42,9 +63,7 @@ export function TasksSection({
     setLoading(true);
 
     try {
-      const filter = `type is "core.task" and parentId is "${product.id}"`;
-      const url = `${baseUrl}/orgs/${orgId}/devices/${deviceId}/query?filter=${encodeURIComponent(filter)}`;
-
+      const url = `${baseUrl}/orgs/${orgId}/devices/${deviceId}/query`;
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -53,7 +72,13 @@ export function TasksSection({
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(url, { headers });
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          filter: `type is "core.task" and parentId is "${product.id}"`,
+        }),
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch tasks: ${response.status}`);
@@ -66,6 +91,47 @@ export function TasksSection({
       console.error('[TasksSection] Fetch error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!taskName.trim()) {
+      setError('Task name is required');
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const api = new TaskAPI({ orgId, deviceId, baseUrl, token });
+      await api.createTask({
+        name: taskName.trim(),
+        parentId: product.id,
+        settings: {
+          description: taskDescription.trim() || undefined,
+          status: taskStatus,
+          priority: taskPriority,
+          progress: 0,
+        },
+      });
+
+      // Reset form
+      setTaskName('');
+      setTaskDescription('');
+      setTaskStatus('todo');
+      setTaskPriority('medium');
+      setCreateDialogOpen(false);
+
+      // Refresh tasks
+      await fetchTasks();
+    } catch (err) {
+      console.error('[TasksSection] Failed to create task:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create task');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -85,14 +151,28 @@ export function TasksSection({
       : 0;
 
   return (
-    <SettingsSection
-      title="Tasks"
-      icon={ListChecks}
-      description={`${taskStats.total} tasks • ${taskStats.completed} completed`}
-      isExpanded={isExpanded}
-      onToggle={onToggle}
-    >
-      <div className="space-y-4">
+    <>
+      <SettingsSection
+        title="Tasks"
+        icon={ListChecks}
+        description={`${taskStats.total} tasks • ${taskStats.completed} completed`}
+        isExpanded={isExpanded}
+        onToggle={onToggle}
+        actions={
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              setCreateDialogOpen(true);
+            }}
+          >
+            <Plus size={14} />
+            Add Task
+          </Button>
+        }
+      >
+        <div className="space-y-4">
         {/* Stats Bar */}
         <div className="grid grid-cols-4 gap-3">
           <div className="rounded-lg border bg-muted/30 p-3">
@@ -183,5 +263,118 @@ export function TasksSection({
         )}
       </div>
     </SettingsSection>
+
+    {/* Create Task Dialog */}
+    {createDialogOpen && (
+      <div
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setCreateDialogOpen(false);
+        }}
+      >
+        <div className="bg-background rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Create Task</h2>
+            <button
+              onClick={() => setCreateDialogOpen(false)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              ✕
+            </button>
+          </div>
+
+          <form onSubmit={handleCreateTask} className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">
+                Product
+              </label>
+              <input
+                type="text"
+                value={product.name}
+                disabled
+                className="w-full px-3 py-2 border rounded-md text-sm bg-muted"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">
+                Task Name <span className="text-destructive">*</span>
+              </label>
+              <input
+                type="text"
+                value={taskName}
+                onChange={(e) => setTaskName(e.target.value)}
+                placeholder="Enter task name..."
+                className="w-full px-3 py-2 border rounded-md text-sm"
+                required
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Description</label>
+              <textarea
+                value={taskDescription}
+                onChange={(e) => setTaskDescription(e.target.value)}
+                placeholder="Enter task description..."
+                rows={3}
+                className="w-full px-3 py-2 border rounded-md text-sm resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Status</label>
+                <select
+                  value={taskStatus}
+                  onChange={(e) => setTaskStatus(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md text-sm"
+                >
+                  {TASK_STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Priority</label>
+                <select
+                  value={taskPriority}
+                  onChange={(e) => setTaskPriority(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md text-sm"
+                >
+                  {TASK_PRIORITIES.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {error && (
+              <div className="rounded-md bg-destructive/10 border border-destructive/50 p-3">
+                <p className="text-sm text-destructive">{error}</p>
+              </div>
+            )}
+
+            <div className="flex gap-2 justify-end pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting || !taskName.trim()}>
+                {submitting ? 'Creating...' : 'Create Task'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+  </>
   );
 }

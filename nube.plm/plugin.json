@@ -84,6 +84,7 @@
       "icon": "factory",
       "color": "#8b5cf6",
       "category": "manufacturing",
+      "propertyPanels": ["node-settings", "tags-references"],
       "constraints": {
         "maxOneNode": true,
         "allowedParents": ["rubix.device"]
@@ -100,6 +101,7 @@
       "icon": "package",
       "color": "#3b82f6",
       "category": "manufacturing",
+      "propertyPanels": ["node-settings", "history-analytics", "tags-references"],
       "constraints": {
         "allowedParents": ["plm.service", "plm.products"]
       },
@@ -134,6 +136,7 @@
       "icon": "cpu",
       "color": "#ef4444",
       "category": "manufacturing",
+      "propertyPanels": ["node-settings", "tags-references"],
       "constraints": {
         "allowedParents": ["plm.product"]
       },
@@ -150,6 +153,7 @@
       "icon": "component",
       "color": "#f59e0b",
       "category": "manufacturing",
+      "propertyPanels": ["node-settings", "tags-references"],
       "visibility": {
         "hideIn": ["wiresheet"]
       },
@@ -234,6 +238,7 @@
       "enabled": true,
       "isDefault": true,
       "order": 10,
+      "propertyPanels": ["node-settings", "tags-references"],
       "props": {
         "exposedPath": "./Page",
         "useMountPattern": true
@@ -248,6 +253,7 @@
       "enabled": true,
       "isDefault": true,
       "order": 10,
+      "propertyPanels": ["node-settings", "history-analytics", "tags-references"],
       "props": {
         "exposedPath": "./ProductDetail",
         "useMountPattern": true

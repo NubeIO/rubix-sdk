@@ -60,7 +60,7 @@ export function ProductDetailView({
 
   const handleProductUpdate = async (productId: string, input: any) => {
     try {
-      const url = `${baseUrl}/orgs/${orgId}/devices/${deviceId}/nodes/${productId}`;
+      const url = `${baseUrl}/orgs/${orgId}/devices/${deviceId}/nodes/${productId}/settings`;
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
