@@ -268,3 +268,88 @@ nodeTypes:
           default: {}
           label: Performance Metrics
           description: Real-time operational metrics
+
+# =============================================================================
+# Node Profiles - Core types customized by PLM plugin
+# =============================================================================
+nodeProfiles:
+  # ---------------------------------------------------------------------------
+  # BOM Item (core.document + plm-bom profile)
+  # ---------------------------------------------------------------------------
+  - nodeType: core.document
+    profile: plm-bom
+    displayName: BOM Item
+    description: Bill of Materials entry
+    identity: [document, bom, plm]
+
+    defaults:
+      documentType: "bom-item"
+
+    uiHints:
+      icon: component
+      color: "#f59e0b"
+
+  # ---------------------------------------------------------------------------
+  # Time Entry (core.entry + plm-time-entry profile)
+  # ---------------------------------------------------------------------------
+  - nodeType: core.entry
+    profile: plm-time-entry
+    displayName: Time Entry
+    description: Time tracking for work items
+    identity: [entry, timesheet, plm]
+
+    defaults:
+      entryType: "time"
+
+    uiHints:
+      icon: clock
+      color: "#10b981"
+
+  # ---------------------------------------------------------------------------
+  # Work Item (core.ticket + plm-work-item profile)
+  # ---------------------------------------------------------------------------
+  - nodeType: core.ticket
+    profile: plm-work-item
+    displayName: Work Item
+    description: Task, bug, or feature request
+    identity: [ticket, work-item, plm]
+
+    defaults:
+      ticketType: "task"
+      status: "open"
+
+    uiHints:
+      icon: check-square
+      color: "#6366f1"
+
+  # ---------------------------------------------------------------------------
+  # Hardware Unit (core.asset + plm-unit profile)
+  # ---------------------------------------------------------------------------
+  - nodeType: core.asset
+    profile: plm-unit
+    displayName: Hardware Unit
+    description: Physical hardware unit with serial tracking
+    identity: [asset, unit, hardware, plm]
+
+    defaults:
+      assetType: "hardware-unit"
+
+    uiHints:
+      icon: cpu
+      color: "#ef4444"
+
+  # ---------------------------------------------------------------------------
+  # Component (core.component + plm-component profile)
+  # ---------------------------------------------------------------------------
+  - nodeType: core.component
+    profile: plm-component
+    displayName: PLM Component
+    description: Generic component for PLM system
+    identity: [component, plm]
+
+    defaults:
+      componentType: "generic"
+
+    uiHints:
+      icon: box
+      color: "#8b5cf6"

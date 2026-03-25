@@ -31,3 +31,9 @@ export type { RefreshButtonProps } from './refresh-button';
 
 export { Tabs } from './tabs';
 export type { TabsProps, Tab } from './tabs';
+
+export { Collapsible, CollapsibleContent, CollapsibleTrigger } from './collapsible';
+
+export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption } from './table';
+
+export { SettingsSection } from './settings-section';

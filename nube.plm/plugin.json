@@ -15,8 +15,12 @@
   ],
   "coreNodeTypes": [
     "core.asset",
+    "core.component",
+    "core.document",
+    "core.entry",
+    "core.product",
     "core.service",
-    "core.product"
+    "core.ticket"
   ],
   "_futureNodeTypes": [
     "plm.production-runs",
@@ -69,6 +73,139 @@
       "requiresBackend": false,
       "defaultSize": { "w": 6, "h": 4 },
       "settingsSchemaFile": "product-table-widget-settings.yaml"
+    }
+  ],
+  "nodes": [
+    {
+      "type": "plm.service",
+      "displayName": "PLM Service",
+      "description": "Product lifecycle management root service",
+      "icon": "factory",
+      "color": "#8b5cf6",
+      "category": "manufacturing",
+      "constraints": {
+        "maxOneNode": true,
+        "allowedParents": ["rubix.device"]
+      },
+      "autoFields": {
+        "identity": ["service", "plm"],
+        "pluginId": true
+      }
+    },
+    {
+      "type": "plm.product",
+      "displayName": "Product",
+      "description": "PLM-managed product with BOM and releases",
+      "icon": "package",
+      "color": "#3b82f6",
+      "category": "manufacturing",
+      "constraints": {
+        "allowedParents": ["plm.service", "plm.products"]
+      },
+      "autoFields": {
+        "identity": ["product", "plm"],
+        "pluginId": true
+      }
+    },
+    {
+      "type": "plm.products",
+      "displayName": "Products Collection",
+      "description": "Container for product catalog",
+      "icon": "package",
+      "color": "#3b82f6",
+      "category": "manufacturing",
+      "visibility": {
+        "hideIn": ["wiresheet"]
+      },
+      "constraints": {
+        "maxOneNode": true,
+        "allowedParents": ["plm.service"]
+      },
+      "autoFields": {
+        "identity": ["collection", "products", "plm"],
+        "pluginId": true
+      }
+    },
+    {
+      "type": "plm.manufacturing-unit",
+      "displayName": "Manufacturing Unit",
+      "description": "Serialized hardware unit",
+      "icon": "cpu",
+      "color": "#ef4444",
+      "category": "manufacturing",
+      "constraints": {
+        "allowedParents": ["plm.product"]
+      },
+      "autoFields": {
+        "identity": ["asset", "unit", "manufacturing", "plm"],
+        "pluginId": true
+      }
+    },
+    {
+      "type": "core.document",
+      "profile": "plm-bom",
+      "displayName": "BOM Item",
+      "description": "Bill of Materials entry",
+      "icon": "component",
+      "color": "#f59e0b",
+      "category": "manufacturing",
+      "visibility": {
+        "hideIn": ["wiresheet"]
+      },
+      "constraints": {
+        "allowedParents": ["plm.product"]
+      },
+      "autoFields": {
+        "identity": ["document", "bom", "plm"]
+      }
+    },
+    {
+      "type": "core.entry",
+      "profile": "plm-time-entry",
+      "displayName": "Time Entry",
+      "description": "Time tracking for work items",
+      "icon": "clock",
+      "color": "#10b981",
+      "category": "manufacturing",
+      "visibility": {
+        "hideIn": ["sidebar", "wiresheet"]
+      },
+      "constraints": {
+        "allowedParents": ["core.ticket"]
+      },
+      "autoFields": {
+        "identity": ["entry", "timesheet", "plm"]
+      }
+    },
+    {
+      "type": "core.ticket",
+      "profile": "plm-work-item",
+      "displayName": "Work Item",
+      "description": "Task, bug, or feature request",
+      "icon": "check-square",
+      "color": "#6366f1",
+      "category": "manufacturing",
+      "constraints": {
+        "allowedParents": ["plm.product"]
+      },
+      "autoFields": {
+        "identity": ["ticket", "work-item", "plm"]
+      }
+    },
+    {
+      "type": "core.asset",
+      "profile": "plm-unit",
+      "displayName": "Hardware Unit",
+      "description": "Physical hardware unit with serial tracking",
+      "icon": "cpu",
+      "color": "#ef4444",
+      "category": "manufacturing",
+      "constraints": {
+        "allowedParents": ["plm.product", "plm.manufacturing-unit"]
+      },
+      "autoFields": {
+        "identity": ["asset", "unit", "hardware", "plm"]
+      }
     }
   ],
   "pages": [
