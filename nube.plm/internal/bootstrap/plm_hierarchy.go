@@ -16,10 +16,13 @@ func EnsurePLMHierarchy(ctx context.Context, client *pluginBootstrap.Client, plu
 		PluginNodeID: pluginNodeID,
 		ServiceNode: pluginBootstrap.NodeSpec{
 			Type: "plm.service",
-			Name: "PLM System",
+			Name: "Product Lifecycle Management",
 			Settings: map[string]interface{}{
-				"description": "Product Lifecycle Management",
-				"version":     "1.0.0",
+				"serviceName": "Product Lifecycle Management",
+				"serviceType": "plm",
+				"status":      "active",
+				"version":     "2.0",
+				"tags":        "plm,lifecycle,manufacturing",
 			},
 		},
 		Collections: []pluginBootstrap.NodeSpec{
@@ -86,10 +89,13 @@ func EnsurePLMHierarchyWithRetry(ctx context.Context, client *pluginBootstrap.Cl
 		PluginNodeID: pluginNodeID,
 		ServiceNode: pluginBootstrap.NodeSpec{
 			Type: "plm.service",
-			Name: "PLM System",
+			Name: "Product Lifecycle Management",
 			Settings: map[string]interface{}{
-				"description": "Product Lifecycle Management",
-				"version":     "1.0.0",
+				"serviceName": "Product Lifecycle Management",
+				"serviceType": "plm",
+				"status":      "active",
+				"version":     "2.0",
+				"tags":        "plm,lifecycle,manufacturing",
 			},
 		},
 		Collections: []pluginBootstrap.NodeSpec{

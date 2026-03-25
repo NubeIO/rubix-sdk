@@ -73,16 +73,18 @@ func main() {
 	defer hookHandler.Unsubscribe()
 
 	// Node factory
+	// Note: plm.service and plm.product migrated to core.service and core.product
+	// with node profiles in config/nodes.yaml - no Go code needed!
 	factory := func(nodeType string) pluginnode.PluginNode {
 		switch nodeType {
-		case "plm.service":
-			return &nodes.PLMServiceNode{}
 		case "plm.products":
 			return &nodes.ProductsCollectionNode{}
-		case "plm.product":
-			return &nodes.ProductNode{}
 		case "plm.prototest":
 			return &nodes.ProtoTestNode{}
+		case "plm.manufacturing-unit":
+			// Manufacturing unit with port profile (config/nodes.yaml)
+			// Example: testOutput = testInput + 100
+			return &nodes.ManufacturingUnitNode{}
 		default:
 			return nil
 		}

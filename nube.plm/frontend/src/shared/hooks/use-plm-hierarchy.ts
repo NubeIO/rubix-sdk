@@ -37,9 +37,9 @@ export function usePLMHierarchy(
       try {
         const client = createPluginClient({ orgId, deviceId, baseUrl, token });
 
-        // Query for service node
+        // Query for service node created by nube.plm plugin
         const serviceNodes = await client.queryNodes({
-          filter: 'type is "plm.service"',
+          filter: 'type is "plm.service" and plugin.id is "plm"',
         });
 
         if (serviceNodes.length === 0) {
@@ -49,10 +49,11 @@ export function usePLMHierarchy(
         }
 
         const serviceId = serviceNodes[0].id;
+        console.log('[usePLMHierarchy] Found service node:', serviceId);
 
         // Query for collection nodes under service
         const collectionNodes = await client.queryNodes({
-          filter: `parentRef is "${serviceId}"`,
+          filter: `p.id is "${serviceId}"`,
         });
 
         // Build collection map

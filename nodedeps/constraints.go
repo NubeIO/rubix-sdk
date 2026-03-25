@@ -24,6 +24,12 @@ type NodeConstraints struct {
 
 	// Child dependencies
 	RequiredChildren []ChildDependency `json:"requiredChildren"` // Children that must exist
+
+	// Ref constraints (deletion policies, required refs, target type validation)
+	RefConstraints []RefConstraint `json:"refConstraints"` // Ref integrity rules
+
+	// Ownership support (framework-level team access control)
+	SupportsOwnership bool `json:"supportsOwnership"` // Auto-injects teamRef constraint (optional ref to auth.team)
 }
 
 // ChildDependency defines a required child node
@@ -34,6 +40,31 @@ type ChildDependency struct {
 	MaxCount    int    `json:"maxCount"`    // Maximum number allowed (-1 = unlimited)
 	DeleteProof bool   `json:"deleteProof"` // Child cannot be deleted by user
 }
+
+// RefConstraint defines validation and deletion policies for node refs.
+// This allows plugins to enforce referential integrity and prevent data loss.
+//
+// Example: PLM unit node that MUST reference a manufacturing run:
+//
+//	RefConstraint{
+//	    RefName: "runRef",
+//	    Required: true,
+//	    TargetTypes: []string{"plm.manufacturing-run"},
+//	    OnTargetDelete: RefPolicyProtect, // Block run deletion if units exist
+//	}
+type RefConstraint struct {
+	RefName        string   `json:"refName"`        // e.g., "runRef", "productRef", "siteRef"
+	Required       bool     `json:"required"`       // Must exist at node creation
+	TargetTypes    []string `json:"targetTypes"`    // Allowed target node types (empty = any)
+	OnTargetDelete string   `json:"onTargetDelete"` // RefPolicyCascade | RefPolicyProtect | RefPolicyNullify
+}
+
+// Ref deletion policy constants
+const (
+	RefPolicyCascade = "cascade" // Delete ref when target deleted (default)
+	RefPolicyProtect = "protect" // Block target deletion if refs exist
+	RefPolicyNullify = "nullify" // Clear ref ToNodeID when target deleted (ref survives)
+)
 
 // ConstrainedNode is the interface that nodes implement to declare constraints.
 // If a node implements this interface, rubix will enforce the constraints during CRUD operations.
@@ -58,6 +89,7 @@ func DefaultConstraints() NodeConstraints {
 		HideFromPalette:     false,
 		AllowedParents:      []string{}, // Any parent allowed
 		RequiredChildren:    []ChildDependency{},
+		RefConstraints:      []RefConstraint{},
 	}
 }
 

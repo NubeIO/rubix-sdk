@@ -1,0 +1,355 @@
+version: 1
+
+nodeTypes:
+  # ---------------------------------------------------------------------------
+  # PLM Service (extends core.service)
+  # ---------------------------------------------------------------------------
+  - type: plm.service
+    baseType: core.service
+    displayName: PLM Service
+    description: Product Lifecycle Management service root
+    autoPluginId: true
+    autoIdentity: [service, plm]
+
+    defaults:
+      serviceName: "Product Lifecycle Management"
+      serviceType: "plm"
+      status: "active"
+      version: "2.0"
+      tags: "plm,lifecycle,manufacturing"
+
+    validation:
+      required: [serviceName]
+      rules:
+        serviceName:
+          pattern: "^[A-Za-z0-9 \\-_]+$"
+          message: "Service name must be alphanumeric"
+          example: "Product Lifecycle Management"
+
+    uiHints:
+      icon: package-search
+      color: "#3b82f6"
+
+  # ---------------------------------------------------------------------------
+  # PLM Product (extends core.product)
+  # ---------------------------------------------------------------------------
+  - type: plm.product
+    baseType: core.product
+    displayName: PLM Product
+    description: Product catalog with lifecycle tracking
+    autoPluginId: true
+    autoIdentity: [product, plm]
+
+    defaults:
+      category: "hardware"
+      currency: "USD"
+      status: "Design"
+
+    validation:
+      required: [productCode]
+      rules:
+        productCode:
+          message: "Product code must be at least 3 characters"
+          example: "edge-001"
+        category:
+          enum: [hardware, software, hybrid, firmware, bundle]
+          message: "Invalid category"
+        status:
+          enum: [Design, Prototype, Production, Discontinued]
+          message: "Invalid status"
+        price:
+          min: 0
+          message: "Price must be non-negative"
+
+    # Child node templates - shown in "Add Child" menu
+    childTemplates:
+      - type: core.folder
+        displayName: Bill of Materials (BOM)
+        icon: list-tree
+        defaults:
+          name: "BOM"
+          description: "Components and assemblies"
+
+      - type: core.folder
+        displayName: Specifications
+        icon: file-text
+        defaults:
+          name: "Specifications"
+          description: "Technical specs and documentation"
+
+      - type: core.folder
+        displayName: Revisions
+        icon: git-branch
+        defaults:
+          name: "Revisions"
+          description: "Design revisions and versions"
+
+      - type: core.folder
+        displayName: Manufacturing
+        icon: factory
+        defaults:
+          name: "Manufacturing"
+          description: "Assembly and production instructions"
+
+      - type: core.folder
+        displayName: Testing
+        icon: check-circle
+        defaults:
+          name: "Testing"
+          description: "Test plans and results"
+
+    uiHints:
+      icon: package
+      color: "#10b981"
+
+  # ---------------------------------------------------------------------------
+  # Manufacturing Unit (extends core.asset)
+  # ---------------------------------------------------------------------------
+  - type: plm.manufacturing-unit
+    baseType: core.asset
+    displayName: Manufacturing Unit
+    description: PLM-managed manufacturing equipment with serialization tracking
+    autoPluginId: true
+    autoIdentity: [asset, manufacturing, plm, unit]
+    defaults:
+      assetType: manufacturing-unit
+      status: production
+      trackSerialNumbers: true
+    validation:
+      required: [serialNumber, hardwareRevision]
+      rules:
+        serialNumber:
+          pattern: "^[A-Z]+-[A-Z]-\\d+$"
+          message: "Serial number must match format: EC-C-1402"
+          example: "EC-C-1402"
+        hardwareRevision:
+          pattern: "^rev-[a-z]$"
+          message: "Hardware revision must match format: rev-c"
+          example: "rev-c"
+        firmwareVersion:
+          pattern: "^v\\d+\\.\\d+\\.\\d+$"
+          message: "Firmware version must be semantic version (e.g., v1.2.3)"
+          example: "v1.0.0"
+        status:
+          enum: [production, testing, maintenance, decommissioned]
+          message: "Status must be one of: production, testing, maintenance, decommissioned"
+    refs:
+      optional: [runRef, siteRef, equipRef]
+      constraints:
+        runRef:
+          targetTypes: [plm.production-run]
+          onTargetDelete: restrict
+    uiHints:
+      icon: factory
+      color: "#3b82f6"
+      displayFields: [serialNumber, hardwareRevision, status]
+      searchFields: [serialNumber, hardwareRevision]
+      sections:
+        - name: Hardware
+          fields: [serialNumber, hardwareRevision, firmwareVersion]
+        - name: Status
+          fields: [status, assetType, trackSerialNumbers]
+
+    # Port Profiles - Auto-create ports for manufacturing units
+    ports:
+      inputs:
+        # ✅ TEST PORT: testOutput = testInput + 100
+        - handle: testInput
+          type: number
+          default: 0
+          label: Test Input Value
+          description: Test input for demonstration (testOutput = testInput + 100)
+          unit: units
+          facets:
+            precision: 2
+
+        - handle: targetRate
+          type: number
+          default: 100
+          label: Target Production Rate
+          description: Target units per hour
+          unit: units/hr
+          validation:
+            min: 0
+            max: 1000
+            required: true
+          facets:
+            precision: 0
+            min: 0
+            max: 500
+          uiHints:
+            widget: slider
+            step: 10
+
+        - handle: enable
+          type: bool
+          default: false
+          label: Enable Production
+          description: Start/stop production
+          validation:
+            required: true
+          facets:
+            trueText: Running
+            falseText: Stopped
+          uiHints:
+            widget: toggle
+
+        - handle: mode
+          type: string
+          default: auto
+          label: Operating Mode
+          description: Unit operating mode
+          validation:
+            enum: [auto, manual, maintenance, calibration]
+          uiHints:
+            widget: select
+
+      outputs:
+        # ✅ TEST PORT: testOutput = testInput + 100
+        - handle: testOutput
+          type: number
+          default: 100
+          label: Test Output Value
+          description: Test output (always testInput + 100)
+          unit: units
+          facets:
+            precision: 2
+
+        - handle: actualRate
+          type: number
+          default: 0
+          label: Actual Production Rate
+          description: Current units per hour
+          unit: units/hr
+          facets:
+            precision: 1
+            min: 0
+            max: 500
+
+        - handle: totalCount
+          type: number
+          default: 0
+          label: Total Unit Count
+          description: Cumulative production count
+          unit: units
+          facets:
+            precision: 0
+
+        - handle: temperature
+          type: number
+          default: 20
+          label: Operating Temperature
+          description: Current equipment temperature
+          unit: degC
+          validation:
+            min: -40
+            max: 125
+          facets:
+            precision: 1
+            min: 0
+            max: 100
+
+        - handle: status
+          type: string
+          default: idle
+          label: Runtime Status
+          description: Current operational status
+          validation:
+            enum: [idle, running, error, maintenance, calibrating]
+
+        - handle: lastError
+          type: string
+          default: ""
+          label: Last Error
+          description: Most recent error message
+
+        - handle: metrics
+          type: object
+          default: {}
+          label: Performance Metrics
+          description: Real-time operational metrics
+
+# =============================================================================
+# Node Profiles - Core types customized by PLM plugin
+# =============================================================================
+nodeProfiles:
+  # ---------------------------------------------------------------------------
+  # BOM Item (core.document + plm-bom profile)
+  # ---------------------------------------------------------------------------
+  - nodeType: core.document
+    profile: plm-bom
+    displayName: BOM Item
+    description: Bill of Materials entry
+    identity: [document, bom, plm]
+
+    defaults:
+      documentType: "bom-item"
+
+    uiHints:
+      icon: component
+      color: "#f59e0b"
+
+  # ---------------------------------------------------------------------------
+  # Time Entry (core.entry + plm-time-entry profile)
+  # ---------------------------------------------------------------------------
+  - nodeType: core.entry
+    profile: plm-time-entry
+    displayName: Time Entry
+    description: Time tracking for work items
+    identity: [entry, timesheet, plm]
+
+    defaults:
+      entryType: "time"
+
+    uiHints:
+      icon: clock
+      color: "#10b981"
+
+  # ---------------------------------------------------------------------------
+  # Work Item (core.ticket + plm-work-item profile)
+  # ---------------------------------------------------------------------------
+  - nodeType: core.ticket
+    profile: plm-work-item
+    displayName: Work Item
+    description: Task, bug, or feature request
+    identity: [ticket, work-item, plm]
+
+    defaults:
+      ticketType: "task"
+      status: "open"
+
+    uiHints:
+      icon: check-square
+      color: "#6366f1"
+
+  # ---------------------------------------------------------------------------
+  # Hardware Unit (core.asset + plm-unit profile)
+  # ---------------------------------------------------------------------------
+  - nodeType: core.asset
+    profile: plm-unit
+    displayName: Hardware Unit
+    description: Physical hardware unit with serial tracking
+    identity: [asset, unit, hardware, plm]
+
+    defaults:
+      assetType: "hardware-unit"
+
+    uiHints:
+      icon: cpu
+      color: "#ef4444"
+
+  # ---------------------------------------------------------------------------
+  # Component (core.component + plm-component profile)
+  # ---------------------------------------------------------------------------
+  - nodeType: core.component
+    profile: plm-component
+    displayName: PLM Component
+    description: Generic component for PLM system
+    identity: [component, plm]
+
+    defaults:
+      componentType: "generic"
+
+    uiHints:
+      icon: box
+      color: "#8b5cf6"

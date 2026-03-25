@@ -43,12 +43,12 @@ __debug_bin
 *.log
 nubeio-example/example
 
-# Frontend dependencies
-frontend-sdk/node_modules
-nubeio-example/frontend/node_modules
-nubeio-example/frontend/.__mf__temp
-nubeio-example/dist-frontend
-nubeio-taskmanager/frontend/node_modules
-nubeio-taskmanager/dist-frontend
+# Frontend dependencies and generated plugin artifacts
+**/node_modules/
+**/.mf/
+**/.__mf__temp/
+**/dist-frontend/
+
+# Plugin binaries
 nube.plm/rubix-plm-plugin
 scripts/path.yaml

@@ -1,0 +1,30 @@
+{
+  "id": "nube.github",
+  "vendor": "nube",
+  "name": "github",
+  "displayName": "GitHub Tasks and Reporting",
+  "version": "0.1.0",
+  "description": "GitHub account node with simple action-style fetches for repos, users, teams, issues, and releases.",
+  "category": "operations",
+  "nodeTypes": [
+    "github.account"
+  ],
+  "pages": [
+    {
+      "pageId": "github-manager",
+      "title": "GitHub Manager",
+      "icon": "github",
+      "description": "Run simple GitHub account actions.",
+      "enabled": true,
+      "isDefault": true,
+      "order": 10,
+      "props": {
+        "exposedPath": "./Page",
+        "useMountPattern": true
+      }
+    }
+  ],
+  "widgets": [],
+  "execPath": "./github-plugin",
+  "args": []
+}

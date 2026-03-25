@@ -25,12 +25,29 @@ chmod +x "${PLUGIN_DIR}/${PLUGIN_NAME}"
 echo "📄 Copying plugin.json..."
 cp plugin.json "${PLUGIN_DIR}/"
 
+echo "📄 Copying config directory..."
+if [ -d "config" ]; then
+  cp -r config "${PLUGIN_DIR}/"
+  echo "   ✓ config/nodes.yaml deployed"
+fi
+
+echo "🎨 Copying frontend assets..."
+if [ -d "dist-frontend" ]; then
+  rm -rf "${PLUGIN_DIR}/dist-frontend"
+  cp -r dist-frontend "${PLUGIN_DIR}/"
+  echo "   ✓ dist-frontend/ deployed ($(ls -1 ${PLUGIN_DIR}/dist-frontend | wc -l) files)"
+else
+  echo "   ⚠️  dist-frontend/ not found - run 'cd frontend && npm run build' first"
+fi
+
 echo "✅ PLM plugin deployed to: ${PLUGIN_DIR}"
 echo ""
 echo "Next steps:"
-echo "  1. Restart rubix server: cd ${RUBIX_DIR} && ./bin/rubix --port 9000"
-echo "  2. Check logs for: 'plugin node ID' and 'PLM hierarchy ready'"
-echo "  3. Verify DB: sqlite3 ${RUBIX_DIR}/bin/dev/data/db/rubix.db"
+echo "  1. Build frontend (if not done): cd frontend && npm run build && cd .."
+echo "  2. Redeploy if frontend changed: ./deploy.sh"
+echo "  3. Restart rubix server: cd ${RUBIX_DIR} && ./bin/rubix --port 9000"
+echo "  4. Check logs for: 'plugin node ID' and 'PLM hierarchy ready'"
+echo "  5. Verify DB: sqlite3 ${RUBIX_DIR}/bin/dev/data/db/rubix.db"
 echo ""
 echo "Database verification:"
 echo "  sqlite3 ${RUBIX_DIR}/bin/dev/data/db/rubix.db \\"
