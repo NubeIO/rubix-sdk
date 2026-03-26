@@ -260,6 +260,21 @@
       }
     },
     {
+      "pageId": "product-detail-v2",
+      "title": "Product Details V2 (Modern UI)",
+      "icon": "package",
+      "description": "Modern workspace UI for product management",
+      "nodeTypes": ["plm.product"],
+      "enabled": true,
+      "isDefault": false,
+      "order": 10,
+      "propertyPanels": ["node-settings", "history-analytics", "tags-references"],
+      "props": {
+        "exposedPath": "./ProductDetailV2",
+        "useMountPattern": true
+      }
+    },
+    {
       "pageId": "tasks-manager",
       "title": "Task Management",
       "icon": "list-checks",
