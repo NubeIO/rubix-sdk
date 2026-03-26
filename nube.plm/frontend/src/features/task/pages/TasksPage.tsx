@@ -12,9 +12,8 @@ import { Button, Skeleton } from '@rubix-sdk/frontend/common/ui';
 import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
 import { PlusIcon } from '@shared/components/icons';
 
-import { TaskAPI, type CreateTaskInput, type UpdateTaskInput } from '@features/task/api/task-api';
 import { TasksPageTabs } from './tasks-page-tabs';
-import type { Task } from '@features/task/types/task.types';
+import type { Task, CreateTaskInput, UpdateTaskInput } from '@features/task/types/task.types';
 
 export interface TasksPageProps {
   orgId: string;
@@ -42,9 +41,8 @@ function TasksPage({
     hasToken: !!token,
   });
 
-  // Create plugin client and API
+  // Create plugin client - use SDK directly!
   const client = createPluginClient({ orgId, deviceId, baseUrl, token });
-  const api = new TaskAPI({ orgId, deviceId, baseUrl, token });
 
   // State
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -52,21 +50,29 @@ function TasksPage({
   const [deletingTask, setDeletingTask] = useState<{ id: string; name: string } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // CRUD operations
+  // CRUD operations - use SDK directly, no API wrapper!
   const createTask = useCallback(async (input: CreateTaskInput) => {
-    await api.createTask(input);
+    await client.createNode({
+      type: 'core.task',
+      name: input.name,
+      parentId: input.parentId,
+      settings: input.settings || {},
+    });
     setRefreshKey((prev) => prev + 1);
-  }, []);
+  }, [client]);
 
   const updateTask = useCallback(async (taskId: string, input: UpdateTaskInput) => {
-    await api.updateTask(taskId, input);
+    await client.updateNode(taskId, {
+      name: input.name,
+      settings: input.settings,
+    });
     setRefreshKey((prev) => prev + 1);
-  }, []);
+  }, [client]);
 
   const deleteTask = useCallback(async (taskId: string) => {
-    await api.deleteTask(taskId);
+    await client.deleteNode(taskId);
     setRefreshKey((prev) => prev + 1);
-  }, []);
+  }, [client]);
 
   const displaySettings = {
     showStatus: true,

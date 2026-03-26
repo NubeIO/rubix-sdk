@@ -6,10 +6,10 @@ import { Button } from '@rubix-sdk/frontend/common/ui/button';
 // @ts-ignore - SDK icons
 import { ListChecks, Plus, Edit, Trash2, ExternalLink } from 'lucide-react';
 
+import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
 import type { Product } from '@features/product/types/product.types';
 import type { Task } from '@features/task/types/task.types';
 import { TaskStatusBadge } from '@features/task/components/TaskStatusBadge';
-import { TaskAPI, type CreateTaskInput } from '@features/task/api/task-api';
 
 interface TasksSectionProps {
   product: Product;
@@ -43,6 +43,9 @@ export function TasksSection({
   isExpanded,
   onToggle,
 }: TasksSectionProps) {
+  // Create plugin client - use SDK directly!
+  const client = createPluginClient({ orgId, deviceId, baseUrl, token });
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -63,30 +66,11 @@ export function TasksSection({
     setLoading(true);
 
     try {
-      const url = `${baseUrl}/orgs/${orgId}/devices/${deviceId}/query`;
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          filter: `type is "core.task" and parentId is "${product.id}"`,
-        }),
+      // Use SDK queryNodes instead of raw fetch
+      const fetchedTasks = await client.queryNodes({
+        filter: `type is "core.task" and parentId is "${product.id}"`,
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch tasks: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const fetchedTasks = Array.isArray(data) ? data : [];
-      setTasks(fetchedTasks);
+      setTasks(fetchedTasks as Task[]);
     } catch (err) {
       console.error('[TasksSection] Fetch error:', err);
     } finally {
@@ -106,8 +90,9 @@ export function TasksSection({
     setError(null);
 
     try {
-      const api = new TaskAPI({ orgId, deviceId, baseUrl, token });
-      await api.createTask({
+      // Use SDK createNode instead of TaskAPI
+      await client.createNode({
+        type: 'core.task',
         name: taskName.trim(),
         parentId: product.id,
         settings: {

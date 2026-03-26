@@ -14,16 +14,13 @@ import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
 import { PlusIcon } from '@shared/components/icons';
 
 import { usePLMHierarchy } from '@shared/hooks/use-plm-hierarchy';
-import { ProductsAPI, type CreateProductInput, type UpdateProductInput } from '@features/product/api/product-api';
-import { TaskAPI, type UpdateTaskInput } from '@features/task/api/task-api';
 import { ProductsListTab } from './products-list-tab';
 import { TasksListTab } from './tasks-list-tab';
 import { ProductsPageDialogs } from './products-page-dialogs';
 import { CreateTaskDialog } from './create-task-dialog';
 import { useProductsPageState } from './use-products-page-state';
-import type { Task } from '@features/task/types/task.types';
-import type { Product } from '@features/product/types/product.types';
-import type { CreateTaskInput } from '@features/task/api/task-api';
+import type { Task, CreateTaskInput, UpdateTaskInput } from '@features/task/types/task.types';
+import type { Product, ProductSettings } from '@features/product/types/product.types';
 
 export interface ProductsPageProps {
   orgId: string;
@@ -56,89 +53,44 @@ function ProductsPage({
   // Main tabs state
   const [activeMainTab, setActiveMainTab] = useState('products');
 
-  // Create plugin client and APIs
+  // Create plugin client - use SDK directly!
   const client = createPluginClient({ orgId, deviceId, baseUrl, token });
-  const productsApi = new ProductsAPI({ orgId, deviceId, baseUrl, token });
-  const tasksApi = new TaskAPI({ orgId, deviceId, baseUrl, token });
 
-  // Product CRUD operations (no upfront fetching - lazy loaded by tabs)
-  const createProduct = useCallback(async (input: CreateProductInput) => {
+  // Product CRUD operations - use SDK directly, no API wrapper!
+  const createProduct = useCallback(async (input: { name: string; parentId: string; settings: ProductSettings }) => {
     if (!collections.products) {
       throw new Error('Products collection not found - restart plugin');
     }
-    await productsApi.createProduct(input);
-  }, [collections.products]);
+    await client.createNode({
+      type: 'plm.product',
+      name: input.name,
+      parentId: input.parentId,
+      settings: input.settings,
+    });
+  }, [client, collections.products]);
 
-  const updateProduct = useCallback(async (productId: string, input: UpdateProductInput) => {
-    await productsApi.updateProduct(productId, input);
-  }, []);
+  const updateProduct = useCallback(async (productId: string, input: { name?: string; settings: ProductSettings }) => {
+    await client.updateNode(productId, {
+      name: input.name,
+      settings: input.settings,
+    });
+  }, [client]);
 
   const deleteProduct = useCallback(async (productId: string) => {
-    await productsApi.deleteProduct(productId);
-  }, []);
+    await client.deleteNode(productId);
+  }, [client]);
 
-  // Task CRUD operations
+  // Task CRUD operations - use SDK directly!
   const updateTask = useCallback(async (taskId: string, input: UpdateTaskInput) => {
-    await tasksApi.updateTask(taskId, input);
-  }, []);
+    await client.updateNode(taskId, {
+      name: input.name,
+      settings: input.settings,
+    });
+  }, [client]);
 
   const deleteTask = useCallback(async (taskId: string) => {
-    await tasksApi.deleteTask(taskId);
-  }, []);
-
-  // Fetch all products on mount (needed for task creation dialog)
-  useEffect(() => {
-    let mounted = true;
-
-    async function fetchProducts() {
-      try {
-        setProductsLoading(true);
-
-        const url = `${baseUrl}/orgs/${orgId}/devices/${deviceId}/query`;
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        };
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-
-        const response = await fetch(url, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            filter: 'type is "plm.product"',
-          }),
-        });
-
-        if (!response.ok) {
-          console.error('[ProductsPage] Failed to fetch products:', response.statusText);
-          return;
-        }
-
-        const result = await response.json();
-
-        if (mounted) {
-          const loadedProducts = Array.isArray(result) ? result : [];
-          console.log('[ProductsPage] Products loaded:', loadedProducts.length);
-          setAllProducts(loadedProducts);
-        }
-      } catch (error) {
-        console.error('[ProductsPage] Failed to fetch products:', error);
-      } finally {
-        if (mounted) {
-          setProductsLoading(false);
-        }
-      }
-    }
-
-    if (orgId && deviceId && baseUrl) {
-      fetchProducts();
-    }
-
-    return () => {
-      mounted = false;
-    };
-  }, [orgId, deviceId, baseUrl, token]);
+    await client.deleteNode(taskId);
+  }, [client]);
 
   const canCreate = !!(orgId && deviceId && baseUrl && collections.products);
 
@@ -195,6 +147,46 @@ function ProductsPage({
   const [productsLoading, setProductsLoading] = useState(true);
   const [taskRefreshKey, setTaskRefreshKey] = useState(0);
 
+  // Fetch products ONLY when task dialog opens (lazy load - prevents race condition)
+  useEffect(() => {
+    // Only fetch when dialog is actually open
+    if (!createTaskDialogOpen) {
+      return;
+    }
+
+    let mounted = true;
+
+    async function fetchProducts() {
+      try {
+        setProductsLoading(true);
+
+        // Use SDK queryNodes instead of raw fetch
+        const loadedProducts = await client.queryNodes({
+          filter: 'type is "plm.product"',
+        });
+
+        if (mounted) {
+          console.log('[ProductsPage] Products loaded for task dialog:', loadedProducts.length);
+          setAllProducts(loadedProducts as Product[]);
+        }
+      } catch (error) {
+        console.error('[ProductsPage] Failed to fetch products:', error);
+      } finally {
+        if (mounted) {
+          setProductsLoading(false);
+        }
+      }
+    }
+
+    if (orgId && deviceId && baseUrl) {
+      fetchProducts();
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, [createTaskDialogOpen, client, orgId, deviceId, baseUrl]);
+
   const openCreateTaskDialog = useCallback(() => {
     console.log('[ProductsPage] Opening create task dialog, products available:', allProducts.length);
     setCreateTaskDialogOpen(true);
@@ -222,12 +214,17 @@ function ProductsPage({
     setDeletingTask(null);
   }, []);
 
-  // Create task
+  // Create task - use SDK directly!
   const createTask = useCallback(async (input: CreateTaskInput) => {
     console.log('[ProductsPage] Creating task:', input);
-    await tasksApi.createTask(input);
+    await client.createNode({
+      type: 'core.task',
+      name: input.name,
+      parentId: input.parentId,
+      settings: input.settings || {},
+    });
     setTaskRefreshKey((prev) => prev + 1); // Force refresh tasks tab
-  }, []);
+  }, [client]);
 
   // Loading state
   if (hierarchyLoading) {

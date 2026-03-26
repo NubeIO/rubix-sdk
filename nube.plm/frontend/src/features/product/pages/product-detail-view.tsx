@@ -11,7 +11,8 @@ import { Button } from '@rubix-sdk/frontend/common/ui/button';
 import { Copy, Info } from 'lucide-react';
 
 import type { Product } from '@features/product/types/product.types';
-import { EditProductDialogSDK } from '@features/product/components/edit-product-dialog-sdk';
+import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
+import { SimpleEditProductDialog } from '@features/product/components/edit-product-dialog-simple';
 import { ProductStatusBadge } from '@features/product/components/ProductStatusBadge';
 import { BasicInfoSection } from '@features/product/components/sections/BasicInfoSection-v2';
 import { PricingSection } from '@features/product/components/sections/PricingSection-v2';
@@ -34,13 +35,17 @@ export function ProductDetailView({
   product,
   orgId,
   deviceId,
-  baseUrl,
+  baseUrl = '/api/v1',
   token,
   onProductUpdated,
 }: ProductDetailViewProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [bomCost, setBomCost] = useState<number>(0);
   const [bomComponentCount, setBomComponentCount] = useState<number>(0);
+  const [localProduct, setLocalProduct] = useState<Product>(product);
+
+  // Create plugin client (SDK) - NO custom API wrapper!
+  const client = createPluginClient({ orgId, deviceId, baseUrl, token });
 
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['basic-info'])
@@ -58,33 +63,32 @@ export function ProductDetailView({
     });
   };
 
-  const handleProductUpdate = async (productId: string, input: any) => {
+  const handleProductUpdate = async (productId: string, input: { name?: string; settings: Record<string, any> }) => {
+    console.log('[ProductDetailView] Starting update:', { productId, input });
+
     try {
-      const url = `${baseUrl}/orgs/${orgId}/devices/${deviceId}/nodes/${productId}/settings`;
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(url, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify(input),
+      // Use SDK updateNode to update both name AND settings
+      const updatedProduct = await client.updateNode(productId, {
+        name: input.name,
+        settings: input.settings,
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to update product: ${response.status}`);
-      }
+      console.log('[ProductDetailView] Update successful:', updatedProduct);
 
+      // Update local state - NO PAGE RELOAD
+      setLocalProduct(updatedProduct as Product);
+
+      // Close dialog
       setShowEditDialog(false);
-      onProductUpdated?.();
-      window.location.reload();
+
+      // Notify parent if callback provided
+      onProductUpdated?.(updatedProduct as Product);
+
+      console.log('[ProductDetailView] State updated successfully');
     } catch (err) {
-      console.error('[ProductDetailView] Update error:', err);
-      throw err;
+      console.error('[ProductDetailView] Update FAILED:', err);
+      // Don't throw - just log and keep dialog open so user can retry
+      alert(`Failed to update product: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -98,10 +102,10 @@ export function ProductDetailView({
   };
 
   const infoItems = [
-    { label: 'Product Code', value: product.settings?.productCode || '—' },
-    { label: 'Category', value: product.settings?.category || '—' },
-    { label: 'Node ID', value: product.id },
-    { label: 'Node Type', value: product.type },
+    { label: 'Product Code', value: localProduct.settings?.productCode || '—' },
+    { label: 'Category', value: localProduct.settings?.category || '—' },
+    { label: 'Node ID', value: localProduct.id },
+    { label: 'Node Type', value: localProduct.type },
   ];
 
   return (
@@ -116,11 +120,11 @@ export function ProductDetailView({
                 <Info className="h-6 w-6" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-lg font-semibold">{product.name}</h3>
+                <h3 className="text-lg font-semibold">{localProduct.name}</h3>
                 <div className="mt-1 flex items-center gap-2">
-                  <ProductStatusBadge status={product.settings?.status} />
+                  <ProductStatusBadge status={localProduct.settings?.status} />
                   <span className="text-muted-foreground text-xs">
-                    {product.settings?.category || 'Product'}
+                    {localProduct.settings?.category || 'Product'}
                   </span>
                 </div>
               </div>
@@ -151,14 +155,14 @@ export function ProductDetailView({
 
           {/* Sections */}
           <BasicInfoSection
-            product={product}
+            product={localProduct}
             isExpanded={expandedSections.has('basic-info')}
             onToggle={() => toggleSection('basic-info')}
             onEdit={() => setShowEditDialog(true)}
           />
 
           <PricingSection
-            product={product}
+            product={localProduct}
             bomCost={bomCost}
             bomComponentCount={bomComponentCount}
             isExpanded={expandedSections.has('pricing')}
@@ -166,19 +170,19 @@ export function ProductDetailView({
           />
 
           <HardwareDetailsSection
-            product={product}
+            product={localProduct}
             isExpanded={expandedSections.has('hardware')}
             onToggle={() => toggleSection('hardware')}
           />
 
           <SoftwareDetailsSection
-            product={product}
+            product={localProduct}
             isExpanded={expandedSections.has('software')}
             onToggle={() => toggleSection('software')}
           />
 
           <BOMSection
-            product={product}
+            product={localProduct}
             orgId={orgId}
             deviceId={deviceId}
             baseUrl={baseUrl}
@@ -189,7 +193,7 @@ export function ProductDetailView({
           />
 
           <TasksSection
-            product={product}
+            product={localProduct}
             orgId={orgId}
             deviceId={deviceId}
             baseUrl={baseUrl}
@@ -199,26 +203,20 @@ export function ProductDetailView({
           />
 
           <SystemInfoSection
-            product={product}
+            product={localProduct}
             isExpanded={expandedSections.has('system')}
             onToggle={() => toggleSection('system')}
           />
         </div>
       </div>
 
-      {/* Edit Dialog */}
-      {showEditDialog && (
-        <EditProductDialogSDK
-          orgId={orgId}
-          deviceId={deviceId}
-          baseUrl={baseUrl}
-          token={token}
-          product={product}
-          open={showEditDialog}
-          onClose={() => setShowEditDialog(false)}
-          onSubmit={handleProductUpdate}
-        />
-      )}
+      {/* Edit Dialog - Simple version that actually works */}
+      <SimpleEditProductDialog
+        product={localProduct}
+        open={showEditDialog}
+        onClose={() => setShowEditDialog(false)}
+        onSubmit={handleProductUpdate}
+      />
     </div>
   );
 }
