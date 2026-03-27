@@ -86,7 +86,7 @@ export async function updateNodeSettings(
     body: settings,
   });
 
-  return result.node as Node;
+  return result.data as Node;
 }
 
 export async function deleteNode(

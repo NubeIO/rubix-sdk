@@ -5,6 +5,7 @@
 ## Features
 
 - ✅ **Common UI** - shadcn/ui components (Button, Card, Dialog, Input, etc.)
+- ✅ **Markdown Editor** - Lightweight Tiptap-based editor (~50-70KB gzipped)
 - ✅ **Settings SDK** - Multi-schema settings support for plugins
 - ✅ **Plugin Client** - Type-safe API wrapper for node operations
 - ✅ **RAS Client** - Advanced API client with full type safety
@@ -18,6 +19,8 @@
 ├── common/              # Shared UI primitives
 │   ├── ui/             # shadcn/ui components
 │   └── utils/          # Utilities (cn, etc.)
+├── components/         # Reusable components
+│   └── markdown-editor/ # Tiptap markdown editor
 ├── settings/           # Settings SDK for plugins
 │   ├── components/     # SchemaSelector, SchemaChanger
 │   └── hooks/          # useMultiSchema
@@ -34,6 +37,9 @@ pnpm add @rubix-sdk/frontend
 
 # Peer dependencies
 pnpm add react react-dom lucide-react
+
+# For markdown editor (optional)
+pnpm add @tiptap/react @tiptap/starter-kit @tiptap/extension-placeholder @tiptap/extension-link
 ```
 
 ## Quick Start
@@ -60,7 +66,29 @@ export function MyComponent() {
 }
 ```
 
-### 2. Multi-Schema Settings (Plugins)
+### 2. Markdown Editor
+
+```tsx
+import { MarkdownEditor } from '@rubix-sdk/frontend';
+import { useState } from 'react';
+
+export function DocumentEditor() {
+  const [content, setContent] = useState('# Hello\n\nWrite your **markdown** here.');
+
+  return (
+    <MarkdownEditor
+      value={content}
+      onChange={setContent}
+      placeholder="Write your documentation..."
+      minHeight="300px"
+    />
+  );
+}
+```
+
+See [components/markdown-editor/README.md](components/markdown-editor/README.md) for full documentation.
+
+### 3. Multi-Schema Settings (Plugins)
 
 ```tsx
 import { SchemaSelector, useMultiSchema } from '@rubix-sdk/frontend/settings';
@@ -87,6 +115,9 @@ export function ProductSettings() {
 ## Components
 
 ### Available Components
+
+**Editors:**
+- `MarkdownEditor` - Lightweight Tiptap markdown editor (~50-70KB gzipped)
 
 **Layout:**
 - `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`

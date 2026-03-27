@@ -3,11 +3,15 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Product } from '@features/product/types/product.types';
-import { ProductsAPI, PLMClientConfig, CreateProductInput, UpdateProductInput } from '@features/product/api/product-api';
+import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
+import { Product, ProductSettings } from '@features/product/types/product.types';
 import { usePLMHierarchy } from '@shared/hooks/use-plm-hierarchy';
 
-export interface UseProductsConfig extends PLMClientConfig {
+export interface UseProductsConfig {
+  orgId: string;
+  deviceId: string;
+  baseUrl?: string;
+  token?: string;
   autoRefresh?: boolean;
   refreshInterval?: number;
 }
@@ -16,8 +20,8 @@ export interface UseProductsResult {
   products: Product[];
   loading: boolean;
   error: string | null;
-  createProduct: (input: CreateProductInput) => Promise<void>;
-  updateProduct: (productId: string, input: UpdateProductInput) => Promise<void>;
+  createProduct: (input: { name: string; parentId: string; settings: ProductSettings }) => Promise<void>;
+  updateProduct: (productId: string, input: { name?: string; settings: ProductSettings }) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
   refetch: () => Promise<void>;
   productsCollectionId: string | null;
@@ -29,6 +33,14 @@ export function useProducts(config: UseProductsConfig): UseProductsResult {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Create plugin client - use SDK directly!
+  const client = createPluginClient({
+    orgId: config.orgId,
+    deviceId: config.deviceId,
+    baseUrl: config.baseUrl,
+    token: config.token,
+  });
 
   // Get PLM hierarchy (products collection ID)
   const { collections, loading: hierarchyLoading, error: hierarchyError } = usePLMHierarchy(
@@ -59,15 +71,21 @@ export function useProducts(config: UseProductsConfig): UseProductsResult {
     }
 
     try {
-      console.log('[useProducts] Creating ProductsAPI...');
-      const api = new ProductsAPI(config);
-      console.log('[useProducts] Calling queryProducts...');
-      const products = await api.queryProducts();
+      console.log('[useProducts] Fetching products with SDK...');
+
+      // Use products collection as parent filter (if available)
+      const parentId = collections.products || undefined;
+      const filter = parentId
+        ? `parent.id is "${parentId}" and type is "plm.product"`
+        : 'type is "plm.product"';
+
+      console.log('[useProducts] Calling SDK queryNodes with filter:', filter);
+      const fetchedProducts = await client.queryNodes({ filter });
       console.log('[useProducts] Got products:', {
-        count: products.length,
-        products: products,
+        count: fetchedProducts.length,
+        products: fetchedProducts,
       });
-      setProducts(products);
+      setProducts(fetchedProducts as Product[]);
       setError(null);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to fetch products';
@@ -81,10 +99,10 @@ export function useProducts(config: UseProductsConfig): UseProductsResult {
       console.log('[useProducts] Setting loading=false');
       setLoading(false);
     }
-  }, [config.orgId, config.deviceId, config.baseUrl, config.token]);
+  }, [config.orgId, config.deviceId, config.baseUrl, config.token, collections.products]);
 
   const createProduct = useCallback(
-    async (input: CreateProductInput) => {
+    async (input: { name: string; parentId: string; settings: ProductSettings }) => {
       if (!collections.products) {
         throw new Error('Products collection not found - restart plugin');
       }
@@ -98,29 +116,38 @@ export function useProducts(config: UseProductsConfig): UseProductsResult {
         throw new Error(`Product code '${input.settings?.productCode}' already exists`);
       }
 
-      const api = new ProductsAPI(config);
-      await api.createProduct(input);
+      // Use SDK createNode instead of ProductsAPI
+      await client.createNode({
+        type: 'plm.product',
+        name: input.name,
+        parentId: input.parentId,
+        settings: input.settings,
+      });
       await fetchProducts();
     },
-    [collections.products, config.orgId, config.deviceId, config.baseUrl, config.token, fetchProducts, products]
+    [client, collections.products, fetchProducts, products]
   );
 
   const updateProduct = useCallback(
-    async (productId: string, input: UpdateProductInput) => {
-      const api = new ProductsAPI(config);
-      await api.updateProduct(productId, input);
+    async (productId: string, input: { name?: string; settings: ProductSettings }) => {
+      // Update name if provided
+      if (input.name) {
+        await client.updateNode(productId, { name: input.name });
+      }
+      // Update settings (uses PATCH endpoint for deep merge)
+      await client.updateNodeSettings(productId, input.settings);
       await fetchProducts();
     },
-    [config.orgId, config.deviceId, config.baseUrl, config.token, fetchProducts]
+    [client, fetchProducts]
   );
 
   const deleteProduct = useCallback(
     async (productId: string) => {
-      const api = new ProductsAPI(config);
-      await api.deleteProduct(productId);
+      // Use SDK deleteNode instead of ProductsAPI
+      await client.deleteNode(productId);
       await fetchProducts();
     },
-    [config.orgId, config.deviceId, config.baseUrl, config.token, fetchProducts]
+    [client, fetchProducts]
   );
 
   // Initial fetch

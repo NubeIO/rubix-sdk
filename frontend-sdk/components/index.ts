@@ -39,3 +39,7 @@ export type {
 // Filtered table with tabs
 export { FilteredTableWithTabs } from './filtered-table';
 export type { FilteredTableWithTabsProps, FilteredTab } from './filtered-table';
+
+// Markdown editor
+export { MarkdownEditor, MarkdownToolbar } from './markdown-editor';
+export type { MarkdownEditorProps, MarkdownToolbarProps } from './markdown-editor';

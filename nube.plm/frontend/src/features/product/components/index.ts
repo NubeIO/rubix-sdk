@@ -7,6 +7,7 @@
 export { DeleteProductDialogSDK } from './delete-product-dialog-sdk';
 export { CreateProductDialogSDK } from './create-product-dialog-sdk';
 export { EditProductDialogSDK } from './edit-product-dialog-sdk';
+export { SimpleEditProductDialog } from './edit-product-dialog-simple';
 
 // Components
 export * from './ProductTable';

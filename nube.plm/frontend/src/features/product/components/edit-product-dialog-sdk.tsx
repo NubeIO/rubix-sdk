@@ -4,6 +4,8 @@
  * Uses MultiSettingsDialog from @rubix-sdk/frontend for schema-driven forms
  */
 
+import { useMemo } from 'react';
+
 // @ts-ignore - SDK types are resolved at build time
 import { MultiSettingsDialog } from '@rubix-sdk/frontend/components/settings';
 
@@ -56,58 +58,71 @@ export function EditProductDialogSDK({
   });
 
   const handleSubmit = async (settings: Record<string, any>, schemaName: string) => {
+    console.log('[EditProductDialogSDK] Form submitted:', { settings, schemaName, productId: product.id });
+
     try {
-      console.log('[EditProductDialogSDK] Submit:', { settings, schemaName });
-
-      // Extract product name from productCode field
-      const productName = settings.productCode || product.name;
-
-      // Ensure productType is set
-      const finalSettings = {
-        ...settings,
-        productType: schemaName, // Update/preserve which schema was used
+      // MultiSettingsDialog returns flat settings like { productCode: "...", category: "..." }
+      // UpdateProductInput.settings expects the same flat structure
+      // DO NOT wrap in another settings key - that causes infinite nesting!
+      const input: UpdateProductInput = {
+        settings: {
+          ...settings,
+          productType: schemaName,
+        },
       };
 
-      const input = {
-        name: productName,
-        settings: finalSettings,
-      };
-
-      console.log('[EditProductDialogSDK] Submitting to API:', { productId: product.id, input });
+      console.log('[EditProductDialogSDK] Calling onSubmit with:', input);
       await onSubmit(product.id, input);
 
+      console.log('[EditProductDialogSDK] Submit successful, closing dialog');
       onClose();
     } catch (err) {
-      console.error('[EditProductDialogSDK] Submit error:', err);
-      // Error handling is done by the parent component
-      throw err;
+      console.error('[EditProductDialogSDK] Submit FAILED:', err);
+      // Don't throw - parent will handle the error and show alert
+      // Just log it here for debugging
     }
   };
 
-  // Show loading state
-  if (loading) {
-    console.log('[EditProductDialogSDK] Loading schemas...');
-    return null; // Dialog will be hidden during schema loading
+  // Memoize settings to prevent infinite re-renders in MultiSettingsDialog
+  const { currentSchema, cleanSettings } = useMemo(() => {
+    const schema = product.settings?.productType || 'hardware';
+
+    // Extract current settings, handling corrupted nested data from previous bugs
+    let settings = product.settings || {};
+
+    // If settings contains a nested "settings" key (from previous bug), unwrap it
+    if (settings.settings && typeof settings.settings === 'object') {
+      console.warn('[EditProductDialogSDK] Detected nested settings, unwrapping...', settings);
+      settings = settings.settings;
+    }
+
+    // Remove the "name" field if it exists (it's not a setting, it's the node name)
+    const { name: _unused, ...clean } = settings;
+
+    return {
+      currentSchema: schema,
+      cleanSettings: clean,
+    };
+  }, [product.settings]);
+
+  // IMPORTANT: Never return null when open=true! This prevents mount/unmount crashes.
+  // Only return null when dialog is actually closed
+  if (!open) {
+    return null;
   }
 
-  // Show error state
-  if (error || schemas.length === 0) {
-    console.error('[EditProductDialogSDK] Schema error:', error || 'No schemas available');
-    return null; // Could render an error dialog here
-  }
+  // When open, ALWAYS render something - even during loading or error
+  // This keeps the component mounted and prevents white screen crashes
 
-  // Determine current schema from product settings
-  const currentSchema = product.settings?.productType || 'hardware';
-
-  // Current settings (exclude productType from form as it's automatically set)
-  const currentSettings = product.settings || {};
-
-  console.log('[EditProductDialogSDK] Rendering with schemas:', {
-    currentSchema,
-    schemas: schemas.map(s => ({ name: s.name, displayName: s.displayName })),
-    currentSettings,
+  console.log('[EditProductDialogSDK] Rendering:', {
+    loading,
+    error: error?.message,
+    schemasCount: schemas.length,
+    open,
   });
 
+  // If we don't have schemas yet, show dialog anyway (it might handle it gracefully)
+  // or the loading state will be visible
   return (
     <MultiSettingsDialog
       open={open}
@@ -116,7 +131,7 @@ export function EditProductDialogSDK({
       description={`Editing: ${product.name}`}
       schemas={schemas}
       defaultSchema={currentSchema}
-      currentSettings={currentSettings}
+      currentSettings={cleanSettings}
       onSubmit={handleSubmit}
     />
   );

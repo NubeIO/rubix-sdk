@@ -5,3 +5,4 @@ export { SoftwareDetailsSection } from './SoftwareDetailsSection';
 export { BOMSection } from './BOMSection';
 export { SystemInfoSection } from './SystemInfoSection';
 export { BOMComponentDialog } from './BOMComponentDialog';
+export { TasksSection } from './TasksSection';

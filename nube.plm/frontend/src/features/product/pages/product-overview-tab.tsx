@@ -11,7 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@rubix-sdk/frontend/co
 // @ts-ignore - SDK icons
 import { Edit, DollarSign, Package, Tag, Activity, RefreshCw } from 'lucide-react';
 
-import type { Product } from '@features/product/types/product.types';
+import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
+import type { Product } from '@features/product/types/localProduct.types';
+import type { ProductSettings } from '@features/product/types/product.types';
 import { ProductStatusBadge } from '@features/product/components/ProductStatusBadge';
 import { EditProductDialogSDK } from '@features/product/components/edit-product-dialog-sdk';
 
@@ -21,54 +23,57 @@ interface ProductOverviewTabProps {
   deviceId: string;
   baseUrl?: string;
   token?: string;
-  onProductUpdated?: () => void;
+  onProductUpdated?: (product: Product) => void;
 }
 
 export function ProductOverviewTab({
   product,
   orgId,
   deviceId,
-  baseUrl,
+  baseUrl = '/api/v1',
   token,
   onProductUpdated,
 }: ProductOverviewTabProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [localProduct, setLocalProduct] = useState<Product>(product);
+
+  // Create plugin client - use SDK directly!
+  const client = createPluginClient({ orgId, deviceId, baseUrl, token });
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    window.location.reload();
+    try {
+      // Use SDK getNode instead of ProductsAPI
+      const updated = await client.getNode(localProduct.id);
+      setLocalProduct(updated as Product);
+      onProductUpdated?.(updated as Product);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleEdit = () => {
     setShowEditDialog(true);
   };
 
-  const handleProductUpdate = async (productId: string, input: any) => {
+  const handleProductUpdate = async (productId: string, input: { name?: string; settings: ProductSettings }) => {
     try {
-      const url = `${baseUrl}/orgs/${orgId}/devices/${deviceId}/nodes/${productId}`;
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      // Update name if provided
+      if (input.name) {
+        await client.updateNode(productId, { name: input.name });
       }
+      // Update settings (uses PATCH endpoint for deep merge)
+      const updatedProduct = await client.updateNodeSettings(productId, input.settings);
 
-      const response = await fetch(url, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify(input),
-      });
+      // Update local state
+      setLocalProduct(updatedProduct as Product);
 
-      if (!response.ok) {
-        throw new Error(`Failed to update product: ${response.status}`);
-      }
-
+      // Close dialog
       setShowEditDialog(false);
-      onProductUpdated?.();
-      window.location.reload();
+
+      // Notify parent
+      onProductUpdated?.(updatedProduct as Product);
     } catch (err) {
       console.error('[ProductOverviewTab] Update error:', err);
       throw err;
@@ -114,36 +119,36 @@ export function ProductOverviewTab({
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Product Name</label>
-                <p className="mt-1 text-base">{product.name}</p>
+                <p className="mt-1 text-base">{localProduct.name}</p>
               </div>
 
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Product Code</label>
                 <p className="mt-1 font-mono text-base">
-                  {product.settings?.productCode || '—'}
+                  {localProduct.settings?.productCode || '—'}
                 </p>
               </div>
 
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Category</label>
                 <p className="mt-1 text-base capitalize">
-                  {product.settings?.category || '—'}
+                  {localProduct.settings?.category || '—'}
                 </p>
               </div>
 
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Status</label>
                 <div className="mt-1">
-                  <ProductStatusBadge status={product.settings?.status} />
+                  <ProductStatusBadge status={localProduct.settings?.status} />
                 </div>
               </div>
             </div>
 
-            {product.settings?.description && (
+            {localProduct.settings?.description && (
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Description</label>
                 <p className="mt-1 text-base text-muted-foreground">
-                  {product.settings.description}
+                  {localProduct.settings.description}
                 </p>
               </div>
             )}
@@ -163,22 +168,22 @@ export function ProductOverviewTab({
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Price</label>
                 <p className="mt-1 text-2xl font-semibold">
-                  {product.settings?.price
-                    ? `$${Number(product.settings.price).toFixed(2)}`
+                  {localProduct.settings?.price
+                    ? `$${Number(localProduct.settings.price).toFixed(2)}`
                     : '—'}
                 </p>
               </div>
 
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Currency</label>
-                <p className="mt-1 text-base">{product.settings?.currency || 'USD'}</p>
+                <p className="mt-1 text-base">{localProduct.settings?.currency || 'USD'}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Technical Info (for hardware) */}
-        {product.settings?.category === 'hardware' && (
+        {localProduct.settings?.category === 'hardware' && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -188,35 +193,35 @@ export function ProductOverviewTab({
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-6">
-                {product.settings?.sku && (
+                {localProduct.settings?.sku && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">SKU</label>
-                    <p className="mt-1 font-mono text-base">{product.settings.sku}</p>
+                    <p className="mt-1 font-mono text-base">{localProduct.settings.sku}</p>
                   </div>
                 )}
 
-                {product.settings?.manufacturer && (
+                {localProduct.settings?.manufacturer && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">
                       Manufacturer
                     </label>
-                    <p className="mt-1 text-base">{product.settings.manufacturer}</p>
+                    <p className="mt-1 text-base">{localProduct.settings.manufacturer}</p>
                   </div>
                 )}
 
-                {product.settings?.modelNumber && (
+                {localProduct.settings?.modelNumber && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">
                       Model Number
                     </label>
-                    <p className="mt-1 font-mono text-base">{product.settings.modelNumber}</p>
+                    <p className="mt-1 font-mono text-base">{localProduct.settings.modelNumber}</p>
                   </div>
                 )}
 
-                {product.settings?.weight && (
+                {localProduct.settings?.weight && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Weight</label>
-                    <p className="mt-1 text-base">{product.settings.weight} kg</p>
+                    <p className="mt-1 text-base">{localProduct.settings.weight} kg</p>
                   </div>
                 )}
               </div>
@@ -225,7 +230,7 @@ export function ProductOverviewTab({
         )}
 
         {/* Software Info (for software) */}
-        {product.settings?.category === 'software' && (
+        {localProduct.settings?.category === 'software' && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -235,26 +240,26 @@ export function ProductOverviewTab({
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-6">
-                {product.settings?.version && (
+                {localProduct.settings?.version && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Version</label>
-                    <p className="mt-1 font-mono text-base">{product.settings.version}</p>
+                    <p className="mt-1 font-mono text-base">{localProduct.settings.version}</p>
                   </div>
                 )}
 
-                {product.settings?.licenseType && (
+                {localProduct.settings?.licenseType && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">
                       License Type
                     </label>
-                    <p className="mt-1 text-base capitalize">{product.settings.licenseType}</p>
+                    <p className="mt-1 text-base capitalize">{localProduct.settings.licenseType}</p>
                   </div>
                 )}
 
-                {product.settings?.platform && (
+                {localProduct.settings?.platform && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Platform</label>
-                    <p className="mt-1 text-base">{product.settings.platform}</p>
+                    <p className="mt-1 text-base">{localProduct.settings.platform}</p>
                   </div>
                 )}
               </div>
@@ -274,12 +279,12 @@ export function ProductOverviewTab({
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Node ID</label>
-                <p className="mt-1 font-mono text-sm">{product.id}</p>
+                <p className="mt-1 font-mono text-sm">{localProduct.id}</p>
               </div>
 
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Node Type</label>
-                <p className="mt-1 font-mono text-sm">{product.type}</p>
+                <p className="mt-1 font-mono text-sm">{localProduct.type}</p>
               </div>
             </div>
           </CardContent>
@@ -293,7 +298,7 @@ export function ProductOverviewTab({
           deviceId={deviceId}
           baseUrl={baseUrl}
           token={token}
-          product={product}
+          product={localProduct}
           open={showEditDialog}
           onClose={() => setShowEditDialog(false)}
           onSubmit={handleProductUpdate}

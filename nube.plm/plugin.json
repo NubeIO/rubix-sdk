@@ -20,6 +20,7 @@
     "core.entry",
     "core.product",
     "core.service",
+    "core.task",
     "core.ticket"
   ],
   "_futureNodeTypes": [
@@ -83,6 +84,7 @@
       "icon": "factory",
       "color": "#8b5cf6",
       "category": "manufacturing",
+      "propertyPanels": ["node-settings", "tags-references"],
       "constraints": {
         "maxOneNode": true,
         "allowedParents": ["rubix.device"]
@@ -99,6 +101,7 @@
       "icon": "package",
       "color": "#3b82f6",
       "category": "manufacturing",
+      "propertyPanels": ["node-settings", "history-analytics", "tags-references"],
       "constraints": {
         "allowedParents": ["plm.service", "plm.products"]
       },
@@ -133,6 +136,7 @@
       "icon": "cpu",
       "color": "#ef4444",
       "category": "manufacturing",
+      "propertyPanels": ["node-settings", "tags-references"],
       "constraints": {
         "allowedParents": ["plm.product"]
       },
@@ -149,6 +153,7 @@
       "icon": "component",
       "color": "#f59e0b",
       "category": "manufacturing",
+      "propertyPanels": ["node-settings", "tags-references"],
       "visibility": {
         "hideIn": ["wiresheet"]
       },
@@ -160,10 +165,25 @@
       }
     },
     {
+      "type": "core.task",
+      "profile": "plm-task",
+      "displayName": "Task",
+      "description": "Product development task or work item",
+      "icon": "list-checks",
+      "color": "#8b5cf6",
+      "category": "manufacturing",
+      "constraints": {
+        "allowedParents": ["plm.product"]
+      },
+      "autoFields": {
+        "identity": ["task", "plm"]
+      }
+    },
+    {
       "type": "core.entry",
       "profile": "plm-time-entry",
       "displayName": "Time Entry",
-      "description": "Time tracking for work items",
+      "description": "Time tracking for tasks and work items",
       "icon": "clock",
       "color": "#10b981",
       "category": "manufacturing",
@@ -171,7 +191,7 @@
         "hideIn": ["sidebar", "wiresheet"]
       },
       "constraints": {
-        "allowedParents": ["core.ticket"]
+        "allowedParents": ["core.task", "core.ticket"]
       },
       "autoFields": {
         "identity": ["entry", "timesheet", "plm"]
@@ -218,6 +238,7 @@
       "enabled": true,
       "isDefault": true,
       "order": 10,
+      "propertyPanels": ["node-settings", "tags-references"],
       "props": {
         "exposedPath": "./Page",
         "useMountPattern": true
@@ -232,8 +253,38 @@
       "enabled": true,
       "isDefault": true,
       "order": 10,
+      "propertyPanels": ["node-settings", "history-analytics", "tags-references"],
       "props": {
         "exposedPath": "./ProductDetail",
+        "useMountPattern": true
+      }
+    },
+    {
+      "pageId": "product-detail-v2",
+      "title": "Product Details V2 (Modern UI)",
+      "icon": "package",
+      "description": "Modern workspace UI for product management",
+      "nodeTypes": ["plm.product"],
+      "enabled": true,
+      "isDefault": false,
+      "order": 10,
+      "propertyPanels": ["node-settings", "history-analytics", "tags-references"],
+      "props": {
+        "exposedPath": "./ProductDetailV2",
+        "useMountPattern": true
+      }
+    },
+    {
+      "pageId": "tasks-manager",
+      "title": "Task Management",
+      "icon": "list-checks",
+      "description": "Manage product tasks",
+      "nodeTypes": ["plm.product"],
+      "enabled": true,
+      "isDefault": false,
+      "order": 11,
+      "props": {
+        "exposedPath": "./TasksPage",
         "useMountPattern": true
       }
     },
