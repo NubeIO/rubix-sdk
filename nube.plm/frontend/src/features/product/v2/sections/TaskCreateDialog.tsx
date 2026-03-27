@@ -62,7 +62,8 @@ export function TaskCreateDialog({
 
       // Create task using SDK
       await client.createNode({
-        type: 'plm.task',
+        type: 'core.task',
+        profile: 'plm-task',
         name: formData.name,
         parentRef: productId, // IMPORTANT: Use parentRef, not parentId
         settings: {

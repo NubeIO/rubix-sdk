@@ -76,18 +76,18 @@ function SortableTaskCard({ task, onClick }: { task: Task; onClick: () => void }
         {/* Priority badge */}
         {task.priority && (
           <Badge className={cn('mb-2 text-xs', getPriorityColor(task.priority))}>
-            {task.priority}
+            {String(task.priority)}
           </Badge>
         )}
 
         {/* Task title */}
-        <div className="mb-3 font-medium">{task.name}</div>
+        <div className="mb-3 font-medium">{String(task.name || 'Untitled')}</div>
 
         {/* Task meta */}
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <User className="h-3 w-3" />
-            {task.assignee}
+            {task.assignee || 'Unassigned'}
           </span>
           <span className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
