@@ -62,10 +62,14 @@ function TasksPage({
   }, [client]);
 
   const updateTask = useCallback(async (taskId: string, input: UpdateTaskInput) => {
-    await client.updateNode(taskId, {
-      name: input.name,
-      settings: input.settings,
-    });
+    // Update name if provided
+    if (input.name) {
+      await client.updateNode(taskId, { name: input.name });
+    }
+    // Update settings if provided (uses PATCH endpoint for deep merge)
+    if (input.settings) {
+      await client.updateNodeSettings(taskId, input.settings);
+    }
     setRefreshKey((prev) => prev + 1);
   }, [client]);
 

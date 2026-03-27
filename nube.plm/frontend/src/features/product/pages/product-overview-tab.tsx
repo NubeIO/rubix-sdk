@@ -59,11 +59,12 @@ export function ProductOverviewTab({
 
   const handleProductUpdate = async (productId: string, input: { name?: string; settings: ProductSettings }) => {
     try {
-      // Use SDK updateNode instead of ProductsAPI
-      const updatedProduct = await client.updateNode(productId, {
-        name: input.name,
-        settings: input.settings,
-      });
+      // Update name if provided
+      if (input.name) {
+        await client.updateNode(productId, { name: input.name });
+      }
+      // Update settings (uses PATCH endpoint for deep merge)
+      const updatedProduct = await client.updateNodeSettings(productId, input.settings);
 
       // Update local state
       setLocalProduct(updatedProduct as Product);

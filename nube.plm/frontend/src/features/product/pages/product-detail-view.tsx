@@ -67,11 +67,12 @@ export function ProductDetailView({
     console.log('[ProductDetailView] Starting update:', { productId, input });
 
     try {
-      // Use SDK updateNode to update both name AND settings
-      const updatedProduct = await client.updateNode(productId, {
-        name: input.name,
-        settings: input.settings,
-      });
+      // Update name if provided
+      if (input.name) {
+        await client.updateNode(productId, { name: input.name });
+      }
+      // Update settings (uses PATCH endpoint for deep merge)
+      const updatedProduct = await client.updateNodeSettings(productId, input.settings);
 
       console.log('[ProductDetailView] Update successful:', updatedProduct);
 

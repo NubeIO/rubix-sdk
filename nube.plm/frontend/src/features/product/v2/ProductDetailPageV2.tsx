@@ -96,9 +96,17 @@ export function ProductDetailPageV2({
   const updateProduct = async (updates: { name?: string; settings?: Record<string, any> }) => {
     try {
       setIsLoading(true);
-      const updated = await client.updateNode(product.id, updates);
-      setProduct(updated as Product);
-      onProductUpdated?.(updated as Product);
+      // Update name if provided
+      if (updates.name) {
+        await client.updateNode(product.id, { name: updates.name });
+      }
+      // Update settings if provided (uses PATCH endpoint for deep merge)
+      let updated = product;
+      if (updates.settings) {
+        updated = await client.updateNodeSettings(product.id, updates.settings) as Product;
+      }
+      setProduct(updated);
+      onProductUpdated?.(updated);
     } catch (err) {
       console.error('[ProductDetailPageV2] Failed to update product:', err);
       throw err;
