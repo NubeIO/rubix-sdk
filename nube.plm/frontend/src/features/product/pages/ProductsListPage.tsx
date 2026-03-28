@@ -70,10 +70,12 @@ function ProductsPage({
   }, [client, collections.products]);
 
   const updateProduct = useCallback(async (productId: string, input: { name?: string; settings: ProductSettings }) => {
-    await client.updateNode(productId, {
-      name: input.name,
-      settings: input.settings,
-    });
+    // Update name if provided
+    if (input.name) {
+      await client.updateNode(productId, { name: input.name });
+    }
+    // Update settings (uses PATCH endpoint for deep merge)
+    await client.updateNodeSettings(productId, input.settings);
   }, [client]);
 
   const deleteProduct = useCallback(async (productId: string) => {
@@ -82,10 +84,14 @@ function ProductsPage({
 
   // Task CRUD operations - use SDK directly!
   const updateTask = useCallback(async (taskId: string, input: UpdateTaskInput) => {
-    await client.updateNode(taskId, {
-      name: input.name,
-      settings: input.settings,
-    });
+    // Update name if provided
+    if (input.name) {
+      await client.updateNode(taskId, { name: input.name });
+    }
+    // Update settings if provided (uses PATCH endpoint for deep merge)
+    if (input.settings) {
+      await client.updateNodeSettings(taskId, input.settings);
+    }
   }, [client]);
 
   const deleteTask = useCallback(async (taskId: string) => {

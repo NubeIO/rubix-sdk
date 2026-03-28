@@ -380,3 +380,34 @@ nodeProfiles:
     uiHints:
       icon: box
       color: "#8b5cf6"
+
+  # ---------------------------------------------------------------------------
+  # Task (core.task + plm-task profile)
+  # ---------------------------------------------------------------------------
+  - nodeType: core.task
+    profile: plm-task
+    displayName: PLM Task
+    description: Product development task with kanban workflow
+    identity: [task, plm]
+
+    defaults:
+      status: pending
+      priority: Medium
+      assignee: Unassigned
+
+    validation:
+      required: [name]
+      rules:
+        status:
+          enum: [pending, in-progress, completed]
+          message: "Status must be: pending, in-progress, or completed"
+        priority:
+          enum: [Low, Medium, High]
+          message: "Priority must be: Low, Medium, or High"
+        dueDate:
+          pattern: "^\\d{4}-\\d{2}-\\d{2}(T.*)?$"
+          message: "Due date must be ISO 8601 format (YYYY-MM-DD or full timestamp)"
+
+    uiHints:
+      icon: list-checks
+      color: "#8b5cf6"

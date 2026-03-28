@@ -130,11 +130,12 @@ export function useProducts(config: UseProductsConfig): UseProductsResult {
 
   const updateProduct = useCallback(
     async (productId: string, input: { name?: string; settings: ProductSettings }) => {
-      // Use SDK updateNode instead of ProductsAPI
-      await client.updateNode(productId, {
-        name: input.name,
-        settings: input.settings,
-      });
+      // Update name if provided
+      if (input.name) {
+        await client.updateNode(productId, { name: input.name });
+      }
+      // Update settings (uses PATCH endpoint for deep merge)
+      await client.updateNodeSettings(productId, input.settings);
       await fetchProducts();
     },
     [client, fetchProducts]
