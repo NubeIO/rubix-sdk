@@ -53,6 +53,24 @@ import {
   type NodeSchemasListResponse,
 } from './schema';
 import { getPalletDetails as getPalletDetailsHelper } from './pallet';
+import {
+  listCommands as listCommandsHelper,
+  getCommand as getCommandHelper,
+  executeCommand as executeCommandHelper,
+  executeGetCommand as executeGetCommandHelper,
+  executePostCommand as executePostCommandHelper,
+  executePatchCommand as executePatchCommandHelper,
+  executeDeleteCommand as executeDeleteCommandHelper,
+  getCommandJob as getCommandJobHelper,
+  listCommandJobs as listCommandJobsHelper,
+  cancelCommandJob as cancelCommandJobHelper,
+  pollCommandJob as pollCommandJobHelper,
+  executeAndWait as executeAndWaitHelper,
+  type CommandDefinition,
+  type CommandJob,
+  type CommandExecuteResult,
+  type ExecuteCommandOptions,
+} from './commands';
 
 export interface PluginClientConfig {
   orgId: string;
@@ -409,6 +427,367 @@ export class PluginClient {
     }
   }
 
+  // ========================================================================
+  // Commands
+  // ========================================================================
+
+  /**
+   * List all commands available for a node
+   *
+   * @example
+   * ```ts
+   * const commands = await client.listCommands(nodeId);
+   * console.log(commands.map(c => c.name)); // ["ping", "discover", "reset"]
+   * ```
+   */
+  async listCommands(nodeId: string): Promise<CommandDefinition[]> {
+    try {
+      return await listCommandsHelper(this, nodeId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to list commands for node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Get a specific command definition including its parameter schema
+   *
+   * @example
+   * ```ts
+   * const cmd = await client.getCommand(nodeId, 'ping');
+   * console.log(cmd.schema); // Parameter schema
+   * ```
+   */
+  async getCommand(nodeId: string, commandName: string): Promise<CommandDefinition> {
+    try {
+      return await getCommandHelper(this, nodeId, commandName);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to get command ${commandName}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Execute a command on a node
+   *
+   * Handles both sync and async execution automatically. For async commands,
+   * returns a jobId that can be polled for status.
+   *
+   * @example
+   * ```ts
+   * // Sync command
+   * const result = await client.executeCommand(nodeId, 'ping', { count: 5 });
+   * console.log(result.result); // { success: true, latency: 12.5 }
+   *
+   * // Async command
+   * const job = await client.executeCommand(nodeId, 'discover', { subnet: '192.168.1.0/24' });
+   * console.log(job.jobId); // "job_abc123"
+   * ```
+   */
+  async executeCommand<TResult = any, TParams = any>(
+    nodeId: string,
+    commandName: string,
+    parameters?: TParams,
+    options?: ExecuteCommandOptions
+  ): Promise<CommandExecuteResult<TResult>> {
+    try {
+      return await executeCommandHelper<TResult, TParams>(
+        this,
+        nodeId,
+        commandName,
+        parameters,
+        options
+      );
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to execute command ${commandName}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Execute a GET command (query/read operation)
+   *
+   * @example
+   * ```ts
+   * const status = await client.executeGetCommand(nodeId, 'status', { verbose: true });
+   * ```
+   */
+  async executeGetCommand<TResult = any>(
+    nodeId: string,
+    commandName: string,
+    query?: Record<string, string | number | boolean>
+  ): Promise<TResult> {
+    try {
+      return await executeGetCommandHelper<TResult>(this, nodeId, commandName, query);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to execute GET command ${commandName}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Execute a POST command (create/mutation operation)
+   *
+   * @example
+   * ```ts
+   * const result = await client.executePostCommand(nodeId, 'reset', { force: true });
+   * ```
+   */
+  async executePostCommand<TResult = any, TParams = any>(
+    nodeId: string,
+    commandName: string,
+    parameters?: TParams,
+    options?: ExecuteCommandOptions
+  ): Promise<CommandExecuteResult<TResult>> {
+    try {
+      return await executePostCommandHelper<TResult, TParams>(
+        this,
+        nodeId,
+        commandName,
+        parameters,
+        options
+      );
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to execute POST command ${commandName}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Execute a PATCH command (update operation)
+   *
+   * @example
+   * ```ts
+   * const result = await client.executePatchCommand(nodeId, 'updateConfig', { timeout: 30 });
+   * ```
+   */
+  async executePatchCommand<TResult = any, TParams = any>(
+    nodeId: string,
+    commandName: string,
+    parameters?: TParams,
+    options?: ExecuteCommandOptions
+  ): Promise<CommandExecuteResult<TResult>> {
+    try {
+      return await executePatchCommandHelper<TResult, TParams>(
+        this,
+        nodeId,
+        commandName,
+        parameters,
+        options
+      );
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to execute PATCH command ${commandName}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Execute a DELETE command (delete/clear operation)
+   *
+   * @example
+   * ```ts
+   * const result = await client.executeDeleteCommand(nodeId, 'clearCache');
+   * ```
+   */
+  async executeDeleteCommand<TResult = any, TParams = any>(
+    nodeId: string,
+    commandName: string,
+    parameters?: TParams,
+    options?: ExecuteCommandOptions
+  ): Promise<CommandExecuteResult<TResult>> {
+    try {
+      return await executeDeleteCommandHelper<TResult, TParams>(
+        this,
+        nodeId,
+        commandName,
+        parameters,
+        options
+      );
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to execute DELETE command ${commandName}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Get command job status and result
+   *
+   * @example
+   * ```ts
+   * const job = await client.getCommandJob(nodeId, 'job_abc123');
+   * console.log(job.status); // "running" | "success" | "failed"
+   * if (job.status === 'success') {
+   *   console.log(job.result); // Command result
+   * }
+   * ```
+   */
+  async getCommandJob<TResult = any, TParams = any>(
+    nodeId: string,
+    jobId: string
+  ): Promise<CommandJob<TResult, TParams>> {
+    try {
+      return await getCommandJobHelper<TResult, TParams>(this, nodeId, jobId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to get command job ${jobId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * List all command jobs for a node, optionally filtered by status
+   *
+   * @example
+   * ```ts
+   * // Get all jobs
+   * const allJobs = await client.listCommandJobs(nodeId);
+   *
+   * // Get only running jobs
+   * const runningJobs = await client.listCommandJobs(nodeId, 'running');
+   * ```
+   */
+  async listCommandJobs<TResult = any, TParams = any>(
+    nodeId: string,
+    status?: 'pending' | 'running' | 'success' | 'failed'
+  ): Promise<CommandJob<TResult, TParams>[]> {
+    try {
+      return await listCommandJobsHelper<TResult, TParams>(this, nodeId, status);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to list command jobs for node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Cancel or delete a command job
+   *
+   * @example
+   * ```ts
+   * await client.cancelCommandJob(nodeId, 'job_abc123');
+   * ```
+   */
+  async cancelCommandJob(
+    nodeId: string,
+    jobId: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      return await cancelCommandJobHelper(this, nodeId, jobId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to cancel command job ${jobId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Poll a command job until completion
+   *
+   * @example
+   * ```ts
+   * const result = await client.executeCommand(nodeId, 'discover', { subnet: '192.168.1.0/24' });
+   * if (result.jobId) {
+   *   const job = await client.pollCommandJob(nodeId, result.jobId);
+   *   if (job.status === 'success') {
+   *     console.log('Discovery complete:', job.result);
+   *   }
+   * }
+   * ```
+   */
+  async pollCommandJob<TResult = any, TParams = any>(
+    nodeId: string,
+    jobId: string,
+    pollInterval?: number,
+    maxAttempts?: number
+  ): Promise<CommandJob<TResult, TParams>> {
+    try {
+      return await pollCommandJobHelper<TResult, TParams>(
+        this,
+        nodeId,
+        jobId,
+        pollInterval,
+        maxAttempts
+      );
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to poll command job ${jobId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Execute a command and wait for completion
+   *
+   * Convenience function that executes a command and automatically polls
+   * for completion if it returns a jobId.
+   *
+   * @example
+   * ```ts
+   * const result = await client.executeAndWait(nodeId, 'discover', {
+   *   subnet: '192.168.1.0/24'
+   * });
+   * console.log('Discovery complete:', result);
+   * ```
+   */
+  async executeAndWait<TResult = any, TParams = any>(
+    nodeId: string,
+    commandName: string,
+    parameters?: TParams,
+    options?: ExecuteCommandOptions & {
+      pollInterval?: number;
+      maxAttempts?: number;
+    }
+  ): Promise<TResult> {
+    try {
+      return await executeAndWaitHelper<TResult, TParams>(
+        this,
+        nodeId,
+        commandName,
+        parameters,
+        options
+      );
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to execute and wait for command ${commandName}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  // ========================================================================
+  // Low-level API
+  // ========================================================================
+
   /**
    * Make a custom API request
    *
@@ -522,3 +901,4 @@ export * from './pallet';
 export * from './query';
 export * from './node';
 export * from './url-builder';
+export * from './commands';

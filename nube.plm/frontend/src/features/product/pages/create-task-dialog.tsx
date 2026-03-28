@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { Button, Input, Textarea, Select } from '@rubix-sdk/frontend/common/ui';
 import type { Product } from '@features/product/types/product.types';
 import type { CreateTaskInput } from '@features/task/types/task.types';
+import { getDefaultTaskDueDate } from '@features/task/utils/task-date';
 
 interface CreateTaskDialogProps {
   products: Product[];
@@ -15,9 +16,10 @@ interface CreateTaskDialogProps {
 }
 
 const TASK_STATUSES = [
-  { value: 'todo', label: 'To Do' },
-  { value: 'in_progress', label: 'In Progress' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'in-progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
 ];
 
 const TASK_PRIORITIES = [
@@ -31,9 +33,10 @@ export function CreateTaskDialog({ products, onClose, onCreate }: CreateTaskDial
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [productId, setProductId] = useState('');
-  const [status, setStatus] = useState('todo');
+  const [status, setStatus] = useState('pending');
   const [priority, setPriority] = useState('medium');
   const [assignee, setAssignee] = useState('');
+  const [dueDate, setDueDate] = useState(getDefaultTaskDueDate());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +72,7 @@ export function CreateTaskDialog({ products, onClose, onCreate }: CreateTaskDial
           status,
           priority,
           assignee: assignee.trim() || undefined,
+          dueDate,
           progress: 0,
         },
       });
@@ -184,16 +188,26 @@ export function CreateTaskDialog({ products, onClose, onCreate }: CreateTaskDial
             </div>
           </div>
 
-          {/* Assignee */}
-          <div>
-            <label className="text-sm font-medium mb-1.5 block">Assignee</label>
-            <input
-              type="text"
-              value={assignee}
-              onChange={(e) => setAssignee(e.target.value)}
-              placeholder="Enter assignee name..."
-              className="w-full px-3 py-2 border rounded-md text-sm"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Assignee</label>
+              <input
+                type="text"
+                value={assignee}
+                onChange={(e) => setAssignee(e.target.value)}
+                placeholder="Enter assignee name..."
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Due Date</label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              />
+            </div>
           </div>
 
           {/* Error Message */}

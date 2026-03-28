@@ -12,11 +12,13 @@ import { cn } from '@/lib/utils';
 import type { Product } from '../../types/product.types';
 import { TaskDialog } from '../components/TaskDialog';
 import { DeleteTaskDialog } from '../components/DeleteTaskDialog';
+import { formatTaskDate } from '@features/task/utils/task-date';
+import { normalizeTaskStatus, type TaskStatusValue } from '@features/task/utils/task-status';
 
 interface Task {
   id: string;
   name: string;
-  status: 'pending' | 'in-progress' | 'completed';
+  status: TaskStatusValue;
   priority?: string;
   assignee?: string;
   dueDate?: string;
@@ -42,17 +44,16 @@ export function TasksSectionV2({ product, client, onStatsUpdate }: TasksSectionV
   const fetchTasks = async () => {
     try {
       setIsLoading(true);
-      // Query for tasks
-      const result = await client.queryNodes({
-        filter: `parent.id is "${product.id}" and type is "plm.task"`,
+      const nodes = await client.queryNodes({
+        filter: `type is "plm.task" and parentId is "${product.id}"`,
       });
 
-      const taskList: Task[] = (result.nodes || []).map((node: any) => ({
+      const taskList: Task[] = (nodes || []).map((node: any) => ({
         id: node.id,
         name: node.name,
-        status: node.settings?.status || 'pending',
+        status: normalizeTaskStatus(node.settings?.status, node.settings?.completed),
         priority: node.settings?.priority || 'Medium',
-        assignee: node.settings?.assignee || 'User 1',
+        assignee: node.settings?.assignee || 'Unassigned',
         dueDate: node.settings?.dueDate,
       }));
 
@@ -73,6 +74,7 @@ export function TasksSectionV2({ product, client, onStatsUpdate }: TasksSectionV
     { id: 'pending', label: 'Pending', status: 'pending', dotColor: 'bg-gray-400' },
     { id: 'in-progress', label: 'In Progress', status: 'in-progress', dotColor: 'bg-amber-500' },
     { id: 'completed', label: 'Completed', status: 'completed', dotColor: 'bg-emerald-500' },
+    { id: 'cancelled', label: 'Cancelled', status: 'cancelled', dotColor: 'bg-slate-400' },
   ];
 
   const getTasksByStatus = (status: Task['status']) => {
@@ -91,9 +93,7 @@ export function TasksSectionV2({ product, client, onStatsUpdate }: TasksSectionV
   };
 
   const formatDate = (dateStr?: string) => {
-    if (!dateStr) return 'No due date';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return formatTaskDate(dateStr);
   };
 
   return (
@@ -112,7 +112,7 @@ export function TasksSectionV2({ product, client, onStatsUpdate }: TasksSectionV
       </div>
 
       {/* Kanban Board */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         {columns.map((column) => {
           const columnTasks = getTasksByStatus(column.status);
 

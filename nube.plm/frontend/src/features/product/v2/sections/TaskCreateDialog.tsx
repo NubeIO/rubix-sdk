@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getDefaultTaskDueDate } from '@features/task/utils/task-date';
 
 interface TaskCreateDialogProps {
   productId: string;
@@ -38,7 +39,7 @@ export function TaskCreateDialog({
     status: 'pending',
     priority: 'Medium',
     assignee: '',
-    dueDate: '',
+    dueDate: getDefaultTaskDueDate(),
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +63,7 @@ export function TaskCreateDialog({
 
       // Create task using SDK
       await client.createNode({
-        type: 'core.task',
+        type: 'plm.task',
         profile: 'plm-task',
         name: formData.name,
         parentRef: productId, // IMPORTANT: Use parentRef, not parentId
@@ -85,7 +86,7 @@ export function TaskCreateDialog({
         status: 'pending',
         priority: 'Medium',
         assignee: '',
-        dueDate: '',
+        dueDate: getDefaultTaskDueDate(),
       });
     } catch (err) {
       console.error('[TaskCreateDialog] Failed to create task:', err);

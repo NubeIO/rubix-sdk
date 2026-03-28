@@ -224,7 +224,7 @@ function ProductsPage({
   const createTask = useCallback(async (input: CreateTaskInput) => {
     console.log('[ProductsPage] Creating task:', input);
     await client.createNode({
-      type: 'core.task',
+      type: 'plm.task',
       name: input.name,
       parentId: input.parentId,
       settings: input.settings || {},

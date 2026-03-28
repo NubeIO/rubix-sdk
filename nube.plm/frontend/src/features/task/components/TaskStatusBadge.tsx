@@ -2,21 +2,22 @@
  * Task status badge component
  */
 
+import { normalizeTaskStatus } from '@features/task/utils/task-status';
+
 interface TaskStatusBadgeProps {
   status?: string;
 }
 
 const STATUS_STYLES: Record<string, { bg: string; color: string; label: string }> = {
-  todo: { bg: '#f3f4f6', color: '#374151', label: 'To Do' },
-  in_progress: { bg: '#dbeafe', color: '#1e40af', label: 'In Progress' },
-  review: { bg: '#fef3c7', color: '#92400e', label: 'Review' },
-  blocked: { bg: '#fee2e2', color: '#991b1b', label: 'Blocked' },
+  pending: { bg: '#f3f4f6', color: '#374151', label: 'Pending' },
+  'in-progress': { bg: '#dbeafe', color: '#1e40af', label: 'In Progress' },
   completed: { bg: '#d1fae5', color: '#065f46', label: 'Completed' },
   cancelled: { bg: '#f3f4f6', color: '#6b7280', label: 'Cancelled' },
 };
 
 export function TaskStatusBadge({ status }: TaskStatusBadgeProps) {
-  const style = STATUS_STYLES[status || 'todo'] || STATUS_STYLES.todo;
+  const normalizedStatus = normalizeTaskStatus(status);
+  const style = STATUS_STYLES[normalizedStatus];
 
   return (
     <span

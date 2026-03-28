@@ -53,7 +53,7 @@ function TasksPage({
   // CRUD operations - use SDK directly, no API wrapper!
   const createTask = useCallback(async (input: CreateTaskInput) => {
     await client.createNode({
-      type: 'core.task',
+      type: 'plm.task',
       name: input.name,
       parentId: input.parentId,
       settings: input.settings || {},

@@ -3,12 +3,13 @@
  *
  * Tabs:
  * - All: Shows all tasks
- * - To Do: Filters to status is "todo"
- * - In Progress: Filters to status is "in_progress"
+ * - Pending: Filters to status is "pending"
+ * - In Progress: Filters to status is "in-progress"
  * - Completed: Filters to status is "completed"
+ * - Cancelled: Filters to status is "cancelled"
  */
 
-import { ListChecks, CircleDot, Loader2, CheckCircle2 } from 'lucide-react';
+import { ListChecks, CircleDot, Loader2, CheckCircle2, CircleOff } from 'lucide-react';
 // @ts-ignore - SDK types are resolved at build time
 import { FilteredTableWithTabs, type FilteredTab } from '@rubix-sdk/frontend/components';
 // @ts-ignore - SDK types are resolved at build time
@@ -27,22 +28,28 @@ const TABS: FilteredTab[] = [
     filter: undefined, // No filter - show all
   },
   {
-    value: 'todo',
-    label: 'To Do',
+    value: 'pending',
+    label: 'Pending',
     icon: CircleDot,
-    filter: 'settings.status is "todo"',
+    filter: 'settings.status in ["pending", "todo"]',
   },
   {
-    value: 'in_progress',
+    value: 'in-progress',
     label: 'In Progress',
     icon: Loader2,
-    filter: 'settings.status is "in_progress"',
+    filter: 'settings.status in ["in-progress", "in_progress"]',
   },
   {
     value: 'completed',
     label: 'Completed',
     icon: CheckCircle2,
-    filter: 'settings.status is "completed"',
+    filter: 'settings.status is "completed" or settings.completed is true',
+  },
+  {
+    value: 'cancelled',
+    label: 'Cancelled',
+    icon: CircleOff,
+    filter: 'settings.status in ["cancelled", "canceled"]',
   },
 ];
 
@@ -77,7 +84,7 @@ export function TasksListTab({
   return (
     <FilteredTableWithTabs<Task>
       tabs={TABS}
-      baseFilter='type is "core.task" and identity contains ["plm"]'
+      baseFilter='type is "plm.task"'
       client={client}
       renderTable={(tasks, isRefreshing) => (
         <div className={isRefreshing ? 'opacity-50 pointer-events-none' : ''}>

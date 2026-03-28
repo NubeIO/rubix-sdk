@@ -148,12 +148,65 @@ export const nodeUrls = {
   },
 
   /**
-   * Execute node command
-   * POST /orgs/{orgId}/devices/{deviceId}/nodes/{nodeId}/commands/{commandName}
+   * List available commands for a node
+   * GET /orgs/{orgId}/devices/{deviceId}/nodes/{nodeId}/commands
    */
-  command(config: URLConfig, nodeId: string, commandName: string): string {
+  commandsList(config: URLConfig, nodeId: string): string {
+    const { orgId, deviceId, baseUrl = '/api/v1' } = config;
+    return `${baseUrl}/orgs/${orgId}/devices/${deviceId}/nodes/${nodeId}/commands`;
+  },
+
+  /**
+   * Get specific command definition
+   * GET /orgs/{orgId}/devices/{deviceId}/nodes/{nodeId}/commands/{commandName}
+   */
+  commandGet(config: URLConfig, nodeId: string, commandName: string): string {
     const { orgId, deviceId, baseUrl = '/api/v1' } = config;
     return `${baseUrl}/orgs/${orgId}/devices/${deviceId}/nodes/${nodeId}/commands/${commandName}`;
+  },
+
+  /**
+   * Execute node command
+   * POST /orgs/{orgId}/devices/{deviceId}/nodes/{nodeId}/commands/{commandName}/execute
+   */
+  commandExecute(config: URLConfig, nodeId: string, commandName: string): string {
+    const { orgId, deviceId, baseUrl = '/api/v1' } = config;
+    return `${baseUrl}/orgs/${orgId}/devices/${deviceId}/nodes/${nodeId}/commands/${commandName}/execute`;
+  },
+
+  /**
+   * Execute node command (legacy - kept for backwards compatibility)
+   * POST /orgs/{orgId}/devices/{deviceId}/nodes/{nodeId}/commands/{commandName}
+   * @deprecated Use commandExecute instead
+   */
+  command(config: URLConfig, nodeId: string, commandName: string): string {
+    return nodeUrls.commandExecute(config, nodeId, commandName);
+  },
+
+  /**
+   * Get command job status
+   * GET /orgs/{orgId}/devices/{deviceId}/nodes/{nodeId}/jobs/{jobId}
+   */
+  commandJob(config: URLConfig, nodeId: string, jobId: string): string {
+    const { orgId, deviceId, baseUrl = '/api/v1' } = config;
+    return `${baseUrl}/orgs/${orgId}/devices/${deviceId}/nodes/${nodeId}/jobs/${jobId}`;
+  },
+
+  /**
+   * List command jobs for a node
+   * GET /orgs/{orgId}/devices/{deviceId}/nodes/{nodeId}/jobs
+   */
+  commandJobsList(config: URLConfig, nodeId: string): string {
+    const { orgId, deviceId, baseUrl = '/api/v1' } = config;
+    return `${baseUrl}/orgs/${orgId}/devices/${deviceId}/nodes/${nodeId}/jobs`;
+  },
+
+  /**
+   * Cancel or delete a command job
+   * DELETE /orgs/{orgId}/devices/{deviceId}/nodes/{nodeId}/jobs/{jobId}
+   */
+  commandJobCancel(config: URLConfig, nodeId: string, jobId: string): string {
+    return nodeUrls.commandJob(config, nodeId, jobId);
   },
 
   /**

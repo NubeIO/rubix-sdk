@@ -14,6 +14,7 @@ import {
   listNodeTypeSchemas,
   listNodeSchemas
 } from '@rubix-sdk/frontend/plugin-client/schema';
+import { getDefaultTaskDueDate } from '@features/task/utils/task-date';
 
 interface TaskDialogProps {
   client: any;
@@ -86,6 +87,9 @@ export function TaskDialog({ client, productId, task, onClose, onSuccess }: Task
               defaults[key] = prop.default;
             }
           });
+        }
+        if (fetchedSchema.properties?.dueDate && !defaults.dueDate) {
+          defaults.dueDate = getDefaultTaskDueDate();
         }
         setFormData(defaults);
       }

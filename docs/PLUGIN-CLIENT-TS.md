@@ -959,6 +959,400 @@ async function exampleCRUD() {
 }
 ```
 
+## Node Commands
+
+Commands are actions that nodes can execute, like "discover devices", "ping connection", or "reset configuration". Each node type can register its own commands with custom parameters and response schemas.
+
+### How Commands Work
+
+Commands follow an async-by-default execution model:
+
+1. **List** available commands for a node
+2. **Execute** a command with parameters → returns result or job ID
+3. **Poll** job status until completion (for async commands)
+4. **Read** results from completed job
+
+### Command Execution Modes
+
+- **Sync**: Returns results immediately in response body (< 5 seconds)
+- **Async**: Returns job ID for long-running operations (discovery, bulk ops)
+- **Auto**: Runtime decides based on execution time
+
+### List Commands
+
+```typescript
+const client = createPluginClient({ orgId, deviceId, baseUrl, token });
+
+// Get all commands available for a node
+const commands = await client.listCommands(nodeId);
+
+console.log(commands.map(c => ({
+  name: c.name,
+  description: c.description,
+  method: c.method,
+  executionMode: c.executionMode
+})));
+
+// Example output:
+// [
+//   { name: "ping", description: "Test connectivity", method: "GET", executionMode: "sync" },
+//   { name: "discover", description: "Discover devices", method: "POST", executionMode: "async" },
+//   { name: "reset", description: "Reset configuration", method: "POST", executionMode: "sync" }
+// ]
+```
+
+### Get Command Definition
+
+```typescript
+// Get detailed info about a specific command including parameter schema
+const command = await client.getCommand(nodeId, 'ping');
+
+console.log(command.schema);        // Parameter JSON Schema
+console.log(command.responseSchema); // Response JSON Schema
+console.log(command.ui);            // UI customization (label, icon, etc.)
+```
+
+### Execute Commands
+
+#### Sync Command (Fast Operations)
+
+```typescript
+// Execute and get result immediately
+const result = await client.executeCommand(nodeId, 'ping', {
+  count: 5,
+  timeout: 3000
+});
+
+if (!result.isAsync) {
+  console.log('Ping result:', result.result);
+  // { success: true, latency: 12.5, packetsLost: 0 }
+}
+```
+
+#### Async Command (Long-Running Operations)
+
+```typescript
+// Execute command that returns job ID
+const result = await client.executeCommand(nodeId, 'discover', {
+  subnet: '192.168.1.0/24',
+  timeout: 60
+});
+
+if (result.isAsync) {
+  console.log('Job started:', result.jobId);
+
+  // Poll for completion
+  const job = await client.pollCommandJob(nodeId, result.jobId);
+
+  if (job.status === 'success') {
+    console.log('Discovery complete:', job.result);
+    // { devicesFound: 12, devices: [...] }
+  } else {
+    console.error('Discovery failed:', job.error);
+  }
+}
+```
+
+#### Execute and Wait (Convenience Method)
+
+```typescript
+// Automatically handles both sync and async commands
+const result = await client.executeAndWait(nodeId, 'discover', {
+  subnet: '192.168.1.0/24'
+}, {
+  pollInterval: 1000,  // Poll every 1 second
+  maxAttempts: 60      // Max 60 attempts (60 seconds)
+});
+
+console.log('Discovery complete:', result);
+// { devicesFound: 12, devices: [...] }
+```
+
+### Command HTTP Methods
+
+Commands can map to different HTTP methods for semantic operations:
+
+#### GET Commands (Read-Only)
+
+```typescript
+// Query/read operations - no side effects
+const status = await client.executeGetCommand(nodeId, 'status', {
+  verbose: true
+});
+
+console.log('Device status:', status);
+```
+
+#### POST Commands (Create/Trigger)
+
+```typescript
+// Create/trigger operations
+const result = await client.executePostCommand(nodeId, 'restart', {
+  force: true
+});
+```
+
+#### PATCH Commands (Update)
+
+```typescript
+// Update operations
+const result = await client.executePatchCommand(nodeId, 'updateConfig', {
+  timeout: 30,
+  retries: 3
+});
+```
+
+#### DELETE Commands (Delete/Clear)
+
+```typescript
+// Delete/clear operations
+const result = await client.executeDeleteCommand(nodeId, 'clearCache', {
+  includeHistory: false
+});
+```
+
+### Managing Command Jobs
+
+#### Get Job Status
+
+```typescript
+// Check status of a running job
+const job = await client.getCommandJob(nodeId, 'job_abc123');
+
+console.log('Status:', job.status);     // "pending" | "running" | "success" | "failed"
+console.log('Progress:', job.progress); // 0-100
+console.log('Created:', job.createdAt);
+console.log('Started:', job.startedAt);
+
+if (job.status === 'success') {
+  console.log('Result:', job.result);
+} else if (job.status === 'failed') {
+  console.error('Error:', job.error);
+}
+```
+
+#### List Jobs
+
+```typescript
+// Get all jobs for a node
+const allJobs = await client.listCommandJobs(nodeId);
+
+// Filter by status
+const runningJobs = await client.listCommandJobs(nodeId, 'running');
+const failedJobs = await client.listCommandJobs(nodeId, 'failed');
+
+console.log(`Found ${runningJobs.length} running jobs`);
+```
+
+#### Cancel Job
+
+```typescript
+// Cancel a running job
+await client.cancelCommandJob(nodeId, 'job_abc123');
+```
+
+### Complete Command Example
+
+```typescript
+import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
+
+async function discoverDevices() {
+  const client = createPluginClient({
+    orgId: 'my-org',
+    deviceId: 'my-device',
+    baseUrl: '/api/v1',
+    token: 'your-token',
+  });
+
+  // 1. List available commands
+  const commands = await client.listCommands('bacnet_client_node_id');
+  console.log('Available commands:', commands.map(c => c.name));
+
+  // 2. Get command details
+  const discoverCmd = await client.getCommand('bacnet_client_node_id', 'whoisAsync');
+  console.log('Discovery parameters:', discoverCmd.schema);
+
+  // 3. Execute discovery (async command)
+  const result = await client.executeCommand('bacnet_client_node_id', 'whoisAsync', {
+    subnet: '192.168.1.0/24',
+    deviceRange: { low: 0, high: 4194303 }
+  });
+
+  if (result.isAsync) {
+    console.log('Discovery started, job ID:', result.jobId);
+
+    // 4. Poll for completion
+    const job = await client.pollCommandJob(
+      'bacnet_client_node_id',
+      result.jobId,
+      1000,  // Poll every 1 second
+      120    // Max 2 minutes
+    );
+
+    // 5. Check result
+    if (job.status === 'success') {
+      console.log(`Found ${job.result.devicesFound} devices`);
+      console.log('Devices:', job.result.devices);
+    } else {
+      console.error('Discovery failed:', job.error);
+    }
+  }
+}
+
+// Alternative: Use executeAndWait for simpler code
+async function discoverDevicesSimple() {
+  const client = createPluginClient({
+    orgId: 'my-org',
+    deviceId: 'my-device',
+    baseUrl: '/api/v1',
+    token: 'your-token',
+  });
+
+  try {
+    const result = await client.executeAndWait(
+      'bacnet_client_node_id',
+      'whoisAsync',
+      {
+        subnet: '192.168.1.0/24',
+        deviceRange: { low: 0, high: 4194303 }
+      },
+      {
+        pollInterval: 1000,
+        maxAttempts: 120
+      }
+    );
+
+    console.log(`Found ${result.devicesFound} devices`);
+    console.log('Devices:', result.devices);
+  } catch (err) {
+    console.error('Discovery failed:', err.message);
+  }
+}
+```
+
+### React Hook for Commands
+
+```typescript
+import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
+import { useState } from 'react';
+
+function DeviceDiscovery({ orgId, deviceId, baseUrl, token, nodeId }) {
+  const [discovering, setDiscovering] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  const client = useMemo(
+    () => createPluginClient({ orgId, deviceId, baseUrl, token }),
+    [orgId, deviceId, baseUrl, token]
+  );
+
+  const startDiscovery = async () => {
+    setDiscovering(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const result = await client.executeAndWait(nodeId, 'whoisAsync', {
+        subnet: '192.168.1.0/24'
+      });
+      setResult(result);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
+  return (
+    <div>
+      <button onClick={startDiscovery} disabled={discovering}>
+        {discovering ? 'Discovering...' : 'Start Discovery'}
+      </button>
+
+      {error && <div className="error">{error}</div>}
+
+      {result && (
+        <div>
+          <h3>Discovery Complete</h3>
+          <p>Found {result.devicesFound} devices</p>
+          <ul>
+            {result.devices.map(device => (
+              <li key={device.id}>{device.name} - {device.address}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### Command Options
+
+```typescript
+// Force async execution (returns jobId instead of result)
+const result = await client.executeCommand(nodeId, 'ping',
+  { count: 5 },
+  { async: true }
+);
+
+// Add query parameters (for GET commands)
+const status = await client.executeGetCommand(nodeId, 'status', {
+  verbose: true,
+  format: 'json'
+});
+```
+
+### TypeScript Types
+
+```typescript
+import type {
+  CommandDefinition,
+  CommandJob,
+  CommandExecuteResult,
+  ExecuteCommandOptions,
+  CommandUI,
+} from '@rubix-sdk/frontend/plugin-client';
+
+// Command definition
+const command: CommandDefinition = {
+  name: 'ping',
+  description: 'Test connectivity',
+  method: 'GET',
+  executionMode: 'sync',
+  timeout: 5,
+  schema: { /* JSON Schema */ },
+  responseSchema: { /* JSON Schema */ },
+  ui: {
+    label: 'Ping Device',
+    icon: 'wifi',
+    variant: 'primary'
+  }
+};
+
+// Command job with typed result
+interface PingResult {
+  success: boolean;
+  latency: number;
+  packetsLost: number;
+}
+
+interface PingParams {
+  count: number;
+  timeout: number;
+}
+
+const job: CommandJob<PingResult, PingParams> = {
+  id: 'job_123',
+  nodeId: 'node_abc',
+  commandName: 'ping',
+  status: 'success',
+  parameters: { count: 5, timeout: 3000 },
+  result: { success: true, latency: 12.5, packetsLost: 0 },
+  // ... other fields
+};
+```
+
 ## Error Handling
 
 ```typescript
@@ -1326,9 +1720,29 @@ urls.node.setPortValue(config, nodeId, 'temperature')
 
 **Command URLs:**
 ```typescript
-// Execute node command
-urls.node.command(config, nodeId, 'reset')
-// → /api/v1/orgs/my-org/devices/my-device/nodes/{nodeId}/commands/reset
+// List available commands for a node
+urls.node.commandsList(config, nodeId)
+// → /api/v1/orgs/my-org/devices/my-device/nodes/{nodeId}/commands
+
+// Get specific command definition
+urls.node.commandGet(config, nodeId, 'ping')
+// → /api/v1/orgs/my-org/devices/my-device/nodes/{nodeId}/commands/ping
+
+// Execute command
+urls.node.commandExecute(config, nodeId, 'reset')
+// → /api/v1/orgs/my-org/devices/my-device/nodes/{nodeId}/commands/reset/execute
+
+// Get command job status
+urls.node.commandJob(config, nodeId, jobId)
+// → /api/v1/orgs/my-org/devices/my-device/nodes/{nodeId}/jobs/{jobId}
+
+// List command jobs
+urls.node.commandJobsList(config, nodeId)
+// → /api/v1/orgs/my-org/devices/my-device/nodes/{nodeId}/jobs
+
+// Cancel command job
+urls.node.commandJobCancel(config, nodeId, jobId)
+// → /api/v1/orgs/my-org/devices/my-device/nodes/{nodeId}/jobs/{jobId}
 ```
 
 ### Node Type URLs

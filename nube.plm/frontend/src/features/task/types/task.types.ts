@@ -5,7 +5,7 @@
 export interface TaskSettings {
   title?: string;
   description?: string;
-  status?: string; // todo, in_progress, review, blocked, completed, cancelled
+  status?: string; // pending, in-progress, completed, cancelled
   priority?: string; // low, medium, high, critical
   progress?: number; // 0-100
   completed?: boolean;

@@ -7,11 +7,13 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@rubix-sdk/frontend/common/ui/button';
 import { Calendar, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatTaskDate } from '@features/task/utils/task-date';
+import type { TaskStatusValue } from '@features/task/utils/task-status';
 
 interface Task {
   id: string;
   name: string;
-  status: 'pending' | 'in-progress' | 'completed';
+  status: TaskStatusValue;
   assignee?: string;
   dueDate?: string;
 }
@@ -28,15 +30,15 @@ export function RecentTasks({ tasks, onViewAll }: RecentTasksProps) {
         return 'bg-emerald-500';
       case 'in-progress':
         return 'bg-amber-500';
+      case 'cancelled':
+        return 'bg-slate-400';
       default:
         return 'bg-gray-400';
     }
   };
 
   const formatDate = (dateStr?: string) => {
-    if (!dateStr) return 'No due date';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return formatTaskDate(dateStr);
   };
 
   return (

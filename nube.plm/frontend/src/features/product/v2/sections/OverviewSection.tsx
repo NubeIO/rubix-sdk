@@ -8,6 +8,7 @@ import { StatCard } from '../components/StatCard';
 import { RecentTasks } from '../widgets/RecentTasks';
 import { QuickActions } from '../widgets/QuickActions';
 import type { Product } from '../../types/product.types';
+import { normalizeTaskStatus } from '@features/task/utils/task-status';
 
 interface OverviewSectionProps {
   product: Product;
@@ -51,16 +52,14 @@ export function OverviewSection({
       setIsLoading(true);
 
       // Fetch tasks
-      const tasksResult = await client.queryNodes({
-        filter: `parent.id is "${product.id}" and type is "plm.task"`,
+      const tasks = await client.queryNodes({
+        filter: `type is "plm.task" and parentId is "${product.id}"`,
       });
-      const tasks = tasksResult.nodes || [];
 
       // Fetch BOM items
-      const bomResult = await client.queryNodes({
-        filter: `parent.id is "${product.id}" and type is "plm.bom"`,
+      const bomItems = await client.queryNodes({
+        filter: `parentId is "${product.id}" and type is "plm.bom"`,
       });
-      const bomItems = bomResult.nodes || [];
 
       // Calculate stats
       const totalTasks = tasks.length;
@@ -68,7 +67,7 @@ export function OverviewSection({
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       const tasksCompletedThisWeek = tasks.filter((task: any) => {
-        const status = task.settings?.status;
+        const status = normalizeTaskStatus(task.settings?.status, task.settings?.completed);
         const completedAt = task.updatedAt ? new Date(task.updatedAt) : null;
         return status === 'completed' && completedAt && completedAt >= oneWeekAgo;
       }).length;
@@ -104,8 +103,8 @@ export function OverviewSection({
       setRecentTasks(sortedTasks.slice(0, 5).map((task: any) => ({
         id: task.id,
         name: task.name,
-        status: task.settings?.status || 'pending',
-        assignee: task.settings?.assignee || 'User 4',
+        status: normalizeTaskStatus(task.settings?.status, task.settings?.completed),
+        assignee: task.settings?.assignee || 'Unassigned',
         dueDate: task.settings?.dueDate,
       })));
 
