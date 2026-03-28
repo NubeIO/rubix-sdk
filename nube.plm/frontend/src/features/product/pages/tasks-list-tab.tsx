@@ -76,6 +76,7 @@ export function TasksListTab({
     <TasksDataTable
       tasks={tasks}
       products={products}
+      client={client}
       onEdit={onEdit}
       onDelete={onDelete}
     />

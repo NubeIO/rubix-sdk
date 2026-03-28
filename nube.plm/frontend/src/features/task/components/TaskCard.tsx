@@ -7,18 +7,22 @@ import { CSS } from '@dnd-kit/utilities';
 // @ts-ignore - SDK types are resolved at build time
 import { Badge, Card, CardContent, Button } from '@rubix-sdk/frontend/common/ui';
 import { Calendar, User, GripVertical, Edit2, Ticket } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { Task } from '../types/task.types';
+import type { PluginClient } from '@rubix-sdk/frontend/plugin-client';
 import { TaskStatusBadge } from './TaskStatusBadge';
+import { TaskTicketPreview } from './TaskTicketPreview';
 
 interface TaskCardProps {
   task: Task;
   ticketCount?: number;
+  client?: PluginClient;
   onClick?: () => void;
   onEdit?: (task: Task) => void;
   onViewTickets?: (task: Task) => void;
 }
 
-export function TaskCard({ task, ticketCount = 0, onClick, onEdit, onViewTickets }: TaskCardProps) {
+export function TaskCard({ task, ticketCount = 0, client, onClick, onEdit, onViewTickets }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -117,23 +121,42 @@ export function TaskCard({ task, ticketCount = 0, onClick, onEdit, onViewTickets
               </Button>
             )}
             {onViewTickets && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onViewTickets(task);
-                }}
-              >
-                <Ticket className="h-3 w-3 mr-1" />
-                Tickets
-                {ticketCount > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">
-                    {ticketCount}
-                  </Badge>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Don't trigger onViewTickets on click - only on explicit request
+                    }}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      // Double-click to open full dialog
+                      onViewTickets(task);
+                    }}
+                  >
+                    <Ticket className="h-3 w-3 mr-1" />
+                    Tickets
+                    {ticketCount > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">
+                        {ticketCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                {client && (
+                  <PopoverContent
+                    className="p-0 w-auto"
+                    side="top"
+                    align="start"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <TaskTicketPreview taskId={task.id} client={client} />
+                  </PopoverContent>
                 )}
-              </Button>
+              </Popover>
             )}
           </div>
         </CardContent>

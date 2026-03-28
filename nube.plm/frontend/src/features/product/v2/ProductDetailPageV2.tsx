@@ -23,9 +23,10 @@ const BasicInfoSection = lazy(() => import('./sections/BasicInfoSection').then(m
 const PricingSection = lazy(() => import('./sections/PricingSection').then(m => ({ default: m.PricingSection })));
 const BOMSectionV2 = lazy(() => import('./sections/BOMSectionV2').then(m => ({ default: m.BOMSectionV2 })));
 const TasksSectionV2 = lazy(() => import('./sections/TasksSectionV2').then(m => ({ default: m.TasksSectionV2 })));
+const TicketsSection = lazy(() => import('./sections/TicketsSection').then(m => ({ default: m.TicketsSection })));
 const SystemInfoSection = lazy(() => import('./sections/SystemInfoSection').then(m => ({ default: m.SystemInfoSection })));
 
-export type SectionId = 'overview' | 'basic-info' | 'pricing' | 'bom' | 'tasks' | 'system-info';
+export type SectionId = 'overview' | 'basic-info' | 'pricing' | 'bom' | 'tasks' | 'tickets' | 'system-info';
 
 // Loading fallback for lazy sections
 function SectionLoadingFallback() {
@@ -72,6 +73,10 @@ export function ProductDetailPageV2({
     bomItemsCount: 0,
     bomItemsPending: 0,
     totalCost: 0,
+    totalTickets: 0,
+    blockedTickets: 0,
+    completedTickets: 0,
+    ticketsByStatus: {} as Record<string, number>,
     lastActivity: product.updatedAt || new Date().toISOString(),
     health: 98.2,
     latency: 24,
@@ -144,6 +149,8 @@ export function ProductDetailPageV2({
         return <BOMSectionV2 {...commonProps} onStatsUpdate={updateStats} />;
       case 'tasks':
         return <TasksSectionV2 {...commonProps} onStatsUpdate={updateStats} />;
+      case 'tickets':
+        return <TicketsSection {...commonProps} onStatsUpdate={updateStats} />;
       case 'system-info':
         return <SystemInfoSection {...commonProps} />;
       default:

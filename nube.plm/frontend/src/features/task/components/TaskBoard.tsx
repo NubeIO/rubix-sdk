@@ -37,12 +37,13 @@ const COLUMNS: {
 interface TaskBoardProps {
   tasks: Task[];
   client: PluginClient;
+  ticketCounts?: Record<string, number>;
   onTaskUpdate?: () => void;
   onEditTask?: (task: Task) => void;
   onViewTickets?: (task: Task) => void;
 }
 
-export function TaskBoard({ tasks, client, onTaskUpdate, onEditTask, onViewTickets }: TaskBoardProps) {
+export function TaskBoard({ tasks, client, ticketCounts = {}, onTaskUpdate, onEditTask, onViewTickets }: TaskBoardProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -142,6 +143,8 @@ export function TaskBoard({ tasks, client, onTaskUpdate, onEditTask, onViewTicke
               id={column.id}
               label={column.label}
               tasks={columnTasks}
+              ticketCounts={ticketCounts}
+              client={client}
               onEditTask={onEditTask}
               onViewTickets={onViewTickets}
             />

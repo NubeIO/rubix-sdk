@@ -10,6 +10,7 @@ import type { Product } from '../../types/product.types';
 import { TaskDialog } from '../components/TaskDialog';
 import { DeleteTaskDialog } from '../components/DeleteTaskDialog';
 import { TaskBoard } from '@features/task/components/TaskBoard';
+import { TaskDetailDialog } from '@features/task/components/TaskDetailDialog';
 import { normalizeTaskStatus } from '@features/task/utils/task-status';
 import type { Task } from '@features/task/types/task.types';
 
@@ -25,11 +26,58 @@ export function TasksSectionV2({ product, client, onStatsUpdate }: TasksSectionV
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingTask, setEditingTask] = useState<any | null>(null);
   const [deletingTask, setDeletingTask] = useState<any | null>(null);
+  const [viewingTask, setViewingTask] = useState<Task | null>(null);
+  const [ticketCounts, setTicketCounts] = useState<Record<string, number>>({});
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     fetchTasks();
   }, [product.id, refreshKey]);
+
+  const fetchTicketCounts = async (taskList: Task[]) => {
+    try {
+      const counts: Record<string, number> = {};
+      let allTickets: any[] = [];
+
+      // Fetch ticket counts for all tasks in parallel
+      await Promise.all(
+        taskList.map(async (task) => {
+          try {
+            const tickets = await client.queryNodes({
+              filter: `type is "plm.ticket" and parentId is "${task.id}"`,
+            });
+            counts[task.id] = tickets?.length || 0;
+            allTickets = [...allTickets, ...(tickets || [])];
+          } catch (err) {
+            console.error(`[TasksSectionV2] Failed to fetch tickets for task ${task.id}:`, err);
+            counts[task.id] = 0;
+          }
+        })
+      );
+
+      setTicketCounts(counts);
+
+      // Calculate ticket statistics for overview
+      const totalTickets = allTickets.length;
+      const ticketsByStatus = allTickets.reduce((acc: Record<string, number>, ticket: any) => {
+        const status = ticket.settings?.status || 'pending';
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {});
+      const blockedTickets = ticketsByStatus['blocked'] || 0;
+      const completedTickets = ticketsByStatus['completed'] || 0;
+
+      // Update stats with ticket information
+      onStatsUpdate({
+        totalTickets,
+        blockedTickets,
+        completedTickets,
+        ticketsByStatus,
+      });
+    } catch (err) {
+      console.error('[TasksSectionV2] Failed to fetch ticket counts:', err);
+    }
+  };
 
   const fetchTasks = async () => {
     try {
@@ -52,6 +100,11 @@ export function TasksSectionV2({ product, client, onStatsUpdate }: TasksSectionV
       }));
 
       setTasks(taskList);
+
+      // Fetch ticket counts
+      if (taskList.length > 0) {
+        fetchTicketCounts(taskList);
+      }
 
       // Update stats
       onStatsUpdate({
@@ -119,13 +172,10 @@ export function TasksSectionV2({ product, client, onStatsUpdate }: TasksSectionV
         <TaskBoard
           tasks={tasks}
           client={client}
+          ticketCounts={ticketCounts}
           onTaskUpdate={handleTaskUpdate}
           onEditTask={(task) => setEditingTask(task)}
-          onViewTickets={(task) => {
-            // TODO: Navigate to task detail page or open tickets dialog
-            console.log('[TasksSectionV2] View tickets for task:', task.id);
-            alert(`View tickets for: ${task.name}\n\nThis will navigate to the task detail page showing all tickets.`);
-          }}
+          onViewTickets={(task) => setViewingTask(task)}
         />
       )}
 
@@ -157,6 +207,24 @@ export function TasksSectionV2({ product, client, onStatsUpdate }: TasksSectionV
           task={deletingTask}
           onClose={() => setDeletingTask(null)}
           onSuccess={fetchTasks}
+        />
+      )}
+
+      {/* Task Detail Dialog (View Tickets) */}
+      {viewingTask && (
+        <TaskDetailDialog
+          task={viewingTask}
+          product={product}
+          client={client}
+          onClose={() => setViewingTask(null)}
+          onEdit={(task) => {
+            setViewingTask(null);
+            setEditingTask(task);
+          }}
+          onDelete={(taskId, taskName) => {
+            setViewingTask(null);
+            setDeletingTask({ id: taskId, name: taskName });
+          }}
         />
       )}
     </div>

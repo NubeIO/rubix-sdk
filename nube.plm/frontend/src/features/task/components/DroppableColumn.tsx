@@ -16,11 +16,13 @@ interface DroppableColumnProps {
   id: string;
   label: string;
   tasks: Task[];
+  ticketCounts?: Record<string, number>;
+  client?: any;
   onEditTask?: (task: Task) => void;
   onViewTickets?: (task: Task) => void;
 }
 
-export function DroppableColumn({ id, label, tasks, onEditTask, onViewTickets }: DroppableColumnProps) {
+export function DroppableColumn({ id, label, tasks, ticketCounts = {}, client, onEditTask, onViewTickets }: DroppableColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id,
   });
@@ -55,6 +57,8 @@ export function DroppableColumn({ id, label, tasks, onEditTask, onViewTickets }:
                 <TaskCard
                   key={task.id}
                   task={task}
+                  ticketCount={ticketCounts[task.id] || 0}
+                  client={client}
                   onEdit={onEditTask}
                   onViewTickets={onViewTickets}
                 />

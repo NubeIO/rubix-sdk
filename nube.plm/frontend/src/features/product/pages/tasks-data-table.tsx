@@ -3,7 +3,7 @@
  * Using TanStack Table with shadcn/ui
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Fragment } from 'react';
 import {
   flexRender,
   getCoreRowModel,
@@ -27,19 +27,22 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUpDown, Search, Pencil, Trash2, Filter, X, AlertCircle } from 'lucide-react';
+import { ArrowUpDown, Search, Pencil, Trash2, Filter, X, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Task } from '@features/task/types/task.types';
 import type { Product } from '@features/product/types/product.types';
+import type { PluginClient } from '@rubix-sdk/frontend/plugin-client';
 import { TaskStatusBadge } from '@features/task/components/TaskStatusBadge';
+import { TasksNestedTickets } from './tasks-nested-tickets';
 
 interface TasksDataTableProps {
   tasks: Task[];
   products: Product[];
+  client: PluginClient;
   onEdit?: (task: Task) => void;
   onDelete?: (taskId: string, taskName: string) => void;
 }
 
-export function TasksDataTable({ tasks, products, onEdit, onDelete }: TasksDataTableProps) {
+export function TasksDataTable({ tasks, products, client, onEdit, onDelete }: TasksDataTableProps) {
   console.log('[TasksDataTable] Rendering with:', { tasksCount: tasks.length, productsCount: products.length });
 
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -47,6 +50,7 @@ export function TasksDataTable({ tasks, products, onEdit, onDelete }: TasksDataT
   const [globalFilter, setGlobalFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [productFilter, setProductFilter] = useState<string>('all');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // Create product lookup map (memoized)
   const productMap = useMemo(() => {
@@ -79,8 +83,44 @@ export function TasksDataTable({ tasks, products, onEdit, onDelete }: TasksDataT
     return new Date(task.settings.dueDate) < new Date();
   };
 
+  const toggleRow = (taskId: string) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  };
+
   // Define columns
   const columns: ColumnDef<Task>[] = [
+    {
+      id: 'expand',
+      header: '',
+      cell: ({ row }) => {
+        const task = row.original;
+        const isExpanded = expandedRows.has(task.id);
+        return (
+          <button
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              toggleRow(task.id);
+            }}
+            className="p-1 hover:bg-muted rounded"
+            title={isExpanded ? 'Collapse tickets' : 'Expand tickets'}
+          >
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </button>
+        );
+      },
+    },
     {
       accessorKey: 'name',
       header: ({ column }) => {
@@ -387,35 +427,35 @@ export function TasksDataTable({ tasks, products, onEdit, onDelete }: TasksDataT
               table.getRowModel().rows.map((row) => {
                 const task = row.original;
                 const isOverdue = isTaskOverdue(task);
+                const isExpanded = expandedRows.has(task.id);
 
                 return (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && 'selected'}
-                    onClick={(e: React.MouseEvent<HTMLTableRowElement>) => {
-                      // Don't trigger if clicking action buttons
-                      const target = e.target as HTMLElement;
-                      if (target.closest('button')) {
-                        return;
-                      }
-                      onEdit?.(task);
-                    }}
-                    className={`cursor-pointer hover:bg-muted/50 ${
-                      isOverdue ? 'bg-destructive/5 border-l-4 border-l-destructive' : ''
-                    }`}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {cell.column.id === 'name' && isOverdue && (
-                          <AlertCircle className="inline h-4 w-4 text-destructive mr-2" />
-                        )}
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
+                  <Fragment key={row.id}>
+                    {/* Main Task Row */}
+                    <TableRow
+                      data-state={row.getIsSelected() && 'selected'}
+                      className={`${
+                        isOverdue ? 'bg-destructive/5 border-l-4 border-l-destructive' : ''
+                      }`}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {cell.column.id === 'name' && isOverdue && (
+                            <AlertCircle className="inline h-4 w-4 text-destructive mr-2" />
+                          )}
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+
+                    {/* Nested Tickets Row */}
+                    {isExpanded && (
+                      <TasksNestedTickets task={task} client={client} />
+                    )}
+                  </Fragment>
                 );
               })
             ) : (
