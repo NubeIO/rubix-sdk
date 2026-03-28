@@ -1,7 +1,5 @@
 /**
- * Product node detail view components
+ * Product pages exports
  */
 
-export { ProductDetailView } from './product-detail-view';
-export { ProductOverviewTab } from './product-overview-tab';
-export { ProductBOMTab } from './product-bom-tab';
+export { default as ProductDetailPageV2Entry } from './ProductDetailPageV2Entry';

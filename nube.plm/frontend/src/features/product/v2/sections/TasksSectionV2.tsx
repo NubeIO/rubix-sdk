@@ -7,9 +7,11 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 // @ts-ignore - SDK button
 import { Button } from '@rubix-sdk/frontend/common/ui/button';
-import { Plus, Calendar, User } from 'lucide-react';
+import { Plus, Calendar, User, Edit2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Product } from '../../types/product.types';
+import { TaskDialog } from '../components/TaskDialog';
+import { DeleteTaskDialog } from '../components/DeleteTaskDialog';
 
 interface Task {
   id: string;
@@ -29,6 +31,9 @@ interface TasksSectionV2Props {
 export function TasksSectionV2({ product, client, onStatsUpdate }: TasksSectionV2Props) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [deletingTask, setDeletingTask] = useState<Task | null>(null);
 
   useEffect(() => {
     fetchTasks();
@@ -100,7 +105,7 @@ export function TasksSectionV2({ product, client, onStatsUpdate }: TasksSectionV
             Track and manage product development tasks
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Create Task
         </Button>
@@ -133,7 +138,7 @@ export function TasksSectionV2({ product, client, onStatsUpdate }: TasksSectionV
                   </div>
                 ) : (
                   columnTasks.map((task) => (
-                    <Card key={task.id} className="group cursor-pointer transition-all hover:shadow-md">
+                    <Card key={task.id} className="group transition-all hover:shadow-md">
                       <CardContent className="p-4">
                         {/* Priority badge */}
                         {task.priority && (
@@ -146,7 +151,7 @@ export function TasksSectionV2({ product, client, onStatsUpdate }: TasksSectionV
                         <div className="mb-3 font-medium">{task.name}</div>
 
                         {/* Task meta */}
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
                           <span className="flex items-center gap-1">
                             <User className="h-3 w-3" />
                             {task.assignee}
@@ -155,6 +160,28 @@ export function TasksSectionV2({ product, client, onStatsUpdate }: TasksSectionV
                             <Calendar className="h-3 w-3" />
                             {formatDate(task.dueDate)}
                           </span>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => setEditingTask(task)}
+                          >
+                            <Edit2 className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                            onClick={() => setDeletingTask(task)}
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Delete
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -165,6 +192,37 @@ export function TasksSectionV2({ product, client, onStatsUpdate }: TasksSectionV
           );
         })}
       </div>
+
+      {/* Create Task Dialog */}
+      {showCreateDialog && (
+        <TaskDialog
+          client={client}
+          productId={product.id}
+          onClose={() => setShowCreateDialog(false)}
+          onSuccess={fetchTasks}
+        />
+      )}
+
+      {/* Edit Task Dialog */}
+      {editingTask && (
+        <TaskDialog
+          client={client}
+          productId={product.id}
+          task={editingTask}
+          onClose={() => setEditingTask(null)}
+          onSuccess={fetchTasks}
+        />
+      )}
+
+      {/* Delete Task Dialog */}
+      {deletingTask && (
+        <DeleteTaskDialog
+          client={client}
+          task={deletingTask}
+          onClose={() => setDeletingTask(null)}
+          onSuccess={fetchTasks}
+        />
+      )}
     </div>
   );
 }

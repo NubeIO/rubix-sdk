@@ -2,8 +2,8 @@
 
 This directory contains all code related to the **Product** domain, organized using a feature-based architecture.
 
-**Date Refactored**: 2026-03-25
-**Status**: ✅ Production Ready
+**Date Refactored**: 2026-03-28
+**Status**: ✅ Production Ready - V2 Architecture
 
 ---
 
@@ -31,13 +31,27 @@ product/
 │   └── index.ts                 # Exports
 ├── pages/                        # Full-page views
 │   ├── ProductsListPage.tsx     # Main products list (tabbed)
-│   ├── ProductDetailPage.tsx    # Single product detail (MF entry)
-│   ├── product-detail-view.tsx  # Detail view component
-│   ├── product-overview-tab.tsx # Overview tab
-│   ├── product-bom-tab.tsx      # BOM tab
+│   ├── ProductDetailPageV2Entry.tsx # Product detail V2 (MF entry)
 │   ├── products-page-tabs.tsx   # Page tabs component
 │   ├── products-page-dialogs.tsx # Page dialogs
 │   └── use-products-page-state.ts # Page state hook
+├── v2/                           # V2 Product Detail Page
+│   ├── ProductDetailPageV2.tsx  # Main V2 detail page
+│   ├── components/              # V2-specific components
+│   │   ├── ProductHeader.tsx    # Product header
+│   │   ├── SidebarNavigation.tsx # Sidebar navigation
+│   │   ├── StatCard.tsx         # Statistics card
+│   │   └── AddBOMItemDialog.tsx # BOM item dialog
+│   ├── sections/                # V2 page sections
+│   │   ├── OverviewSection.tsx  # Overview section
+│   │   ├── BasicInfoSection.tsx # Basic info section
+│   │   ├── PricingSection.tsx   # Pricing section
+│   │   ├── SystemInfoSection.tsx # System info section
+│   │   ├── BOMSectionV2.tsx     # BOM section
+│   │   └── TasksSectionV2.tsx   # Tasks section
+│   └── widgets/                 # V2 widgets
+│       ├── QuickActions.tsx     # Quick actions widget
+│       └── RecentTasks.tsx      # Recent tasks widget
 ├── widgets/                      # Dashboard widgets
 │   └── ProductTableWidget.tsx   # Product table widget
 ├── utils/                        # Utility functions
@@ -125,14 +139,24 @@ This structure scales to 100s of files without confusion:
 - Create/Edit/Delete operations
 - Module Federation export (`./Page`)
 
-**`ProductDetailPage.tsx`** - Product detail entry
-- Single product view with tabs
+**`ProductDetailPageV2Entry.tsx`** - Product detail V2 entry
+- Module Federation mount/unmount wrapper
 - Module Federation export (`./ProductDetail`)
 - Shows when clicking product node in tree
+- Wraps the V2 ProductDetailPageV2 component
 
-**Tab Components:**
-- `product-overview-tab.tsx` - Overview tab
-- `product-bom-tab.tsx` - BOM tab (hardware only)
+### V2 Architecture (`v2/`)
+
+**`ProductDetailPageV2.tsx`** - Modern product detail page
+- Sidebar navigation with section switching
+- Lazy-loaded sections for performance
+- Real-time product updates
+- Integrated task and BOM management
+
+**V2 Components:**
+- Modern, responsive UI components
+- Optimized for performance with lazy loading
+- Consistent styling with shadcn/ui
 
 ### Widgets (`widgets/`)
 

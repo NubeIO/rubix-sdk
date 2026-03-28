@@ -10,6 +10,7 @@
     "plm.service",
     "plm.product",
     "plm.products",
+    "plm.task",
     "plm.prototest",
     "plm.manufacturing-unit"
   ],
@@ -38,6 +39,7 @@
       "plm.service",
       "plm.product",
       "plm.products",
+      "plm.task",
       "plm.prototest",
       "plm.manufacturing-unit"
     ],
@@ -87,7 +89,7 @@
       "propertyPanels": ["node-settings", "tags-references"],
       "constraints": {
         "maxOneNode": true,
-        "allowedParents": ["rubix.device"]
+        "allowedParents": ["rubix.plugin"]
       },
       "autoFields": {
         "identity": ["service", "plm"],
@@ -165,18 +167,19 @@
       }
     },
     {
-      "type": "core.task",
-      "profile": "plm-task",
+      "type": "plm.task",
       "displayName": "Task",
       "description": "Product development task or work item",
       "icon": "list-checks",
       "color": "#8b5cf6",
       "category": "manufacturing",
+      "propertyPanels": ["node-settings", "tags-references"],
       "constraints": {
         "allowedParents": ["plm.product"]
       },
       "autoFields": {
-        "identity": ["task", "plm"]
+        "identity": ["task", "plm"],
+        "pluginId": true
       }
     },
     {
