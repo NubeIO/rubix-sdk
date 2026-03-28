@@ -31,7 +31,9 @@ export async function createNode(
     deviceId: config.deviceId,
     body: {
       type: input.type,
+      profile: input.profile,
       name: input.name,
+      identity: input.identity,
       parentId: input.parentId,
       settings: input.settings,
       data: input.data,

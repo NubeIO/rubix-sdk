@@ -114,16 +114,61 @@ nodeTypes:
     defaults:
       status: "pending"
       priority: "Medium"
+      progress: 0
+      actualHours: 0
 
     validation:
       required: []
       rules:
         status:
-          enum: [pending, in-progress, completed, cancelled]
+          enum: [pending, in-progress, blocked, review, completed, cancelled]
           message: "Invalid status"
         priority:
           enum: [Low, Medium, High]
           message: "Invalid priority"
+        progress:
+          min: 0
+          max: 100
+          message: "Progress must be between 0-100"
+        actualHours:
+          min: 0
+          message: "Hours must be non-negative"
+
+    # Commands for task operations
+    commands:
+      - name: listComments
+        description: List all comments on this task
+        method: GET
+
+      - name: addComment
+        description: Add a comment to this task
+        method: POST
+        params:
+          - name: text
+            type: string
+            required: true
+          - name: userId
+            type: string
+            required: true
+          - name: userName
+            type: string
+            required: false
+
+      - name: deleteComment
+        description: Delete a comment from this task
+        method: DELETE
+        params:
+          - name: commentId
+            type: string
+            required: true
+
+      - name: listTickets
+        description: List all tickets under this task
+        method: GET
+
+      - name: recalculateProgress
+        description: Recalculate task progress from ticket statuses
+        method: POST
 
     uiHints:
       icon: list-checks
@@ -317,16 +362,30 @@ nodeProfiles:
       color: "#f59e0b"
 
   # ---------------------------------------------------------------------------
-  # Time Entry (core.entry + plm-time-entry profile)
+  # Time Entry (core.entry + plm-time-log profile)
   # ---------------------------------------------------------------------------
   - nodeType: core.entry
-    profile: plm-time-entry
+    profile: plm-time-log
     displayName: Time Entry
     description: Time tracking for work items
-    identity: [entry, timesheet, plm]
+    identity: [entry, time-log, plm]
 
     defaults:
-      entryType: "time"
+      hours: 0
+      category: "development"
+
+    validation:
+      required: [date, hours, userId]
+      rules:
+        hours:
+          min: 0
+          message: "Hours must be positive"
+        date:
+          pattern: "^\\d{4}-\\d{2}-\\d{2}(T.*)?$"
+          message: "Date must be ISO 8601 format (YYYY-MM-DD)"
+        category:
+          enum: [development, testing, documentation, meeting, review]
+          message: "Invalid category"
 
     uiHints:
       icon: clock
@@ -343,7 +402,64 @@ nodeProfiles:
 
     defaults:
       ticketType: "task"
-      status: "open"
+      status: "pending"
+      priority: "Medium"
+      actualHours: 0
+
+    validation:
+      required: []
+      rules:
+        status:
+          enum: [pending, in-progress, blocked, review, completed, cancelled]
+          message: "Invalid status"
+        priority:
+          enum: [Low, Medium, High, Critical]
+          message: "Invalid priority"
+        ticketType:
+          enum: [task, bug, feature, chore]
+          message: "Invalid ticket type"
+        estimatedHours:
+          min: 0
+          message: "Hours must be non-negative"
+        actualHours:
+          min: 0
+          message: "Hours must be non-negative"
+
+    # Commands for ticket operations
+    commands:
+      - name: listComments
+        description: List all comments on this ticket
+        method: GET
+
+      - name: addComment
+        description: Add a comment to this ticket
+        method: POST
+        params:
+          - name: text
+            type: string
+            required: true
+          - name: userId
+            type: string
+            required: true
+          - name: userName
+            type: string
+            required: false
+
+      - name: deleteComment
+        description: Delete a comment from this ticket
+        method: DELETE
+        params:
+          - name: commentId
+            type: string
+            required: true
+
+      - name: listTimeEntries
+        description: List all time entries for this ticket
+        method: GET
+
+      - name: recalculateHours
+        description: Recalculate actual hours from time entries
+        method: POST
 
     uiHints:
       icon: check-square

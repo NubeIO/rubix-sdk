@@ -99,6 +99,8 @@ export interface CreateNodeInput {
   type: string;
   name: string;
   parentId?: string;
+  profile?: string;
+  identity?: string[];
   settings?: Record<string, unknown>;
   data?: Record<string, unknown>;
   ui?: Record<string, unknown>;

@@ -14,6 +14,7 @@ import { PlusIcon } from '@shared/components/icons';
 
 import { TasksPageTabs } from './tasks-page-tabs';
 import type { Task, CreateTaskInput, UpdateTaskInput } from '@features/task/types/task.types';
+import { normalizeTaskStatus } from '@features/task/utils/task-status';
 
 export interface TasksPageProps {
   orgId: string;
@@ -54,8 +55,16 @@ function TasksPage({
   const createTask = useCallback(async (input: CreateTaskInput) => {
     await client.createNode({
       type: 'plm.task',
+      profile: 'plm-task',
       name: input.name,
       parentId: input.parentId,
+      identity: ['task', 'work-item', 'plm'],
+      refs: [
+        {
+          refName: 'parentRef',
+          toNodeId: input.parentId,
+        },
+      ],
       settings: input.settings || {},
     });
     setRefreshKey((prev) => prev + 1);
@@ -68,7 +77,14 @@ function TasksPage({
     }
     // Update settings if provided (uses PATCH endpoint for deep merge)
     if (input.settings) {
-      await client.updateNodeSettings(taskId, input.settings);
+      // Normalize status before saving to prevent data drift
+      const normalized = {
+        ...input.settings,
+        status: input.settings.status
+          ? normalizeTaskStatus(input.settings.status)
+          : undefined
+      };
+      await client.updateNodeSettings(taskId, normalized);
     }
     setRefreshKey((prev) => prev + 1);
   }, [client]);

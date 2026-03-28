@@ -292,6 +292,21 @@
       }
     },
     {
+      "pageId": "task-detail",
+      "title": "Task Details",
+      "icon": "list-checks",
+      "description": "View and manage task details, tickets, and logged time",
+      "nodeTypes": ["plm.task"],
+      "enabled": true,
+      "isDefault": true,
+      "order": 12,
+      "propertyPanels": ["node-settings", "tags-references"],
+      "props": {
+        "exposedPath": "./TaskDetail",
+        "useMountPattern": true
+      }
+    },
+    {
       "pageId": "proof-shared",
       "title": "✅ PROOF: Shared Component",
       "icon": "check-circle-2",

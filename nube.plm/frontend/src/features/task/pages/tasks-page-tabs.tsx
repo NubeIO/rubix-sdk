@@ -68,7 +68,7 @@ export function TasksPageTabs({
   return (
     <FilteredTableWithTabs<Task>
       tabs={TABS}
-      baseFilter={`type is "plm.task" and parentId is "${productId}"`}
+      baseFilter={`type is "plm.task" and parent.id is "${productId}"`}
       client={client}
       renderTable={(tasks, isRefreshing) => (
         <div className={isRefreshing ? 'opacity-50 pointer-events-none' : ''}>

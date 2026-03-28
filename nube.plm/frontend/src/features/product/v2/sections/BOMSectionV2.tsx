@@ -116,7 +116,13 @@ export function BOMSectionV2({ product, client, onStatsUpdate }: BOMSectionV2Pro
       type: 'core.document',
       profile: 'plm-bom',
       name: bomItem.partCode,
-      parentRef: product.id,
+      parentId: product.id,
+      refs: [
+        {
+          refName: 'parentRef',
+          toNodeId: product.id,
+        },
+      ],
       settings: {
         documentType: 'bom-item',
         description: bomItem.description,

@@ -53,12 +53,12 @@ export function OverviewSection({
 
       // Fetch tasks
       const tasks = await client.queryNodes({
-        filter: `type is "plm.task" and parentId is "${product.id}"`,
+        filter: `type is "plm.task" and parent.id is "${product.id}"`,
       });
 
       // Fetch BOM items
       const bomItems = await client.queryNodes({
-        filter: `parentId is "${product.id}" and type is "plm.bom"`,
+        filter: `parent.id is "${product.id}" and type is "plm.bom"`,
       });
 
       // Calculate stats

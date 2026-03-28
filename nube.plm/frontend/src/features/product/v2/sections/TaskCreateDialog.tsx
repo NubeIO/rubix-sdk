@@ -66,7 +66,13 @@ export function TaskCreateDialog({
         type: 'plm.task',
         profile: 'plm-task',
         name: formData.name,
-        parentRef: productId, // IMPORTANT: Use parentRef, not parentId
+        parentId: productId,
+        refs: [
+          {
+            refName: 'parentRef',
+            toNodeId: productId,
+          },
+        ],
         settings: {
           // Settings are flat, no wrapping
           status: formData.status,

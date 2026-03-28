@@ -45,7 +45,7 @@ export function TasksSectionV2({ product, client, onStatsUpdate }: TasksSectionV
     try {
       setIsLoading(true);
       const nodes = await client.queryNodes({
-        filter: `type is "plm.task" and parentId is "${product.id}"`,
+        filter: `type is "plm.task" and parent.id is "${product.id}"`,
       });
 
       const taskList: Task[] = (nodes || []).map((node: any) => ({
