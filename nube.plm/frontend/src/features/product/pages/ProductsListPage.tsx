@@ -23,6 +23,7 @@ import { DeleteTaskDialog } from './delete-task-dialog';
 import { useProductsPageState } from './use-products-page-state';
 import type { Task, CreateTaskInput, UpdateTaskInput } from '@features/task/types/task.types';
 import type { Product, ProductSettings } from '@features/product/types/product.types';
+import { createCommentsNode } from '@features/comments/utils/comment-helpers';
 
 export interface ProductsPageProps {
   orgId: string;
@@ -222,12 +223,14 @@ function ProductsPage({
   // Create task - use SDK directly!
   const createTask = useCallback(async (input: CreateTaskInput) => {
     console.log('[ProductsPage] Creating task:', input);
-    await client.createNode({
+    const task = await client.createNode({
       type: 'plm.task',
       name: input.name,
       parentId: input.parentId,
       settings: input.settings || {},
     });
+    // Create the bound comments node immediately
+    await createCommentsNode(client, task.id);
     setTaskRefreshKey((prev) => prev + 1); // Force refresh tasks tab
   }, [client]);
 

@@ -1,8 +1,13 @@
 /**
  * Comment helper functions
  *
- * Comments are stored in core.note child nodes using the note's commands.
- * Each task/ticket has a single core.note child node that stores all comments.
+ * Comments are stored in a dedicated core.note child node.
+ * The note is created alongside the task and bound via two refs:
+ *   - parentRef: tree hierarchy (note is a child of the task)
+ *   - taskRef:   semantic binding (uniquely identifies this note belongs to the task)
+ *
+ * To find the comments node for a task, query:
+ *   type is "core.note" and taskRef is "<taskId>"
  */
 
 // @ts-ignore - SDK types are resolved at build time
@@ -29,36 +34,51 @@ export interface AddCommentInput {
 }
 
 /**
- * Find or create the core.note child node for a task/ticket
+ * Create the core.note comments node for a task.
  *
- * Each task/ticket has one core.note child that stores comments.
- * The note is named "_comments" and hidden from the tree.
+ * Call this immediately after creating the task node.
+ * Sets parentRef (tree hierarchy) and taskRef (semantic binding).
+ *
+ * @returns The ID of the created note node
  */
-async function getOrCreateCommentsNode(
+export async function createCommentsNode(
   client: PluginClient,
-  parentNodeId: string
+  taskId: string
 ): Promise<string> {
-  // Try to find existing comments node
-  const result: { id: string }[] = await (client as any).queryNodes({
-    filter: `parent.id is "${parentNodeId}" and type is "core.note" and name is "_comments"`,
-  });
-
-  if (result && result.length > 0) {
-    return result[0].id;
-  }
-
-  // Create new comments node
   const node = await (client as any).createNode({
     type: 'core.note',
     name: '_comments',
-    parentRef: parentNodeId,
+    parentId: taskId,
     settings: {
       hidden: true,
       noteType: 'comments',
     },
+    refs: [
+      { refName: 'parentRef', toNodeId: taskId },
+      { refName: 'taskRef',   toNodeId: taskId },
+    ],
+  });
+  return node.id;
+}
+
+/**
+ * Find the core.note comments node for a task via taskRef.
+ *
+ * Uses the refs table — fast, no name matching needed.
+ */
+async function getCommentsNode(
+  client: PluginClient,
+  taskId: string
+): Promise<string> {
+  const results: { id: string }[] = await (client as any).queryNodes({
+    filter: `type is "core.note" and taskRef is "${taskId}"`,
   });
 
-  return node.id;
+  if (!results || results.length === 0) {
+    throw new Error(`No comments node found for task ${taskId}`);
+  }
+
+  return results[0].id;
 }
 
 /**
@@ -74,18 +94,18 @@ async function getOrCreateCommentsNode(
  */
 export async function listComments(
   client: PluginClient,
-  nodeId: string
+  taskId: string
 ): Promise<Comment[]> {
   try {
-    const noteNodeId = await getOrCreateCommentsNode(client, nodeId);
-    const result = await executeGetCommand<{ comments: Comment[]; count: number }>(
+    const noteNodeId = await getCommentsNode(client, taskId);
+    const result = await executeGetCommand<{ data: { comments: Comment[]; count: number } }>(
       client,
       noteNodeId,
       'listComments'
     );
-    return result?.comments || [];
+    return result?.data?.comments || [];
   } catch (error) {
-    console.error(`Failed to list comments for ${nodeId}:`, error);
+    console.error(`Failed to list comments for ${taskId}:`, error);
     throw error;
   }
 }
@@ -118,8 +138,8 @@ export async function addComment(
       throw new Error('userId is required');
     }
 
-    const noteNodeId = await getOrCreateCommentsNode(client, nodeId);
-    const result = await executePostCommand<{ id: string; text: string; createdAt: string }>(
+    const noteNodeId = await getCommentsNode(client, nodeId);
+    const result = await executePostCommand<{ data: { id: string; text: string; createdAt: string } }>(
       client,
       noteNodeId,
       'addComment',
@@ -129,13 +149,13 @@ export async function addComment(
     );
 
     // Return a properly formatted comment
-    if (result.result) {
+    if (result.result?.data) {
       return {
-        id: result.result.id,
-        text: result.result.text,
+        id: result.result.data.id,
+        text: result.result.data.text,
         userId: input.userId,
         userName: input.userName || input.userId,
-        createdAt: result.result.createdAt,
+        createdAt: result.result.data.createdAt,
       };
     }
 
@@ -166,7 +186,7 @@ export async function deleteComment(
       throw new Error('commentId is required');
     }
 
-    const noteNodeId = await getOrCreateCommentsNode(client, nodeId);
+    const noteNodeId = await getCommentsNode(client, nodeId);
     await executeDeleteCommand(client, noteNodeId, 'deleteComment', {
       id: commentId,
     });
