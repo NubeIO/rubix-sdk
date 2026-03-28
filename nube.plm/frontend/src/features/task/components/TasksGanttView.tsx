@@ -273,9 +273,11 @@ export function TasksGanttView({
     }
   }, [client, taskTickets]);
 
-  const toggleTaskExpansion = useCallback(async (taskId: string) => {
-    const isExpanded = expandedTasks.has(taskId);
+  const toggleTaskExpansion = useCallback((taskId: string) => {
+    // Check current state first
+    const wasExpanded = expandedTasks.has(taskId);
 
+    // Toggle the expansion state
     setExpandedTasks((prev) => {
       const next = new Set(prev);
       if (next.has(taskId)) {
@@ -286,10 +288,11 @@ export function TasksGanttView({
       return next;
     });
 
-    if (!isExpanded && !taskTickets.has(taskId)) {
-      await loadTickets(taskId);
+    // If we're expanding and tickets aren't loaded, load them
+    if (!wasExpanded && !taskTickets.has(taskId) && !loadingTickets.has(taskId)) {
+      loadTickets(taskId);
     }
-  }, [expandedTasks, loadTickets, taskTickets]);
+  }, [expandedTasks, loadTickets, taskTickets, loadingTickets]);
 
   const ganttRows = useMemo<GanttRow[]>(() => {
     const rows: GanttRow[] = [];
@@ -339,13 +342,13 @@ export function TasksGanttView({
     return rows;
   }, [context, expandedTasks, productId, productMap, products, taskTickets, filteredTasks]);
 
-  const handleExpanderClick = useCallback(async (item: GanttTask) => {
+  const handleExpanderClick = useCallback((item: GanttTask) => {
     const row = item as GanttRow;
     if (row.rowKind !== 'task') {
       return;
     }
 
-    await toggleTaskExpansion(row.sourceId);
+    toggleTaskExpansion(row.sourceId);
   }, [toggleTaskExpansion]);
 
   const handleDoubleClick = useCallback((item: GanttTask) => {

@@ -13,10 +13,24 @@ interface TaskCommentsSectionProps {
   deviceId: string;
 }
 
+/** Decode a JWT token and return the payload claims (no verification). */
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return {};
+    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const json = atob(payload);
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 export function TaskCommentsSection({ task, client, orgId, deviceId }: TaskCommentsSectionProps) {
-  // TODO: Get actual user ID and name from auth context
-  const currentUserId = 'user_' + deviceId.slice(0, 8);
-  const currentUserName = 'Current User';
+  const config = client.getConfig();
+  const claims = config.token ? decodeJwtPayload(config.token) : {};
+  const currentUserId = (claims.email as string) || (claims.sub as string) || `user_${deviceId.slice(0, 8)}`;
+  const currentUserName = (claims.name as string) || currentUserId;
 
   return (
     <div className="space-y-6">

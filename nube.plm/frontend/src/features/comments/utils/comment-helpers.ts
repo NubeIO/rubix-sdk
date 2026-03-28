@@ -24,13 +24,18 @@ export interface Comment {
   userId: string;
   userName?: string;
   createdAt: string;
-  updatedAt?: string;
+  lastUpdated: string;
 }
 
 export interface AddCommentInput {
   text: string;
   userId: string;
   userName?: string;
+}
+
+export interface EditCommentInput {
+  id: string;
+  text: string;
 }
 
 /**
@@ -156,12 +161,53 @@ export async function addComment(
         userId: input.userId,
         userName: input.userName || input.userId,
         createdAt: result.result.data.createdAt,
+        lastUpdated: '',
       };
     }
 
     throw new Error('Failed to add comment: no result returned');
   } catch (error) {
     console.error(`Failed to add comment to ${nodeId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Edit an existing comment on a task or ticket
+ *
+ * Finds the core.note child node and executes editComment command on it.
+ * Sets lastUpdated to the current timestamp.
+ *
+ * @example
+ * ```typescript
+ * const updated = await editComment(client, taskId, { id: commentId, text: 'new text' });
+ * ```
+ */
+export async function editComment(
+  client: PluginClient,
+  nodeId: string,
+  input: EditCommentInput
+): Promise<void> {
+  try {
+    if (!input.id) {
+      throw new Error('comment ID is required');
+    }
+    if (!input.text.trim()) {
+      throw new Error('comment text is required');
+    }
+
+    const noteNodeId = await getCommentsNode(client, nodeId);
+    await executePostCommand(
+      client,
+      noteNodeId,
+      'editComment',
+      {
+        id: input.id,
+        text: input.text.trim(),
+      }
+    );
+  } catch (error) {
+    console.error(`Failed to edit comment ${input.id}:`, error);
     throw error;
   }
 }
