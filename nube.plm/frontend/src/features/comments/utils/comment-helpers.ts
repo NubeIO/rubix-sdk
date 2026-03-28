@@ -39,12 +39,12 @@ async function getOrCreateCommentsNode(
   parentNodeId: string
 ): Promise<string> {
   // Try to find existing comments node
-  const result = await (client as any).queryNodes({
+  const result: { id: string }[] = await (client as any).queryNodes({
     filter: `parent.id is "${parentNodeId}" and type is "core.note" and name is "_comments"`,
   });
 
-  if (result.nodes && result.nodes.length > 0) {
-    return result.nodes[0].id;
+  if (result && result.length > 0) {
+    return result[0].id;
   }
 
   // Create new comments node

@@ -25,14 +25,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUpDown, Search, Pencil, Trash2, Filter, X, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowUpDown, Pencil, Trash2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Task } from '@features/task/types/task.types';
 import type { Product } from '@features/product/types/product.types';
 import type { PluginClient } from '@rubix-sdk/frontend/plugin-client';
 import { TaskStatusBadge } from '@features/task/components/TaskStatusBadge';
 import { TasksNestedTickets } from './tasks-nested-tickets';
+import { TaskFilters } from '@features/task/components/TaskFilters';
 
 interface TasksDataTableProps {
   tasks: Task[];
@@ -40,9 +40,11 @@ interface TasksDataTableProps {
   client: PluginClient;
   onEdit?: (task: Task) => void;
   onDelete?: (taskId: string, taskName: string) => void;
+  view?: 'table' | 'gantt';
+  onViewChange?: (view: 'table' | 'gantt') => void;
 }
 
-export function TasksDataTable({ tasks, products, client, onEdit, onDelete }: TasksDataTableProps) {
+export function TasksDataTable({ tasks, products, client, onEdit, onDelete, view, onViewChange }: TasksDataTableProps) {
   console.log('[TasksDataTable] Rendering with:', { tasksCount: tasks.length, productsCount: products.length });
 
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -322,84 +324,23 @@ export function TasksDataTable({ tasks, products, client, onEdit, onDelete }: Ta
 
   console.log('[TasksDataTable] Table rows:', table.getRowModel().rows.length);
 
-  const statusOptions = [
-    { value: 'all', label: 'All Status' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'in-progress', label: 'In Progress' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'cancelled', label: 'Cancelled' },
-  ];
-
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="space-y-3">
-        {/* Search and Count */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search tasks..."
-              value={globalFilter ?? ''}
-              onChange={(e) => setGlobalFilter(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <div className="text-sm text-muted-foreground">
-            {table.getFilteredRowModel().rows.length} of {filteredTasks.length} task(s)
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-
-          {/* Status Filter Chips */}
-          <div className="flex gap-1">
-            {statusOptions.map((option) => (
-              <Button
-                key={option.value}
-                variant={statusFilter === option.value ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter(option.value)}
-                className="h-7"
-              >
-                {option.label}
-              </Button>
-            ))}
-          </div>
-
-          {/* Product Filter Dropdown */}
-          <select
-            value={productFilter}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setProductFilter(e.target.value)}
-            className="h-7 px-3 text-sm border rounded-md bg-background"
-          >
-            <option value="all">All Products</option>
-            {products.map((product) => (
-              <option key={product.id} value={product.id}>
-                {product.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Clear Filters */}
-          {(statusFilter !== 'all' || productFilter !== 'all') && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setStatusFilter('all');
-                setProductFilter('all');
-              }}
-              className="h-7"
-            >
-              <X className="h-3 w-3 mr-1" />
-              Clear
-            </Button>
-          )}
-        </div>
-      </div>
+      <TaskFilters
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        productFilter={productFilter}
+        onProductFilterChange={setProductFilter}
+        searchQuery={globalFilter}
+        onSearchQueryChange={setGlobalFilter}
+        products={products}
+        showSearch={true}
+        resultCount={table.getFilteredRowModel().rows.length}
+        totalCount={filteredTasks.length}
+        view={view}
+        onViewChange={onViewChange}
+      />
 
       {/* Table */}
       <div className="rounded-md border">

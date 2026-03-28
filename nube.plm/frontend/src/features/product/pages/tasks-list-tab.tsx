@@ -10,6 +10,7 @@ import type { PluginClient } from '@rubix-sdk/frontend/plugin-client';
 import type { Task } from '@features/task/types/task.types';
 import type { Product } from '@features/product/types/product.types';
 import { TasksDataTable } from './tasks-data-table';
+import { TasksGanttView } from '@features/task/components/TasksGanttView';
 
 interface TasksListTabProps {
   products: Product[];
@@ -28,6 +29,7 @@ export function TasksListTab({
 }: TasksListTabProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [view, setView] = useState<'table' | 'gantt'>('table');
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -73,12 +75,28 @@ export function TasksListTab({
   }
 
   return (
-    <TasksDataTable
-      tasks={tasks}
-      products={products}
-      client={client}
-      onEdit={onEdit}
-      onDelete={onDelete}
-    />
+    <div className="space-y-4">
+      {view === 'table' ? (
+        <TasksDataTable
+          tasks={tasks}
+          products={products}
+          client={client}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          view={view}
+          onViewChange={setView}
+        />
+      ) : (
+        <TasksGanttView
+          tasks={tasks}
+          products={products}
+          client={client}
+          context="all-products"
+          onTaskEdit={onEdit}
+          view={view}
+          onViewChange={setView}
+        />
+      )}
+    </div>
   );
 }

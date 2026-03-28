@@ -4,7 +4,7 @@
  * Fetches the plm.product profile and generates variant schemas for hardware/software
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export interface SchemaInfo {
   name: string;
@@ -200,7 +200,7 @@ export function useProductSchemas(options: UseProductSchemasOptions): UseProduct
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchSchemas = async () => {
+  const fetchSchemas = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -243,14 +243,14 @@ export function useProductSchemas(options: UseProductSchemasOptions): UseProduct
       setError(errorMessage);
       setLoading(false);
     }
-  };
+  }, [orgId, deviceId, baseUrl, token]); // Memoize with dependencies
 
   // Auto-fetch on mount and when dependencies change
   useEffect(() => {
     if (enabled && orgId && deviceId) {
       fetchSchemas();
     }
-  }, [enabled, orgId, deviceId, baseUrl, token]);
+  }, [enabled, orgId, deviceId, fetchSchemas]); // Include fetchSchemas
 
   return {
     schemas,
