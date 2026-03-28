@@ -16,7 +16,6 @@ nodeTypes:
       serviceType: "plm"
       status: "active"
       version: "2.0"
-      tags: "plm,lifecycle,manufacturing"
 
     validation:
       required: [serviceName]
@@ -101,6 +100,34 @@ nodeTypes:
     uiHints:
       icon: package
       color: "#10b981"
+
+  # ---------------------------------------------------------------------------
+  # PLM Task (extends core.task)
+  # ---------------------------------------------------------------------------
+  - type: plm.task
+    baseType: core.task
+    displayName: Task
+    description: Product development task or work item
+    autoPluginId: true
+    autoIdentity: [task, plm]
+
+    defaults:
+      status: "pending"
+      priority: "Medium"
+
+    validation:
+      required: []
+      rules:
+        status:
+          enum: [pending, in-progress, completed, cancelled]
+          message: "Invalid status"
+        priority:
+          enum: [Low, Medium, High]
+          message: "Invalid priority"
+
+    uiHints:
+      icon: list-checks
+      color: "#8b5cf6"
 
   # ---------------------------------------------------------------------------
   # Manufacturing Unit (extends core.asset)

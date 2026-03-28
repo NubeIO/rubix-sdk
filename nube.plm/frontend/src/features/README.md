@@ -169,7 +169,7 @@ const tasks = await apiClient.get('/v1/nodes', {
 
 ### Product → BOM
 ```typescript
-// product/pages/product-bom-tab.tsx
+// product/v2/sections/BOMSectionV2.tsx
 // BOM is core.document - no separate feature needed
 const bomDocs = await apiClient.get('/v1/nodes', {
   type: 'core.document',

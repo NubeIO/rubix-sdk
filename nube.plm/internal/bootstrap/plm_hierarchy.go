@@ -22,7 +22,6 @@ func EnsurePLMHierarchy(ctx context.Context, client *pluginBootstrap.Client, plu
 				"serviceType": "plm",
 				"status":      "active",
 				"version":     "2.0",
-				"tags":        "plm,lifecycle,manufacturing",
 			},
 		},
 		Collections: []pluginBootstrap.NodeSpec{
@@ -95,7 +94,6 @@ func EnsurePLMHierarchyWithRetry(ctx context.Context, client *pluginBootstrap.Cl
 				"serviceType": "plm",
 				"status":      "active",
 				"version":     "2.0",
-				"tags":        "plm,lifecycle,manufacturing",
 			},
 		},
 		Collections: []pluginBootstrap.NodeSpec{
@@ -131,4 +129,3 @@ func EnsurePLMHierarchyWithRetry(ctx context.Context, client *pluginBootstrap.Cl
 		"products": productsID,
 	}, nil
 }
-
