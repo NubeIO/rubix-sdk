@@ -7,6 +7,7 @@
  */
 
 import type { PluginClient } from './index';
+import { urls } from './url-builder';
 
 /**
  * Command definition with schema and metadata
@@ -90,7 +91,7 @@ export async function listCommands(
   nodeId: string
 ): Promise<CommandDefinition[]> {
   const config = client.getConfig();
-  const url = `/orgs/${config.orgId}/devices/${config.deviceId}/nodes/${nodeId}/commands`;
+  const url = urls.node.commandsList(config, nodeId);
 
   return await client.request<CommandDefinition[]>(url, { method: 'GET' });
 }
@@ -111,7 +112,7 @@ export async function getCommand(
   commandName: string
 ): Promise<CommandDefinition> {
   const config = client.getConfig();
-  const url = `/orgs/${config.orgId}/devices/${config.deviceId}/nodes/${nodeId}/commands/${commandName}`;
+  const url = urls.node.commandGet(config, nodeId, commandName);
 
   return await client.request<CommandDefinition>(url, { method: 'GET' });
 }
@@ -141,12 +142,13 @@ export async function executeCommand<TResult = any, TParams = any>(
   options?: ExecuteCommandOptions
 ): Promise<CommandExecuteResult<TResult>> {
   const config = client.getConfig();
-  const queryParams = new URLSearchParams();
+  let url = urls.node.commandExecute(config, nodeId, commandName);
 
+  // Add query parameters
+  const queryParams = new URLSearchParams();
   if (options?.async) {
     queryParams.set('async', 'true');
   }
-
   if (options?.query) {
     Object.entries(options.query).forEach(([key, value]) => {
       queryParams.set(key, String(value));
@@ -154,7 +156,9 @@ export async function executeCommand<TResult = any, TParams = any>(
   }
 
   const queryString = queryParams.toString();
-  const url = `/orgs/${config.orgId}/devices/${config.deviceId}/nodes/${nodeId}/commands/${commandName}/execute${queryString ? `?${queryString}` : ''}`;
+  if (queryString) {
+    url = `${url}?${queryString}`;
+  }
 
   const response = await client.request<any>(url, {
     method: 'POST',
@@ -191,16 +195,18 @@ export async function executeGetCommand<TResult = any>(
   query?: Record<string, string | number | boolean>
 ): Promise<TResult> {
   const config = client.getConfig();
-  const queryParams = new URLSearchParams();
+  let url = urls.node.commandExecute(config, nodeId, commandName);
 
   if (query) {
+    const queryParams = new URLSearchParams();
     Object.entries(query).forEach(([key, value]) => {
       queryParams.set(key, String(value));
     });
+    const queryString = queryParams.toString();
+    if (queryString) {
+      url = `${url}?${queryString}`;
+    }
   }
-
-  const queryString = queryParams.toString();
-  const url = `/orgs/${config.orgId}/devices/${config.deviceId}/nodes/${nodeId}/commands/${commandName}/execute${queryString ? `?${queryString}` : ''}`;
 
   return await client.request<TResult>(url, { method: 'GET' });
 }
@@ -239,14 +245,11 @@ export async function executePatchCommand<TResult = any, TParams = any>(
   options?: ExecuteCommandOptions
 ): Promise<CommandExecuteResult<TResult>> {
   const config = client.getConfig();
-  const queryParams = new URLSearchParams();
+  let url = urls.node.commandExecute(config, nodeId, commandName);
 
   if (options?.async) {
-    queryParams.set('async', 'true');
+    url = `${url}?async=true`;
   }
-
-  const queryString = queryParams.toString();
-  const url = `/orgs/${config.orgId}/devices/${config.deviceId}/nodes/${nodeId}/commands/${commandName}/execute${queryString ? `?${queryString}` : ''}`;
 
   const response = await client.request<any>(url, {
     method: 'PATCH',
@@ -276,14 +279,11 @@ export async function executeDeleteCommand<TResult = any, TParams = any>(
   options?: ExecuteCommandOptions
 ): Promise<CommandExecuteResult<TResult>> {
   const config = client.getConfig();
-  const queryParams = new URLSearchParams();
+  let url = urls.node.commandExecute(config, nodeId, commandName);
 
   if (options?.async) {
-    queryParams.set('async', 'true');
+    url = `${url}?async=true`;
   }
-
-  const queryString = queryParams.toString();
-  const url = `/orgs/${config.orgId}/devices/${config.deviceId}/nodes/${nodeId}/commands/${commandName}/execute${queryString ? `?${queryString}` : ''}`;
 
   const response = await client.request<any>(url, {
     method: 'DELETE',
@@ -315,7 +315,7 @@ export async function getCommandJob<TResult = any, TParams = any>(
   jobId: string
 ): Promise<CommandJob<TResult, TParams>> {
   const config = client.getConfig();
-  const url = `/orgs/${config.orgId}/devices/${config.deviceId}/nodes/${nodeId}/jobs/${jobId}`;
+  const url = urls.node.commandJob(config, nodeId, jobId);
 
   return await client.request<CommandJob<TResult, TParams>>(url, { method: 'GET' });
 }
@@ -338,8 +338,11 @@ export async function listCommandJobs<TResult = any, TParams = any>(
   status?: 'pending' | 'running' | 'success' | 'failed'
 ): Promise<CommandJob<TResult, TParams>[]> {
   const config = client.getConfig();
-  const queryParams = status ? `?status=${status}` : '';
-  const url = `/orgs/${config.orgId}/devices/${config.deviceId}/nodes/${nodeId}/jobs${queryParams}`;
+  let url = urls.node.commandJobsList(config, nodeId);
+
+  if (status) {
+    url = `${url}?status=${status}`;
+  }
 
   return await client.request<CommandJob<TResult, TParams>[]>(url, { method: 'GET' });
 }
@@ -358,7 +361,7 @@ export async function cancelCommandJob(
   jobId: string
 ): Promise<{ success: boolean; message: string }> {
   const config = client.getConfig();
-  const url = `/orgs/${config.orgId}/devices/${config.deviceId}/nodes/${nodeId}/jobs/${jobId}`;
+  const url = urls.node.commandJobCancel(config, nodeId, jobId);
 
   return await client.request<{ success: boolean; message: string }>(url, { method: 'DELETE' });
 }

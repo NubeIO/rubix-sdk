@@ -11,6 +11,7 @@
     "plm.product",
     "plm.products",
     "plm.task",
+    "plm.ticket",
     "plm.prototest",
     "plm.manufacturing-unit"
   ],
@@ -40,6 +41,7 @@
       "plm.product",
       "plm.products",
       "plm.task",
+      "plm.ticket",
       "plm.prototest",
       "plm.manufacturing-unit"
     ],
@@ -201,18 +203,19 @@
       }
     },
     {
-      "type": "core.ticket",
-      "profile": "plm-work-item",
-      "displayName": "Work Item",
-      "description": "Task, bug, or feature request",
+      "type": "plm.ticket",
+      "displayName": "Ticket",
+      "description": "Work item, bug, feature request, or chore",
       "icon": "check-square",
       "color": "#6366f1",
       "category": "manufacturing",
+      "propertyPanels": ["node-settings", "tags-references"],
       "constraints": {
-        "allowedParents": ["plm.product"]
+        "allowedParents": ["plm.product", "plm.task"]
       },
       "autoFields": {
-        "identity": ["ticket", "work-item", "plm"]
+        "identity": ["ticket", "plm"],
+        "pluginId": true
       }
     },
     {

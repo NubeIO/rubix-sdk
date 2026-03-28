@@ -27,7 +27,7 @@ export interface TicketSettings {
 export interface Ticket {
   id: string;
   name: string;
-  type: 'core.ticket';
+  type: 'plm.ticket';
   parentId?: string;
   identity?: string[];
   settings?: TicketSettings;

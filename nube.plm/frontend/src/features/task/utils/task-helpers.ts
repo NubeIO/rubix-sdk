@@ -26,7 +26,7 @@ export async function recalculateTaskProgress(
   try {
     // Query all tickets in task
     const tickets = await client.queryNodes({
-      filter: `type is "core.ticket" and parent.id is "${taskId}"`
+      filter: `type is "plm.ticket" and parent.id is "${taskId}"`
     }) as Ticket[];
 
     if (tickets.length === 0) {
@@ -74,12 +74,12 @@ export async function getAllProductTickets(
   try {
     // Query 1: Direct tickets under product
     const directTickets = await client.queryNodes({
-      filter: `type is "core.ticket" and parent.id is "${productId}"`
+      filter: `type is "plm.ticket" and parent.id is "${productId}"`
     }) as Ticket[];
 
     // Query 2: Tickets under tasks under product
     const taskTickets = await client.queryNodes({
-      filter: `type is "core.ticket" and parent.type is "plm.task" and parent.parent.id is "${productId}"`
+      filter: `type is "plm.ticket" and parent.type is "plm.task" and parent.parent.id is "${productId}"`
     }) as Ticket[];
 
     // Merge and deduplicate by ID
@@ -112,7 +112,7 @@ export async function recalculateTaskActualHours(
   try {
     // Get all tickets in task
     const tickets = await client.queryNodes({
-      filter: `type is "core.ticket" and parent.id is "${taskId}"`
+      filter: `type is "plm.ticket" and parent.id is "${taskId}"`
     }) as Ticket[];
 
     if (tickets.length === 0) {

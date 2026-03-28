@@ -136,32 +136,6 @@ nodeTypes:
 
     # Commands for task operations
     commands:
-      - name: listComments
-        description: List all comments on this task
-        method: GET
-
-      - name: addComment
-        description: Add a comment to this task
-        method: POST
-        params:
-          - name: text
-            type: string
-            required: true
-          - name: userId
-            type: string
-            required: true
-          - name: userName
-            type: string
-            required: false
-
-      - name: deleteComment
-        description: Delete a comment from this task
-        method: DELETE
-        params:
-          - name: commentId
-            type: string
-            required: true
-
       - name: listTickets
         description: List all tickets under this task
         method: GET
@@ -173,6 +147,55 @@ nodeTypes:
     uiHints:
       icon: list-checks
       color: "#8b5cf6"
+
+  # ---------------------------------------------------------------------------
+  # PLM Ticket (extends core.ticket)
+  # ---------------------------------------------------------------------------
+  - type: plm.ticket
+    baseType: core.ticket
+    displayName: Ticket
+    description: Work item, bug, feature request, or chore
+    autoPluginId: true
+    autoIdentity: [ticket, plm]
+
+    defaults:
+      ticketType: "task"
+      status: "pending"
+      priority: "Medium"
+      actualHours: 0
+
+    validation:
+      required: []
+      rules:
+        status:
+          enum: [pending, in-progress, blocked, review, completed, cancelled]
+          message: "Invalid status"
+        priority:
+          enum: [Low, Medium, High, Critical]
+          message: "Invalid priority"
+        ticketType:
+          enum: [task, bug, feature, chore]
+          message: "Invalid ticket type"
+        estimatedHours:
+          min: 0
+          message: "Hours must be non-negative"
+        actualHours:
+          min: 0
+          message: "Hours must be non-negative"
+
+    # Commands for ticket operations
+    commands:
+      - name: listTimeEntries
+        description: List all time entries for this ticket
+        method: GET
+
+      - name: recalculateHours
+        description: Recalculate actual hours from time entries
+        method: POST
+
+    uiHints:
+      icon: check-square
+      color: "#6366f1"
 
   # ---------------------------------------------------------------------------
   # Manufacturing Unit (extends core.asset)
@@ -391,79 +414,6 @@ nodeProfiles:
       icon: clock
       color: "#10b981"
 
-  # ---------------------------------------------------------------------------
-  # Work Item (core.ticket + plm-work-item profile)
-  # ---------------------------------------------------------------------------
-  - nodeType: core.ticket
-    profile: plm-work-item
-    displayName: Work Item
-    description: Task, bug, or feature request
-    identity: [ticket, work-item, plm]
-
-    defaults:
-      ticketType: "task"
-      status: "pending"
-      priority: "Medium"
-      actualHours: 0
-
-    validation:
-      required: []
-      rules:
-        status:
-          enum: [pending, in-progress, blocked, review, completed, cancelled]
-          message: "Invalid status"
-        priority:
-          enum: [Low, Medium, High, Critical]
-          message: "Invalid priority"
-        ticketType:
-          enum: [task, bug, feature, chore]
-          message: "Invalid ticket type"
-        estimatedHours:
-          min: 0
-          message: "Hours must be non-negative"
-        actualHours:
-          min: 0
-          message: "Hours must be non-negative"
-
-    # Commands for ticket operations
-    commands:
-      - name: listComments
-        description: List all comments on this ticket
-        method: GET
-
-      - name: addComment
-        description: Add a comment to this ticket
-        method: POST
-        params:
-          - name: text
-            type: string
-            required: true
-          - name: userId
-            type: string
-            required: true
-          - name: userName
-            type: string
-            required: false
-
-      - name: deleteComment
-        description: Delete a comment from this ticket
-        method: DELETE
-        params:
-          - name: commentId
-            type: string
-            required: true
-
-      - name: listTimeEntries
-        description: List all time entries for this ticket
-        method: GET
-
-      - name: recalculateHours
-        description: Recalculate actual hours from time entries
-        method: POST
-
-    uiHints:
-      icon: check-square
-      color: "#6366f1"
 
   # ---------------------------------------------------------------------------
   # Hardware Unit (core.asset + plm-unit profile)

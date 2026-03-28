@@ -44,7 +44,7 @@ export async function createTimeEntryWithRecalc(
   try {
     // Verify parent ticket exists
     const parentTicket = await client.getNode(input.parentId);
-    if (!parentTicket || parentTicket.type !== 'core.ticket') {
+    if (!parentTicket || parentTicket.type !== 'plm.ticket') {
       throw new Error('Invalid parentId: must be a valid ticket ID');
     }
 
