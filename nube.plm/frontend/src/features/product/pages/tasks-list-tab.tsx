@@ -1,63 +1,20 @@
 /**
- * TasksListTab - Shows all tasks across all products
- *
- * Tabs:
- * - All: Shows all tasks
- * - Pending: Filters to status is "pending"
- * - In Progress: Filters to status is "in-progress"
- * - Completed: Filters to status is "completed"
- * - Cancelled: Filters to status is "cancelled"
+ * TasksListTab - Shows all tasks across all products with enhanced data table
  */
 
-import { ListChecks, CircleDot, Loader2, CheckCircle2, CircleOff } from 'lucide-react';
-// @ts-ignore - SDK types are resolved at build time
-import { FilteredTableWithTabs, type FilteredTab } from '@rubix-sdk/frontend/components';
+import { useEffect, useState, useCallback } from 'react';
 // @ts-ignore - SDK types are resolved at build time
 import { Skeleton } from '@rubix-sdk/frontend/common/ui';
 import type { PluginClient } from '@rubix-sdk/frontend/plugin-client';
 
 import type { Task } from '@features/task/types/task.types';
 import type { Product } from '@features/product/types/product.types';
-import { TasksListTable, type TasksListTableDisplaySettings } from './tasks-list-table';
-
-const TABS: FilteredTab[] = [
-  {
-    value: 'all',
-    label: 'All',
-    icon: ListChecks,
-    filter: undefined, // No filter - show all
-  },
-  {
-    value: 'pending',
-    label: 'Pending',
-    icon: CircleDot,
-    filter: 'settings.status in ["pending", "todo"]',
-  },
-  {
-    value: 'in-progress',
-    label: 'In Progress',
-    icon: Loader2,
-    filter: 'settings.status in ["in-progress", "in_progress"]',
-  },
-  {
-    value: 'completed',
-    label: 'Completed',
-    icon: CheckCircle2,
-    filter: 'settings.status is "completed" or settings.completed is true',
-  },
-  {
-    value: 'cancelled',
-    label: 'Cancelled',
-    icon: CircleOff,
-    filter: 'settings.status in ["cancelled", "canceled"]',
-  },
-];
+import { TasksDataTable } from './tasks-data-table';
 
 interface TasksListTabProps {
   products: Product[];
   productsLoading: boolean;
   client: PluginClient;
-  displaySettings: TasksListTableDisplaySettings;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string, taskName: string) => void;
 }
@@ -66,12 +23,33 @@ export function TasksListTab({
   products,
   productsLoading,
   client,
-  displaySettings,
   onEdit,
   onDelete,
 }: TasksListTabProps) {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchTasks = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const nodes = await client.queryNodes({
+        filter: 'type is "plm.task"',
+      });
+      console.log('[TasksListTab] Fetched tasks:', nodes);
+      setTasks(nodes as Task[]);
+    } catch (err) {
+      console.error('[TasksListTab] Failed to fetch tasks:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [client]);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
   // Show loading state while products are loading
-  if (productsLoading) {
+  if (productsLoading || isLoading) {
     return (
       <div className="space-y-3">
         <Skeleton className="h-12 w-full" />
@@ -81,34 +59,25 @@ export function TasksListTab({
     );
   }
 
+  console.log('[TasksListTab] Rendering with tasks:', tasks.length, 'products:', products.length);
+
+  if (tasks.length === 0) {
+    return (
+      <div className="border rounded-lg p-12 text-center">
+        <h3 className="text-lg font-semibold mb-2">No tasks found</h3>
+        <p className="text-muted-foreground">
+          Create your first task to get started.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <FilteredTableWithTabs<Task>
-      tabs={TABS}
-      baseFilter='type is "plm.task"'
-      client={client}
-      renderTable={(tasks, isRefreshing) => (
-        <div className={isRefreshing ? 'opacity-50 pointer-events-none' : ''}>
-          <div className="border rounded-lg">
-            <TasksListTable
-              tasks={tasks}
-              products={products}
-              displaySettings={displaySettings}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          </div>
-        </div>
-      )}
-      renderEmpty={() => (
-        <div className="border rounded-lg p-12 text-center">
-          <div className="max-w-md mx-auto">
-            <h3 className="text-lg font-semibold mb-2">No tasks found</h3>
-            <p className="text-muted-foreground">
-              No tasks match the current filter. Create tasks from individual products to see them here.
-            </p>
-          </div>
-        </div>
-      )}
+    <TasksDataTable
+      tasks={tasks}
+      products={products}
+      onEdit={onEdit}
+      onDelete={onDelete}
     />
   );
 }

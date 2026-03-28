@@ -5,7 +5,7 @@
  */
 
 import { createRoot, type Root } from 'react-dom/client';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Package, ListChecks } from 'lucide-react';
 import '@rubix-sdk/frontend/globals.css';
 // @ts-ignore - SDK types are resolved at build time
@@ -18,6 +18,8 @@ import { ProductsListTab } from './products-list-tab';
 import { TasksListTab } from './tasks-list-tab';
 import { ProductsPageDialogs } from './products-page-dialogs';
 import { CreateTaskDialog } from './create-task-dialog';
+import { EditTaskDialog } from './edit-task-dialog';
+import { DeleteTaskDialog } from './delete-task-dialog';
 import { useProductsPageState } from './use-products-page-state';
 import type { Task, CreateTaskInput, UpdateTaskInput } from '@features/task/types/task.types';
 import type { Product, ProductSettings } from '@features/product/types/product.types';
@@ -53,8 +55,11 @@ function ProductsPage({
   // Main tabs state
   const [activeMainTab, setActiveMainTab] = useState('products');
 
-  // Create plugin client - use SDK directly!
-  const client = createPluginClient({ orgId, deviceId, baseUrl, token });
+  // Create plugin client - use SDK directly! (memoized to prevent infinite re-renders)
+  const client = useMemo(
+    () => createPluginClient({ orgId, deviceId, baseUrl, token }),
+    [orgId, deviceId, baseUrl, token]
+  );
 
   // Product CRUD operations - use SDK directly, no API wrapper!
   const createProduct = useCallback(async (input: { name: string; parentId: string; settings: ProductSettings }) => {
@@ -115,13 +120,6 @@ function ProductsPage({
     compactMode: false,
   };
 
-  const taskDisplaySettings = {
-    showStatus: true,
-    showPriority: true,
-    showProgress: true,
-    compactMode: false,
-  };
-
   // Main tabs configuration
   const mainTabs: Tab[] = [
     { value: 'products', label: 'Products', icon: Package },
@@ -149,14 +147,15 @@ function ProductsPage({
   const [createTaskDialogOpen, setCreateTaskDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<{ id: string; name: string } | null>(null);
+  const [isDeletingTask, setIsDeletingTask] = useState(false);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [taskRefreshKey, setTaskRefreshKey] = useState(0);
 
-  // Fetch products ONLY when task dialog opens (lazy load - prevents race condition)
+  // Fetch products when Tasks tab is active OR when task dialogs open
   useEffect(() => {
-    // Only fetch when dialog is actually open
-    if (!createTaskDialogOpen) {
+    // Only fetch when tasks tab is active or any task dialog is open
+    if (activeMainTab !== 'tasks' && !createTaskDialogOpen && !editingTask) {
       return;
     }
 
@@ -172,7 +171,7 @@ function ProductsPage({
         });
 
         if (mounted) {
-          console.log('[ProductsPage] Products loaded for task dialog:', loadedProducts.length);
+          console.log('[ProductsPage] Products loaded:', loadedProducts.length);
           setAllProducts(loadedProducts as Product[]);
         }
       } catch (error) {
@@ -191,7 +190,7 @@ function ProductsPage({
     return () => {
       mounted = false;
     };
-  }, [createTaskDialogOpen, client, orgId, deviceId, baseUrl]);
+  }, [activeMainTab, createTaskDialogOpen, editingTask, client, orgId, deviceId, baseUrl]);
 
   const openCreateTaskDialog = useCallback(() => {
     console.log('[ProductsPage] Opening create task dialog, products available:', allProducts.length);
@@ -311,7 +310,6 @@ function ProductsPage({
                 products={allProducts}
                 productsLoading={productsLoading}
                 client={client}
-                displaySettings={taskDisplaySettings}
                 onEdit={openEditTaskDialog}
                 onDelete={(taskId, taskName) => {
                   console.log('[ProductsPage] Delete task - ID:', taskId, 'Name:', taskName);
@@ -360,7 +358,41 @@ function ProductsPage({
         />
       )}
 
-      {/* Task Edit/Delete dialogs - TODO: Implement similar to products */}
+      {/* Task Edit Dialog */}
+      {editingTask && (
+        <EditTaskDialog
+          task={editingTask}
+          products={allProducts}
+          onClose={closeEditTaskDialog}
+          onUpdate={async (taskId, input) => {
+            await updateTask(taskId, input);
+            closeEditTaskDialog();
+            setTaskRefreshKey((prev) => prev + 1); // Force refresh
+          }}
+        />
+      )}
+
+      {/* Task Delete Dialog */}
+      {deletingTask && (
+        <DeleteTaskDialog
+          open={!!deletingTask}
+          onOpenChange={(open) => {
+            if (!open) closeDeleteTaskDialog();
+          }}
+          taskName={deletingTask.name}
+          onConfirm={async () => {
+            setIsDeletingTask(true);
+            try {
+              await deleteTask(deletingTask.id);
+              closeDeleteTaskDialog();
+              setTaskRefreshKey((prev) => prev + 1); // Force refresh
+            } finally {
+              setIsDeletingTask(false);
+            }
+          }}
+          isDeleting={isDeletingTask}
+        />
+      )}
     </>
   );
 }
