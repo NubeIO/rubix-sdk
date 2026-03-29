@@ -151,6 +151,7 @@ function ProductsPage({
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [taskRefreshKey, setTaskRefreshKey] = useState(0);
+  const [productRefreshKey, setProductRefreshKey] = useState(0);
 
   // Fetch products when Tasks tab is active OR when task dialogs open
   useEffect(() => {
@@ -297,6 +298,7 @@ function ProductsPage({
           <div className="mt-4">
             {activeMainTab === 'products' ? (
               <ProductsListTab
+                key={productRefreshKey}
                 client={client}
                 displaySettings={productDisplaySettings}
                 onEdit={openEditDialog}
@@ -340,11 +342,18 @@ function ProductsPage({
           console.log('[ProductsPage] Create product submitted:', data);
           await createProduct(data);
           closeCreateDialog();
+          setProductRefreshKey((prev) => prev + 1); // Force refresh products tab
         }}
         onCloseEdit={closeEditDialog}
-        onEdit={updateProduct}
+        onEdit={async (productId, data) => {
+          await updateProduct(productId, data);
+          setProductRefreshKey((prev) => prev + 1); // Force refresh products tab
+        }}
         onCloseDelete={closeDeleteDialog}
-        onDelete={deleteProduct}
+        onDelete={async (productId) => {
+          await deleteProduct(productId);
+          setProductRefreshKey((prev) => prev + 1); // Force refresh products tab
+        }}
       />
 
       {/* Task Create Dialog */}

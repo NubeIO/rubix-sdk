@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
+  Building2,
   CalendarRange,
   ChevronDown,
   ChevronRight,
@@ -15,6 +16,7 @@ import type { PluginClient } from '@rubix-sdk/frontend/plugin-client';
 import type { Product } from '@features/product/types/product.types';
 import type { Task } from '@features/task/types/task.types';
 import type { Ticket } from '@features/ticket/types/ticket.types';
+import type { ManufacturingRun } from '@features/production-run/types';
 import { TaskFilters } from './TaskFilters';
 
 type GanttContext = 'all-products' | 'single-product';
@@ -22,7 +24,7 @@ type GanttView = ViewMode.Day | ViewMode.Week | ViewMode.Month;
 
 interface GanttRow extends GanttTask {
   sourceId: string;
-  rowKind: 'task' | 'ticket';
+  rowKind: 'task' | 'ticket' | 'manufacturing-run';
 }
 
 interface TasksGanttViewProps {
@@ -52,7 +54,6 @@ interface GanttListTableProps {
   tasks: GanttTask[];
   selectedTaskId: string;
   setSelectedTask: (taskId: string) => void;
-  onExpanderClick: (task: GanttTask) => void;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -202,6 +203,8 @@ export function TasksGanttView({
   view,
   onViewChange,
 }: TasksGanttViewProps) {
+  console.log('[TasksGanttView] COMPONENT RENDERED with tasks:', tasks.length);
+
   const [viewMode, setViewMode] = useState<GanttView>(ViewMode.Week);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [taskTickets, setTaskTickets] = useState<Map<string, Ticket[]>>(new Map());
@@ -209,6 +212,7 @@ export function TasksGanttView({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [productFilter, setProductFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [manufacturingRuns, setManufacturingRuns] = useState<ManufacturingRun[]>([]);
 
   const productMap = useMemo(
     () => products.reduce<Record<string, Product>>((acc, product) => {
@@ -246,6 +250,33 @@ export function TasksGanttView({
     [filteredTasks]
   );
 
+  // Fetch manufacturing runs for the selected products
+  useEffect(() => {
+    const fetchManufacturingRuns = async () => {
+      try {
+        // Get unique product IDs from filtered tasks
+        const productIds = Array.from(new Set(filteredTasks.map(task => task.parentId).filter(Boolean)));
+
+        if (productIds.length === 0) {
+          setManufacturingRuns([]);
+          return;
+        }
+
+        // Fetch manufacturing runs for these products
+        const filter = productIds.length === 1
+          ? `type is "plm.manufacturing-run" and parent.id is "${productIds[0]}"`
+          : `type is "plm.manufacturing-run" and (${productIds.map(id => `parent.id is "${id}"`).join(' or ')})`;
+
+        const nodes = await client.queryNodes({ filter });
+        setManufacturingRuns(nodes as ManufacturingRun[]);
+      } catch (error) {
+        console.error('[TasksGanttView] Failed to fetch manufacturing runs:', error);
+      }
+    };
+
+    fetchManufacturingRuns();
+  }, [client, filteredTasks]);
+
   const loadTickets = useCallback(async (taskId: string) => {
     if (taskTickets.has(taskId)) {
       return;
@@ -274,22 +305,28 @@ export function TasksGanttView({
   }, [client, taskTickets]);
 
   const toggleTaskExpansion = useCallback((taskId: string) => {
+    console.log('[TasksGanttView] toggleTaskExpansion called for:', taskId);
+
     // Check current state first
     const wasExpanded = expandedTasks.has(taskId);
+    console.log('[TasksGanttView] Was expanded:', wasExpanded);
 
     // Toggle the expansion state
     setExpandedTasks((prev) => {
       const next = new Set(prev);
       if (next.has(taskId)) {
         next.delete(taskId);
+        console.log('[TasksGanttView] Collapsing task');
       } else {
         next.add(taskId);
+        console.log('[TasksGanttView] Expanding task');
       }
       return next;
     });
 
     // If we're expanding and tickets aren't loaded, load them
     if (!wasExpanded && !taskTickets.has(taskId) && !loadingTickets.has(taskId)) {
+      console.log('[TasksGanttView] Loading tickets for task');
       loadTickets(taskId);
     }
   }, [expandedTasks, loadTickets, taskTickets, loadingTickets]);
@@ -304,6 +341,10 @@ export function TasksGanttView({
           ? products[0]?.name || productId || 'Current product'
           : productMap[task.parentId || '']?.name || 'Unassigned';
 
+      // Check if this task has tickets loaded
+      const tickets = taskTickets.get(task.id) || [];
+      const hasChildren = tickets.length > 0;
+
       rows.push({
         id: task.id,
         sourceId: task.id,
@@ -312,14 +353,14 @@ export function TasksGanttView({
         start: dates.start,
         end: dates.end,
         progress: taskProgress(task),
-        type: 'task',
+        type: hasChildren ? 'project' : 'task',
         hideChildren: !expandedTasks.has(task.id),
         project: productName,
         styles: taskPalette(task.settings?.status),
       });
 
-      if (expandedTasks.has(task.id)) {
-        const tickets = taskTickets.get(task.id) || [];
+      // Always add ticket rows if they're loaded (library handles visibility via hideChildren)
+      if (hasChildren) {
         tickets.forEach((ticket) => {
           const ticketTimeline = ticketDates(ticket);
           rows.push({
@@ -339,15 +380,50 @@ export function TasksGanttView({
       }
     });
 
+    // Add manufacturing runs
+    manufacturingRuns.forEach((run) => {
+      const startDate = parseDate(run.settings?.productionDate);
+      const endDate = parseDate(run.settings?.productionFinishDate);
+
+      // Only show if dates are set
+      if (!startDate || !endDate) {
+        return;
+      }
+
+      const productName = productMap[run.parentId || '']?.name || 'Unknown Product';
+
+      rows.push({
+        id: `mfg-${run.id}`,
+        sourceId: run.id,
+        rowKind: 'manufacturing-run',
+        name: run.name,
+        start: startDate,
+        end: endDate,
+        progress: run.settings?.status === 'completed' ? 100 :
+                  run.settings?.status === 'in-progress' ? 50 : 10,
+        type: 'task',
+        project: productName,
+        styles: {
+          backgroundColor: '#059669',
+          backgroundSelectedColor: '#047857',
+          progressColor: '#a7f3d0',
+          progressSelectedColor: '#d1fae5',
+        },
+      });
+    });
+
     return rows;
-  }, [context, expandedTasks, productId, productMap, products, taskTickets, filteredTasks]);
+  }, [context, expandedTasks, productId, productMap, products, taskTickets, filteredTasks, manufacturingRuns]);
 
   const handleExpanderClick = useCallback((item: GanttTask) => {
+    console.log('[TasksGanttView] Expander clicked:', item);
     const row = item as GanttRow;
     if (row.rowKind !== 'task') {
+      console.log('[TasksGanttView] Not a task, ignoring');
       return;
     }
 
+    console.log('[TasksGanttView] Toggling task:', row.sourceId);
     toggleTaskExpansion(row.sourceId);
   }, [toggleTaskExpansion]);
 
@@ -396,7 +472,6 @@ export function TasksGanttView({
       tasks: chartTasks,
       selectedTaskId,
       setSelectedTask,
-      onExpanderClick,
     }: GanttListTableProps) => (
       <div
         style={{ width: rowWidth, fontFamily, fontSize }}
@@ -405,27 +480,31 @@ export function TasksGanttView({
         {chartTasks.map((item) => {
           const row = item as GanttRow;
           const isTicket = row.rowKind === 'ticket';
+          const isMfgRun = row.rowKind === 'manufacturing-run';
+          const isTask = row.rowKind === 'task';
           const parentTask = isTicket ? taskMap[row.project || ''] : null;
-          const isLoading = !isTicket && loadingTickets.has(row.sourceId);
+          const isLoading = isTask && loadingTickets.has(row.sourceId);
           const isSelected = selectedTaskId === row.id;
-          const productName = !isTicket
+          const productName = isTask
             ? productMap[taskMap[row.sourceId]?.parentId || '']?.name || row.project
-            : parentTask?.name;
+            : isTicket
+            ? parentTask?.name
+            : row.project;
 
           return (
             <div
               key={row.id}
               className={`flex w-full items-center gap-3 border-b px-3 text-left transition-colors ${
                 isSelected ? 'bg-blue-50' : 'hover:bg-slate-50'
-              } ${isTicket ? 'pl-10' : ''}`}
+              } ${isTicket ? 'pl-10' : ''} ${isMfgRun ? 'bg-emerald-50/30' : ''}`}
               style={{ height: rowHeight } as CSSProperties}
             >
-              {!isTicket ? (
+              {isTask ? (
                 <button
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    onExpanderClick(item);
+                    handleExpanderClick(item);
                   }}
                   className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
                   title={row.hideChildren ? 'Show tickets' : 'Hide tickets'}
@@ -439,14 +518,16 @@ export function TasksGanttView({
                   )}
                 </button>
               ) : (
-                <span className="h-7 w-7 rounded-md border border-dashed border-slate-200 bg-slate-50" />
+                <span className={`h-7 w-7 rounded-md border ${isTicket ? 'border-dashed border-slate-200 bg-slate-50' : 'border-emerald-200 bg-emerald-100'} flex items-center justify-center`}>
+                  {isMfgRun && <Building2 className="h-4 w-4 text-emerald-700" />}
+                </span>
               )}
 
               <button
                 type="button"
                 onClick={() => setSelectedTask(row.id)}
                 onDoubleClick={() => {
-                  if (!isTicket && onTaskEdit) {
+                  if (isTask && onTaskEdit) {
                     const task = taskMap[row.sourceId];
                     if (task) {
                       onTaskEdit(task);
@@ -461,6 +542,8 @@ export function TasksGanttView({
                 <div className="truncate text-xs text-slate-500">
                   {isTicket
                     ? `Ticket under ${productName || 'task'}`
+                    : isMfgRun
+                    ? `Manufacturing run • ${productName || 'No product'}`
                     : productName || 'No product'}
                 </div>
               </button>
@@ -469,7 +552,7 @@ export function TasksGanttView({
         })}
       </div>
     ),
-    [loadingTickets, onTaskEdit, productMap, taskMap]
+    [loadingTickets, onTaskEdit, productMap, taskMap, handleExpanderClick]
   );
 
   return (
@@ -508,6 +591,10 @@ export function TasksGanttView({
             <span className="inline-flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-amber-600" />
               Planned
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-600" />
+              Manufacturing
             </span>
           </div>
         </div>

@@ -4,6 +4,8 @@
 
 Quick copy-paste examples for working with tasks, tickets, and time entries.
 
+⚠️ **IMPORTANT**: Read [DESIGN-DECISIONS.md](./DESIGN-DECISIONS.md) first to understand known limitations and workarounds.
+
 ---
 
 ## Creating Nodes
@@ -31,7 +33,7 @@ await client.createNode({
 ```typescript
 await client.createNode({
   type: 'core.ticket',
-  profile: 'plm-ticket',
+  profile: 'plm-work-item',
   name: 'Add JWT validation endpoint',
   parentRef: taskId,  // Points to plm.task
   identity: ['ticket', 'plm', 'task'],
@@ -51,7 +53,7 @@ await client.createNode({
 ```typescript
 await client.createNode({
   type: 'core.ticket',
-  profile: 'plm-ticket',
+  profile: 'plm-work-item',
   name: 'Fix button styling',
   parentRef: productId,  // Points directly to product
   identity: ['ticket', 'plm', 'bug'],
@@ -136,15 +138,50 @@ const tickets = await client.queryNodes({
 ```
 
 ### Get All Tickets for Product (Direct + In Tasks)
+
+**⚠️ This requires 2 queries - use the helper function:**
+
 ```typescript
-// Direct tickets
-const directTickets = await client.queryNodes({
-  filter: `type is "core.ticket" and parent.id is "${productId}"`
+/**
+ * Get ALL tickets for a product (direct + nested in tasks)
+ * ⚠️ IMPORTANT: Always use this helper to avoid missing tickets
+ */
+async function getAllProductTickets(
+  client: PluginClient,
+  productId: string
+): Promise<Ticket[]> {
+  // Query 1: Direct tickets
+  const directTickets = await client.queryNodes({
+    filter: `type is "core.ticket" and parent.id is "${productId}"`
+  });
+
+  // Query 2: Tickets in tasks
+  const taskTickets = await client.queryNodes({
+    filter: `type is "core.ticket" and parent.type is "plm.task" and parent.parent.id is "${productId}"`
+  });
+
+  return [...directTickets, ...taskTickets];
+}
+
+// Usage
+const allTickets = await getAllProductTickets(client, productId);
+```
+
+**Better Alternative**: Use refs for single-query access:
+```typescript
+// Add productRef when creating tickets
+await client.createNode({
+  type: 'core.ticket',
+  parentRef: taskId,
+  refs: [
+    { refName: 'productRef', toNodeId: productId }  // Enables single query
+  ],
+  settings: { ... }
 });
 
-// Tickets in tasks
-const taskTickets = await client.queryNodes({
-  filter: `type is "core.ticket" and parent.type is "plm.task"`
+// Then query becomes simple
+const allTickets = await client.queryNodes({
+  filter: `type is "core.ticket" and refs.productRef.toNodeId is "${productId}"`
 });
 ```
 
@@ -372,28 +409,47 @@ const refresh = () => setRefreshKey(k => k + 1);
 
 ## Common Pitfalls
 
-### ❌ Don't Use `parentId`
+### ❌ Don't Use `parentId` (EVER)
 ```typescript
-// Wrong
+// ❌ WRONG - parentId is a trap, don't use it
 await client.createNode({
   type: 'core.ticket',
-  parentId: taskId  // ← Wrong!
+  parentId: taskId  // ← This will silently fail or create orphaned nodes!
 });
 
-// Correct
+// ✅ CORRECT - Use parentRef
 await client.createNode({
   type: 'core.ticket',
-  parentRef: taskId  // ← Use parentRef
+  parentRef: taskId  // ← Always use parentRef
 });
 ```
 
 ### ❌ Don't Query with `parentId`
 ```typescript
-// Wrong
+// ❌ WRONG
 filter: `parentId is "${taskId}"`
 
-// Correct
+// ✅ CORRECT
 filter: `parent.id is "${taskId}"`
+```
+
+### ❌ Don't Forget to Recalculate Derived Fields
+```typescript
+// ❌ WRONG - actualHours will be stale
+await client.createNode({
+  type: 'core.entry',
+  parentRef: ticketId,
+  settings: { hours: 2.5 }
+});
+// Ticket's actualHours is now wrong!
+
+// ✅ CORRECT - Recalculate after changes
+await client.createNode({
+  type: 'core.entry',
+  parentRef: ticketId,
+  settings: { hours: 2.5 }
+});
+await recalculateActualHours(client, ticketId);  // Update parent
 ```
 
 ### ❌ Don't Store Arrays in Settings
@@ -427,34 +483,46 @@ identity: ['ticket', 'plm', 'bug']
 
 ## Status Normalization
 
+**⚠️ IMPORTANT: Always normalize status values to prevent drift.**
+
 ```typescript
+/**
+ * Normalize status values to standardized set.
+ * Use this helper EVERYWHERE you set status.
+ */
 export function normalizeStatus(status?: string): string {
   const normalized = status?.trim().toLowerCase().replace(/_/g, '-');
 
   switch (normalized) {
     case 'completed':
-    case 'done':
       return 'completed';
     case 'in-progress':
-    case 'inprogress':
-    case 'active':
       return 'in-progress';
-    case 'cancelled':
-    case 'canceled':
-    case 'wontfix':
-      return 'cancelled';
     case 'blocked':
       return 'blocked';
     case 'review':
-    case 'in-review':
       return 'review';
-    case 'todo':
+    case 'cancelled':
+      return 'cancelled';
     case 'pending':
     default:
       return 'pending';
   }
 }
+
+// ✅ ALWAYS use this when setting status
+await client.updateNodeSettings(ticketId, {
+  status: normalizeStatus(userInput)  // Don't trust raw input
+});
 ```
+
+**Standard Status Values** (use these only):
+- `pending`
+- `in-progress`
+- `blocked`
+- `review`
+- `completed`
+- `cancelled`
 
 ---
 

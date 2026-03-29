@@ -49,6 +49,7 @@ export function ProductionRunForm({
       facilityLocation: String(run.settings?.facilityLocation || ''),
       status: run.settings?.status || 'planned',
       productionDate: String(run.settings?.productionDate || ''),
+      productionFinishDate: String(run.settings?.productionFinishDate || ''),
       serialRangeStart: String(run.settings?.serialRangeStart || ''),
       serialRangeEnd: String(run.settings?.serialRangeEnd || ''),
       batchNotes: String(run.settings?.batchNotes || ''),
@@ -89,6 +90,7 @@ export function ProductionRunForm({
           facilityLocation: values.facilityLocation.trim() || undefined,
           status: values.status,
           productionDate: values.productionDate || undefined,
+          productionFinishDate: values.productionFinishDate || undefined,
           serialRangeStart: values.serialRangeStart.trim() || undefined,
           serialRangeEnd: values.serialRangeEnd.trim() || undefined,
           batchNotes: values.batchNotes.trim() || undefined,
@@ -185,6 +187,17 @@ export function ProductionRunForm({
                 type="date"
                 value={values.productionDate}
                 onChange={(event) => updateField('productionDate', event.target.value)}
+                disabled={isSaving}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="run-production-finish-date">Production Finish Date</Label>
+              <Input
+                id="run-production-finish-date"
+                type="date"
+                value={values.productionFinishDate}
+                onChange={(event) => updateField('productionFinishDate', event.target.value)}
                 disabled={isSaving}
               />
             </div>

@@ -18,6 +18,7 @@ export interface ManufacturingRunSettings {
   serialRangeStart?: string;
   serialRangeEnd?: string;
   productionDate?: string;
+  productionFinishDate?: string;
   batchNotes?: string;
   [key: string]: unknown;
 }
@@ -68,6 +69,7 @@ export interface ManufacturingRunFormValues {
   facilityLocation: string;
   status: ManufacturingRunStatus;
   productionDate: string;
+  productionFinishDate: string;
   serialRangeStart: string;
   serialRangeEnd: string;
   batchNotes: string;
@@ -106,6 +108,7 @@ export const DEFAULT_MANUFACTURING_RUN_FORM_VALUES: ManufacturingRunFormValues =
   facilityLocation: '',
   status: 'planned',
   productionDate: '',
+  productionFinishDate: '',
   serialRangeStart: '',
   serialRangeEnd: '',
   batchNotes: '',

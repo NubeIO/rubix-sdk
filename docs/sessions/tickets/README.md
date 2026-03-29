@@ -140,7 +140,7 @@ await client.createNode({
 ```typescript
 await client.createNode({
   type: 'core.ticket',
-  profile: 'plm-ticket',
+  profile: 'plm-work-item',
   name: 'Add JWT validation',
   parentRef: taskId,  // Points to plm.task parent
   identity: ['ticket', 'plm', 'task'],
@@ -254,21 +254,15 @@ Product
 
 ## Status Values
 
-### Task Status
+**⚠️ IMPORTANT: Only use the standardized values below.**
+
+### Standard Status (Tasks & Tickets)
 - `pending` - Not started
 - `in-progress` - Actively being worked on
 - `blocked` - Blocked by dependencies
 - `review` - In code review
 - `completed` - Done
 - `cancelled` - Cancelled/abandoned
-
-### Ticket Status
-- `pending` / `todo` - Not started
-- `in-progress` - Active work
-- `blocked` - Blocked
-- `review` - Needs review
-- `completed` / `done` - Finished
-- `cancelled` / `wontfix` - Not doing
 
 ### Priority Levels
 - `low` - Nice to have
@@ -295,15 +289,49 @@ const tickets = await client.queryNodes({
 ```
 
 ### Get All Tickets for a Product (Including in Tasks)
+
+**⚠️ DESIGN LIMITATION**: Getting all tickets requires 2 queries because tickets can be under Product OR Task.
+
 ```typescript
-// Direct tickets under product
-const directTickets = await client.queryNodes({
-  filter: `type is "core.ticket" and parent.id is "${productId}"`
+/**
+ * Helper function to get ALL tickets for a product (direct + in tasks)
+ * This is the recommended approach to avoid missing tickets.
+ */
+async function getAllProductTickets(client: PluginClient, productId: string) {
+  // Query 1: Direct tickets under product
+  const directTickets = await client.queryNodes({
+    filter: `type is "core.ticket" and parent.id is "${productId}"`
+  });
+
+  // Query 2: Tickets under tasks under product
+  const taskTickets = await client.queryNodes({
+    filter: `type is "core.ticket" and parent.type is "plm.task" and parent.parent.id is "${productId}"`
+  });
+
+  // Merge and deduplicate
+  const allTickets = [...directTickets, ...taskTickets];
+  return allTickets;
+}
+
+// Usage
+const tickets = await getAllProductTickets(client, productId);
+```
+
+**Alternative**: Use refs to link all tickets to product:
+```typescript
+// When creating ticket under task, also add productRef
+await client.createNode({
+  type: 'core.ticket',
+  parentRef: taskId,
+  refs: [
+    { refName: 'productRef', toNodeId: productId }  // ← Enables single query
+  ],
+  settings: { ... }
 });
 
-// Tickets under tasks under product
-const taskTickets = await client.queryNodes({
-  filter: `type is "core.ticket" and parent.type is "plm.task" and parent.parent.id is "${productId}"`
+// Then query becomes simple
+const allTickets = await client.queryNodes({
+  filter: `type is "core.ticket" and refs.productRef.toNodeId is "${productId}"`
 });
 ```
 
@@ -339,40 +367,88 @@ const timeEntries = await client.queryNodes({
 
 ## Refs (References)
 
-### Task Refs
+**When to use Refs vs Parent Hierarchy:**
+
+| Use Case | Use Parent Hierarchy | Use Refs |
+|----------|---------------------|----------|
+| Containment ("belongs to") | ✅ Ticket belongs to Task | ❌ |
+| Single relationship | ✅ Entry belongs to Ticket | ❌ |
+| Multiple relationships | ❌ | ✅ Ticket blocked by multiple tickets |
+| Cross-hierarchy links | ❌ | ✅ Ticket links to Product AND Task |
+| Dependencies | ❌ | ✅ Ticket depends on other tickets |
+
+### Creating Refs
+
+```typescript
+// Create ticket with refs
+const ticket = await client.createNode({
+  type: 'core.ticket',
+  name: 'Implement feature X',
+  parentRef: taskId,  // Parent hierarchy
+  refs: [
+    { refName: 'productRef', toNodeId: productId },  // Cross-reference
+    { refName: 'assignedUserRef', toNodeId: userId }  // User assignment
+  ],
+  settings: { ... }
+});
+
+// Add blocking dependency after creation
+await client.addRef(ticketId, {
+  refName: 'blockedByRef',
+  toNodeId: blockingTicketId
+});
+```
+
+### Querying via Refs
+
+```typescript
+// Get all tickets assigned to a user
+const userTickets = await client.queryNodes({
+  filter: `type is "core.ticket" and refs.assignedUserRef.toNodeId is "${userId}"`
+});
+
+// Get all tickets in a product (using productRef instead of parent queries)
+const productTickets = await client.queryNodes({
+  filter: `type is "core.ticket" and refs.productRef.toNodeId is "${productId}"`
+});
+
+// Get all tickets blocked by a specific ticket
+const blockedTickets = await client.queryNodes({
+  filter: `type is "core.ticket" and refs.blockedByRef.toNodeId is "${blockingTicketId}"`
+});
+
+// Get all tickets that are blocking anything (have blockedByRef)
+const blockingTickets = await client.queryNodes({
+  filter: `type is "core.ticket" and refs.blockedByRef exists`
+});
+```
+
+### Common Ref Patterns
+
+**Task Refs:**
 ```typescript
 {
   refs: [
-    { refName: 'productRef', toNodeId: productId },
-    { refName: 'teamRef', toNodeId: teamId },
-    { refName: 'assignedUserRef', toNodeId: userId },
-    { refName: 'releaseRef', toNodeId: releaseId }  // Optional
+    { refName: 'productRef', toNodeId: productId },      // Required
+    { refName: 'teamRef', toNodeId: teamId },            // Optional
+    { refName: 'assignedUserRef', toNodeId: userId },    // Optional
+    { refName: 'releaseRef', toNodeId: releaseId }       // Optional
   ]
 }
 ```
 
-### Ticket Refs
+**Ticket Refs:**
 ```typescript
 {
   refs: [
-    { refName: 'taskRef', toNodeId: taskId },  // Parent task
-    { refName: 'productRef', toNodeId: productId },  // Product (inherited)
-    { refName: 'assignedUserRef', toNodeId: userId },
-    { refName: 'blockedByRef', toNodeId: blockingTicketId }  // Dependencies
+    { refName: 'productRef', toNodeId: productId },      // Recommended for easier querying
+    { refName: 'assignedUserRef', toNodeId: userId },    // User assignment
+    { refName: 'blockedByRef', toNodeId: ticketId }      // Dependency (can have multiple)
   ]
 }
 ```
 
-### Entry Refs
-```typescript
-{
-  refs: [
-    { refName: 'ticketRef', toNodeId: ticketId },  // Parent ticket
-    { refName: 'userRef', toNodeId: userId },  // Who logged time
-    { refName: 'taskRef', toNodeId: taskId }  // Optional: parent task
-  ]
-}
-```
+**💡 TIP**: Always add `productRef` to tickets, even if they're under a task. This enables single-query access to all product tickets.
 
 ---
 
@@ -400,25 +476,35 @@ nube.plm/frontend/src/features/
 
 ### Creating Nodes
 
-**Always use `parentRef`, not `parentId`:**
+**⚠️ CRITICAL: Always use `parentRef`, NEVER `parentId`**
+
+The API accepts `parentId` but it will silently fail or create orphaned nodes. This is a known footgun.
 
 ```typescript
-// ✅ Correct
+// ✅ CORRECT - Use parentRef
 await client.createNode({
   type: 'core.ticket',
   name: 'My Ticket',
-  parentRef: taskId,  // ← Use parentRef
+  parentRef: taskId,  // ← Always use parentRef
   settings: { ... }
 });
 
-// ❌ Wrong
+// ❌ WRONG - parentId will fail
 await client.createNode({
   type: 'core.ticket',
   name: 'My Ticket',
-  parentId: taskId,  // ← Don't use parentId
+  parentId: taskId,  // ← This is NOT the same as parentRef!
   settings: { ... }
 });
+
+// ❌ WRONG - Don't query with parentId either
+filter: `parentId is "${taskId}"`  // ← Wrong
+
+// ✅ CORRECT - Use parent.id in queries
+filter: `parent.id is "${taskId}"`  // ← Correct
 ```
+
+**Why this matters**: `parentRef` creates the parent-child relationship. `parentId` is just a field that does nothing.
 
 ### TypeScript Types
 
@@ -498,7 +584,18 @@ export interface TimeEntrySettings {
 
 ## Comments System
 
-Both tasks and tickets support comments using the core.note node's command system. Comments are stored in NodeDataStore and support threaded discussions.
+Both tasks and tickets support comments using the **command system** (not child nodes).
+
+**⚠️ DESIGN NOTE**: Comments use a different pattern than time entries:
+- **Time Entries**: Stored as `core.entry` child nodes ✅
+- **Comments**: Stored in NodeDataStore via commands ✅
+
+**Why the difference?**
+- Time entries need to be queryable, aggregated, and filtered
+- Comments are append-only, chronological, and don't need complex queries
+- Commands provide simpler API for comment CRUD operations
+
+This is intentional but creates two mental models in the same system.
 
 ### Comment Data Structure
 
@@ -701,12 +798,37 @@ Task "Build Dashboard"
 ✅ **Do**: `parent.id is "${taskId}"`
 ❌ **Don't**: `parentId is "${taskId}"`
 
-### 4. Use Identity Tags
+### 4. Use Identity Tags Consistently
+
+**⚠️ IMPORTANT: Identity tag order and content matters for filtering.**
+
+**Standard Identity Patterns** (use these exactly):
 
 ```typescript
-identity: ['ticket', 'plm', 'bug']  // Bug ticket
+// Tasks
+identity: ['task', 'work-item', 'plm']  // All tasks use this
+
+// Tickets - always start with 'ticket', 'plm', then type
+identity: ['ticket', 'plm', 'bug']      // Bug ticket
 identity: ['ticket', 'plm', 'feature']  // Feature ticket
-identity: ['ticket', 'plm', 'task']  // Task ticket
+identity: ['ticket', 'plm', 'task']     // Task ticket
+identity: ['ticket', 'plm', 'chore']    // Chore ticket
+
+// Time entries
+identity: ['entry', 'time-log', 'plm']  // All time entries use this
+```
+
+**Filtering by Identity**:
+```typescript
+// Get all bugs
+filter: `identity contains ["bug"]`
+
+// Get all PLM tickets (any type)
+filter: `identity contains ["plm"]`
+
+// ❌ Don't use inconsistent tags
+identity: ['bug', 'ticket']  // Wrong order
+identity: ['ticket']         // Missing 'plm'
 ```
 
 ### 5. Store Time Entries as Child Nodes
@@ -714,25 +836,75 @@ identity: ['ticket', 'plm', 'task']  // Task ticket
 ✅ **Do**: Create `core.entry` nodes under tickets
 ❌ **Don't**: Store time entries in JSON arrays in settings
 
-### 6. Calculate Actual Hours
+### 6. Keep Calculated Fields in Sync
+
+**⚠️ CRITICAL: actualHours and progress will drift if not recalculated!**
+
+These fields are **stored** in settings but **calculated** from child nodes. You MUST update them whenever children change.
 
 ```typescript
-// Query time entries
-const entries = await client.queryNodes({
-  filter: `type is "core.entry" and parent.id is "${ticketId}"`
-});
+/**
+ * Update ticket's actualHours after adding/updating/deleting time entries
+ */
+async function recalculateActualHours(client: PluginClient, ticketId: string) {
+  // Query all time entries
+  const entries = await client.queryNodes({
+    filter: `type is "core.entry" and parent.id is "${ticketId}"`
+  });
 
-// Calculate total
-const actualHours = entries.reduce(
-  (sum, entry) => sum + (entry.settings?.hours || 0),
-  0
-);
+  // Calculate total
+  const actualHours = entries.reduce(
+    (sum, entry) => sum + (entry.settings?.hours || 0),
+    0
+  );
 
-// Update ticket
-await client.updateNodeSettings(ticketId, {
-  actualHours
-});
+  // Update ticket
+  await client.updateNodeSettings(ticketId, {
+    actualHours
+  });
+
+  return actualHours;
+}
+
+/**
+ * Update task's progress after adding/updating/deleting tickets
+ */
+async function recalculateTaskProgress(client: PluginClient, taskId: string) {
+  // Query all tickets in task
+  const tickets = await client.queryNodes({
+    filter: `type is "core.ticket" and parent.id is "${taskId}"`
+  });
+
+  if (tickets.length === 0) {
+    await client.updateNodeSettings(taskId, { progress: 0 });
+    return 0;
+  }
+
+  // Count completed
+  const completed = tickets.filter(
+    t => t.settings?.status === 'completed'
+  ).length;
+
+  const progress = Math.round((completed / tickets.length) * 100);
+
+  // Update task
+  await client.updateNodeSettings(taskId, {
+    progress,
+    completed: progress === 100
+  });
+
+  return progress;
+}
+
+// ⚠️ IMPORTANT: Call these helpers after ANY change to child nodes
+await client.createNode({ type: 'core.entry', ... });
+await recalculateActualHours(client, ticketId);
+
+await client.updateNodeSettings(ticketId, { status: 'completed' });
+await recalculateTaskProgress(client, taskId);
 ```
+
+**💡 TIP**: Consider creating custom hooks or backend triggers to automate this.
 
 ---
 
@@ -757,6 +929,8 @@ The codebase currently uses:
 
 ## See Also
 
+- [DESIGN-DECISIONS.md](./DESIGN-DECISIONS.md) - **READ THIS** - Design decisions, known issues, and workarounds
+- [API-QUICK-REFERENCE.md](./API-QUICK-REFERENCE.md) - Quick copy-paste examples
+- [UI-PATTERNS.md](./UI-PATTERNS.md) - Frontend components and patterns
 - [V2-OVERVIEW.md](/home/user/code/go/nube/rubix/docs/system/v1/plm-plugin/V2-OVERVIEW.md) - PLM V2 architecture
-- [GENERIC-CORE-NODES.md](/home/user/code/go/nube/rubix/docs/system/v1/nodes/GENERIC-CORE-NODES.md) - Core node types
 - [plugin-client README](/home/user/code/go/nube/rubix-sdk/frontend-sdk/plugin-client/README.md) - SDK usage

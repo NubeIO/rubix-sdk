@@ -847,3 +847,4 @@ export function CompactCommentsList({ comments }: { comments: Comment[] }) {
 
 - [README.md](./README.md) - Architecture overview
 - [API-QUICK-REFERENCE.md](./API-QUICK-REFERENCE.md) - API patterns
+- [DESIGN-DECISIONS.md](./DESIGN-DECISIONS.md) - Design decisions and known issues
