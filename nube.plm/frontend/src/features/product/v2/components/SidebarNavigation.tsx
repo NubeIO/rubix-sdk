@@ -2,7 +2,7 @@
  * Sidebar Navigation - Right sidebar with section nav and stats
  */
 
-import { Grid3x3, Info, DollarSign, Layers, CheckSquare, Ticket, Settings } from 'lucide-react';
+import { Grid3x3, Info, DollarSign, Layers, CheckSquare, Ticket, Settings, Factory } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +38,7 @@ export function SidebarNavigation({
     { id: 'pricing', label: 'Pricing', icon: DollarSign },
     { id: 'bom', label: 'Bill of Materials', icon: Layers, badge: stats.bomItemsCount },
     { id: 'tasks', label: 'Tasks', icon: CheckSquare, badge: stats.totalTasks },
+    { id: 'manufacturing', label: 'Manufacturing', icon: Factory },
     { id: 'tickets', label: 'Tickets', icon: Ticket, badge: stats.totalTickets },
     { id: 'system-info', label: 'System Info', icon: Settings },
   ];

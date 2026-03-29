@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/NubeIO/rubix-sdk/bootstrap"
 	"github.com/NubeIO/rubix-sdk/nodehooks"
@@ -14,7 +15,7 @@ import (
 // This controls CRUD operations on PLM node types (plm.product, plm.project, plm.task)
 type PLMNodeHooks struct {
 	nodehooks.NoOpHooks // Embed default implementations
-	client *bootstrap.Client
+	client              *bootstrap.Client
 }
 
 // NewPLMNodeHooks creates a new PLM node hooks handler
@@ -27,6 +28,8 @@ func (h *PLMNodeHooks) BeforeCreate(ctx context.Context, req *nodehooks.BeforeCr
 	switch req.Node.Type {
 	case "plm.product":
 		return h.validateProductCreate(ctx, req)
+	case "plm.manufacturing-run":
+		return h.validateManufacturingRunCreate(ctx, req)
 	case "plm.project":
 		return h.validateProjectCreate(ctx, req)
 	case "plm.task":
@@ -56,6 +59,8 @@ func (h *PLMNodeHooks) BeforeUpdate(ctx context.Context, req *nodehooks.BeforeUp
 	switch req.NewNode.Type {
 	case "plm.product":
 		return h.validateProductUpdate(ctx, req)
+	case "plm.manufacturing-run":
+		return h.validateManufacturingRunUpdate(ctx, req)
 	case "plm.project":
 		return h.validateProjectUpdate(ctx, req)
 	case "plm.task":
@@ -204,6 +209,91 @@ func (h *PLMNodeHooks) validateProductUpdate(ctx context.Context, req *nodehooks
 }
 
 // ============================================================================
+// Manufacturing Run Validation
+// ============================================================================
+
+func (h *PLMNodeHooks) validateManufacturingRunCreate(ctx context.Context, req *nodehooks.BeforeCreateRequest) (*nodehooks.BeforeCreateResponse, error) {
+	_ = ctx
+
+	hardwareVersion, _ := req.Node.Settings["hardwareVersion"].(string)
+	if strings.TrimSpace(hardwareVersion) == "" {
+		return &nodehooks.BeforeCreateResponse{
+			Allow:  false,
+			Reason: "hardwareVersion is required for plm.manufacturing-run nodes",
+		}, nil
+	}
+
+	targetQuantity, ok := extractNumericValue(req.Node.Settings["targetQuantity"])
+	if !ok || targetQuantity < 1 {
+		return &nodehooks.BeforeCreateResponse{
+			Allow:  false,
+			Reason: "targetQuantity must be at least 1",
+		}, nil
+	}
+
+	status, _ := req.Node.Settings["status"].(string)
+	if status == "" {
+		status = "planned"
+	}
+	if !isValidManufacturingRunStatus(status) {
+		return &nodehooks.BeforeCreateResponse{
+			Allow:  false,
+			Reason: fmt.Sprintf("invalid manufacturing run status '%s'", status),
+		}, nil
+	}
+
+	modified := req.Node
+	if modified.Settings == nil {
+		modified.Settings = map[string]any{}
+	}
+
+	if runNumber, _ := modified.Settings["runNumber"].(string); strings.TrimSpace(runNumber) == "" {
+		modified.Settings["runNumber"] = time.Now().Format(`MR-2006:01:02-15:04`)
+	}
+	if _, exists := modified.Settings["producedCount"]; !exists {
+		modified.Settings["producedCount"] = 0
+	}
+	if _, exists := modified.Settings["qaFailures"]; !exists {
+		modified.Settings["qaFailures"] = 0
+	}
+	modified.Settings["status"] = status
+
+	return &nodehooks.BeforeCreateResponse{
+		Allow:    true,
+		Modified: &modified,
+	}, nil
+}
+
+func (h *PLMNodeHooks) validateManufacturingRunUpdate(ctx context.Context, req *nodehooks.BeforeUpdateRequest) (*nodehooks.BeforeUpdateResponse, error) {
+	_ = ctx
+
+	oldStatus, _ := req.OldNode.Settings["status"].(string)
+	newStatus, _ := req.NewNode.Settings["status"].(string)
+	if newStatus != "" && !isValidManufacturingRunStatus(newStatus) {
+		return &nodehooks.BeforeUpdateResponse{
+			Allow:  false,
+			Reason: fmt.Sprintf("invalid manufacturing run status '%s'", newStatus),
+		}, nil
+	}
+
+	if oldStatus == "completed" && newStatus != "" && newStatus != "completed" {
+		return &nodehooks.BeforeUpdateResponse{
+			Allow:  false,
+			Reason: "completed manufacturing runs cannot move back to another status",
+		}, nil
+	}
+
+	if targetQuantity, ok := extractNumericValue(req.NewNode.Settings["targetQuantity"]); ok && targetQuantity < 1 {
+		return &nodehooks.BeforeUpdateResponse{
+			Allow:  false,
+			Reason: "targetQuantity must be at least 1",
+		}, nil
+	}
+
+	return &nodehooks.BeforeUpdateResponse{Allow: true}, nil
+}
+
+// ============================================================================
 // Project Validation
 // ============================================================================
 
@@ -269,12 +359,40 @@ func (h *PLMNodeHooks) validateTaskUpdate(ctx context.Context, req *nodehooks.Be
 
 func isValidProductStatus(status string) bool {
 	validStatuses := map[string]bool{
-		"Design":        true,
-		"Prototype":     true,
-		"Production":    true,
-		"Discontinued":  true,
+		"Design":       true,
+		"Prototype":    true,
+		"Production":   true,
+		"Discontinued": true,
 	}
 	return validStatuses[status]
+}
+
+func isValidManufacturingRunStatus(status string) bool {
+	validStatuses := map[string]bool{
+		"planned":     true,
+		"in-progress": true,
+		"qa":          true,
+		"completed":   true,
+		"cancelled":   true,
+	}
+	return validStatuses[status]
+}
+
+func extractNumericValue(value any) (float64, bool) {
+	switch typed := value.(type) {
+	case float64:
+		return typed, true
+	case float32:
+		return float64(typed), true
+	case int:
+		return float64(typed), true
+	case int32:
+		return float64(typed), true
+	case int64:
+		return float64(typed), true
+	default:
+		return 0, false
+	}
 }
 
 func (h *PLMNodeHooks) productCodeExists(ctx context.Context, productCode string) (bool, error) {

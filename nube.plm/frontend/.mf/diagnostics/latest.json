@@ -1,10 +1,10 @@
 {
   "latestErrorEvent": {
     "code": "TYPE-001",
-    "message": "Failed to generate type declaration. Execute the below cmd to reproduce and fix the error. #TYPE-001\nargs: {\"cmd\":\"npx tsc --project /home/user/code/go/nube/rubix-sdk/nube.plm/frontend/node_modules/.federation/tsconfig.a2d967495247831518e90e80091a5de7.json\"}\nView the docs to see how to solve: https://module-federation.io/guide/troubleshooting/type#type-001",
+    "message": "Failed to generate type declaration. Execute the below cmd to reproduce and fix the error. #TYPE-001\nargs: {\"cmd\":\"npx tsc --project /home/user/code/go/nube/rubix-sdk/nube.plm/frontend/node_modules/.federation/tsconfig.d9531986bbf267b6feeb54f47612d9bd.json\"}\nView the docs to see how to solve: https://module-federation.io/guide/troubleshooting/type#type-001",
     "args": {
-      "cmd": "npx tsc --project /home/user/code/go/nube/rubix-sdk/nube.plm/frontend/node_modules/.federation/tsconfig.a2d967495247831518e90e80091a5de7.json"
+      "cmd": "npx tsc --project /home/user/code/go/nube/rubix-sdk/nube.plm/frontend/node_modules/.federation/tsconfig.d9531986bbf267b6feeb54f47612d9bd.json"
     },
-    "timestamp": 1774740217618
+    "timestamp": 1774743472275
   }
 }

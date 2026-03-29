@@ -8,7 +8,7 @@
  * - Real API integration using plugin-client SDK
  */
 
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense, useCallback, useMemo } from 'react';
 import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
 import type { Product } from '../types/product.types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,9 +24,10 @@ const PricingSection = lazy(() => import('./sections/PricingSection').then(m => 
 const BOMSectionV2 = lazy(() => import('./sections/BOMSectionV2').then(m => ({ default: m.BOMSectionV2 })));
 const TasksSectionV2 = lazy(() => import('./sections/TasksSectionV2').then(m => ({ default: m.TasksSectionV2 })));
 const TicketsSection = lazy(() => import('./sections/TicketsSection').then(m => ({ default: m.TicketsSection })));
+const ManufacturingSection = lazy(() => import('./sections/ManufacturingSection').then(m => ({ default: m.ManufacturingSection })));
 const SystemInfoSection = lazy(() => import('./sections/SystemInfoSection').then(m => ({ default: m.SystemInfoSection })));
 
-export type SectionId = 'overview' | 'basic-info' | 'pricing' | 'bom' | 'tasks' | 'tickets' | 'system-info';
+export type SectionId = 'overview' | 'basic-info' | 'pricing' | 'bom' | 'tasks' | 'manufacturing' | 'tickets' | 'system-info';
 
 // Loading fallback for lazy sections
 function SectionLoadingFallback() {
@@ -64,7 +65,12 @@ export function ProductDetailPageV2({
   const [error, setError] = useState<string | null>(null);
 
   // Create plugin client
-  const client = createPluginClient({ orgId, deviceId, baseUrl, token });
+  const client = useMemo(() => createPluginClient({ orgId, deviceId, baseUrl, token }), [
+    orgId,
+    deviceId,
+    baseUrl,
+    token,
+  ]);
 
   // Stats state
   const [stats, setStats] = useState({
@@ -83,7 +89,7 @@ export function ProductDetailPageV2({
   });
 
   // Refresh product data
-  const refreshProduct = async () => {
+  const refreshProduct = useCallback(async () => {
     try {
       setIsLoading(true);
       const updated = await client.getNode(product.id);
@@ -95,10 +101,10 @@ export function ProductDetailPageV2({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [client, onProductUpdated, product.id]);
 
   // Update product
-  const updateProduct = async (updates: { name?: string; settings?: Record<string, any> }) => {
+  const updateProduct = useCallback(async (updates: { name?: string; settings?: Record<string, any> }) => {
     try {
       setIsLoading(true);
       // Update name if provided
@@ -118,12 +124,27 @@ export function ProductDetailPageV2({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [client, onProductUpdated, product]);
 
   // Calculate stats (will be updated by child components)
-  const updateStats = (newStats: Partial<typeof stats>) => {
-    setStats(prev => ({ ...prev, ...newStats }));
-  };
+  const updateStats = useCallback((newStats: Partial<typeof stats>) => {
+    setStats((prev) => {
+      let changed = false;
+
+      for (const [key, value] of Object.entries(newStats)) {
+        if (prev[key as keyof typeof prev] !== value) {
+          changed = true;
+          break;
+        }
+      }
+
+      if (!changed) {
+        return prev;
+      }
+
+      return { ...prev, ...newStats };
+    });
+  }, []);
 
   // Render active section
   const renderSection = () => {
@@ -149,6 +170,8 @@ export function ProductDetailPageV2({
         return <BOMSectionV2 {...commonProps} onStatsUpdate={updateStats} />;
       case 'tasks':
         return <TasksSectionV2 {...commonProps} onStatsUpdate={updateStats} />;
+      case 'manufacturing':
+        return <ManufacturingSection {...commonProps} onStatsUpdate={updateStats} />;
       case 'tickets':
         return <TicketsSection {...commonProps} onStatsUpdate={updateStats} />;
       case 'system-info':
