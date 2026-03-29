@@ -2,7 +2,7 @@
  * Task Sidebar Navigation - Right sidebar with section navigation and stats
  */
 
-import { Activity, BarChart3, Clock3, Info, ListTodo, Settings } from 'lucide-react';
+import { Activity, BarChart3, Clock3, Info, ListTodo, MessageSquare, Settings } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -37,6 +37,7 @@ export function TaskSidebarNavigation({
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'basic-info', label: 'Basic Info', icon: Info },
     { id: 'tickets', label: 'Tickets', icon: ListTodo, badge: stats.totalTickets },
+    { id: 'comments', label: 'Comments', icon: MessageSquare },
     { id: 'time-entries', label: 'Time Entries', icon: Clock3 },
     { id: 'system-info', label: 'System Info', icon: Settings },
   ];

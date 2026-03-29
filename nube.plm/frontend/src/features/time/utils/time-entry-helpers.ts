@@ -44,23 +44,16 @@ export async function createTimeEntryWithRecalc(
   try {
     // Verify parent ticket exists
     const parentTicket = await client.getNode(input.parentId);
-    if (!parentTicket || parentTicket.type !== 'core.ticket') {
+    if (!parentTicket || parentTicket.type !== 'plm.ticket') {
       throw new Error('Invalid parentId: must be a valid ticket ID');
     }
 
     // Create the time entry
-    const entry = await client.createNode({
+    const entry = await client.createNode(input.parentId, {
       type: 'core.entry',
       profile: 'plm-time-log',
       name: input.name,
-      parentId: input.parentId,
       identity: ['entry', 'time-log', 'plm'],
-      refs: [
-        {
-          refName: 'parentRef',
-          toNodeId: input.parentId,
-        },
-      ],
       settings: {
         date: input.date,
         hours: input.hours,

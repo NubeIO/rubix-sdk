@@ -1,5 +1,5 @@
 import type { Node } from '../ras/types';
-import type { CreateNodeInput, PluginClient, UpdateNodeInput } from './index';
+import type { CreateNodeInput, NodeRef, PluginClient, UpdateNodeInput } from './index';
 
 export async function getNode(
   client: PluginClient,
@@ -19,12 +19,25 @@ export async function getNode(
 
 export async function createNode(
   client: PluginClient,
-  input: CreateNodeInput
+  parentId: string | undefined,
+  input: Omit<CreateNodeInput, 'parentId' | 'refs'> & { refs?: NodeRef[] }
 ): Promise<Node> {
   const rasClient = client.getRASClient();
   const config = client.getConfig();
+  const refs = [...(input.refs ?? [])];
 
-  console.log('[PluginClient] createNode called:', { type: input.type, name: input.name });
+  if (parentId && !refs.some((ref) => ref.refName === 'parentRef')) {
+    refs.unshift({
+      refName: 'parentRef',
+      toNodeId: parentId,
+    });
+  }
+
+  console.log('[PluginClient] createNode called:', {
+    type: input.type,
+    name: input.name,
+    parentId,
+  });
 
   const result = await rasClient.nodes.create({
     orgId: config.orgId,
@@ -34,12 +47,12 @@ export async function createNode(
       profile: input.profile,
       name: input.name,
       identity: input.identity,
-      parentId: input.parentId,
+      parentId,
       settings: input.settings,
       data: input.data,
       ui: input.ui,
       position: input.position,
-      refs: input.refs,
+      refs,
     },
   });
 

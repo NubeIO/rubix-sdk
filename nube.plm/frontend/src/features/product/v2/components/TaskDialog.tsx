@@ -15,6 +15,7 @@ import {
   listNodeSchemas
 } from '@rubix-sdk/frontend/plugin-client/schema';
 import { getDefaultTaskDueDate } from '@features/task/utils/task-date';
+import { createCommentsNode } from '@features/comments/utils/comment-helpers';
 
 interface TaskDialogProps {
   client: any;
@@ -123,12 +124,13 @@ export function TaskDialog({ client, productId, task, onClose, onSuccess }: Task
         });
       } else {
         // Create new task
-        await client.createNode({
+        const task = await client.createNode(productId, {
           type: 'plm.task',
           name: name.trim(),
-          parentId: productId,
           settings,
         });
+        // Create the bound comments node immediately
+        await createCommentsNode(client, task.id);
       }
 
       onSuccess();

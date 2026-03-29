@@ -16,7 +16,7 @@
  *   const products = await client.queryNodes({ filter: 'type is "plm.product"' });
  *
  *   // Create node
- *   const newProduct = await client.createNode({
+ *   const newProduct = await client.createNode(undefined, {
  *     type: 'plm.product',
  *     name: 'Widget Pro',
  *     settings: { productCode: 'WGT-001', price: 99.99 }
@@ -71,6 +71,45 @@ import {
   type CommandExecuteResult,
   type ExecuteCommandOptions,
 } from './commands';
+import {
+  listTeams as listTeamsHelper,
+  getTeam as getTeamHelper,
+  createTeam as createTeamHelper,
+  updateTeam as updateTeamHelper,
+  deleteTeam as deleteTeamHelper,
+  addUserToTeam as addUserToTeamHelper,
+  removeUserFromTeam as removeUserFromTeamHelper,
+  listTeamUsers as listTeamUsersHelper,
+  type Team,
+  type CreateTeamInput,
+  type UpdateTeamInput,
+} from './teams';
+import {
+  listUsers as listUsersHelper,
+  getUser as getUserHelper,
+  inviteUser as inviteUserHelper,
+  updateUser as updateUserHelper,
+  deleteUser as deleteUserHelper,
+  type User,
+  type InviteUserInput,
+  type UpdateUserInput,
+} from './users';
+import {
+  listRefs as listRefsHelper,
+  createRef as createRefHelper,
+  deleteRef as deleteRefHelper,
+  assignTeamToNode as assignTeamToNodeHelper,
+  assignUserToNode as assignUserToNodeHelper,
+  removeTeamsFromNode as removeTeamsFromNodeHelper,
+  removeUsersFromNode as removeUsersFromNodeHelper,
+  getNodeTeams as getNodeTeamsHelper,
+  getNodeUsers as getNodeUsersHelper,
+  isNodePublic as isNodePublicHelper,
+  replaceNodeTeams as replaceNodeTeamsHelper,
+  replaceNodeUsers as replaceNodeUsersHelper,
+  type Ref,
+  type CreateRefInput,
+} from './refs';
 
 export interface PluginClientConfig {
   orgId: string;
@@ -216,7 +255,7 @@ export class PluginClient {
    *
    * @example
    * ```ts
-   * const product = await client.createNode({
+   * const product = await client.createNode(undefined, {
    *   type: 'plm.product',
    *   name: 'Widget Pro',
    *   settings: {
@@ -228,9 +267,12 @@ export class PluginClient {
    * });
    * ```
    */
-  async createNode(input: CreateNodeInput): Promise<Node> {
+  async createNode(
+    parentId: string | undefined,
+    input: Omit<CreateNodeInput, 'parentId' | 'refs'> & { refs?: NodeRef[] }
+  ): Promise<Node> {
     try {
-      return await createNodeHelper(this, input);
+      return await createNodeHelper(this, parentId, input);
     } catch (err: any) {
       console.error('[PluginClient] createNode failed:', err);
       throw new PluginClientError(
@@ -787,6 +829,568 @@ export class PluginClient {
   }
 
   // ========================================================================
+  // Teams
+  // ========================================================================
+
+  /**
+   * List all teams in the organization
+   *
+   * @example
+   * ```ts
+   * const teams = await client.listTeams();
+   * console.log(teams.map(t => t.name)); // ["Engineering", "Sales", "QA"]
+   * ```
+   */
+  async listTeams(): Promise<Team[]> {
+    try {
+      return await listTeamsHelper(this);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || 'Failed to list teams',
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Get a specific team by ID
+   *
+   * @example
+   * ```ts
+   * const team = await client.getTeam('team_001');
+   * console.log(team.name, team.settings);
+   * ```
+   */
+  async getTeam(teamId: string): Promise<Team> {
+    try {
+      return await getTeamHelper(this, teamId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to get team ${teamId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Create a new team
+   *
+   * @example
+   * ```ts
+   * const team = await client.createTeam({
+   *   name: 'Engineering',
+   *   settings: { description: 'Core engineering team' }
+   * });
+   * ```
+   */
+  async createTeam(input: CreateTeamInput): Promise<Team> {
+    try {
+      return await createTeamHelper(this, input);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || 'Failed to create team',
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Update a team
+   *
+   * @example
+   * ```ts
+   * await client.updateTeam('team_001', {
+   *   name: 'Engineering Team',
+   *   settings: { description: 'Updated description' }
+   * });
+   * ```
+   */
+  async updateTeam(teamId: string, input: UpdateTeamInput): Promise<Team> {
+    try {
+      return await updateTeamHelper(this, teamId, input);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to update team ${teamId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Delete a team
+   *
+   * @example
+   * ```ts
+   * await client.deleteTeam('team_001');
+   * ```
+   */
+  async deleteTeam(teamId: string): Promise<void> {
+    try {
+      await deleteTeamHelper(this, teamId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to delete team ${teamId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Add a user to a team
+   *
+   * @example
+   * ```ts
+   * await client.addUserToTeam('team_001', 'user_alice_123');
+   * ```
+   */
+  async addUserToTeam(teamId: string, userId: string): Promise<void> {
+    try {
+      await addUserToTeamHelper(this, teamId, userId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to add user ${userId} to team ${teamId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Remove a user from a team
+   *
+   * @example
+   * ```ts
+   * await client.removeUserFromTeam('team_001', 'user_alice_123');
+   * ```
+   */
+  async removeUserFromTeam(teamId: string, userId: string): Promise<void> {
+    try {
+      await removeUserFromTeamHelper(this, teamId, userId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to remove user ${userId} from team ${teamId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * List all users in a team
+   *
+   * @example
+   * ```ts
+   * const users = await client.listTeamUsers('team_001');
+   * console.log(users.map(u => u.name)); // ["Alice", "Bob", "Charlie"]
+   * ```
+   */
+  async listTeamUsers(teamId: string): Promise<User[]> {
+    try {
+      return await listTeamUsersHelper(this, teamId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to list users in team ${teamId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  // ========================================================================
+  // Users
+  // ========================================================================
+
+  /**
+   * List all users in the organization
+   *
+   * @example
+   * ```ts
+   * const users = await client.listUsers({ includeSettings: true });
+   * console.log(users.map(u => u.name)); // ["Alice", "Bob", "Charlie"]
+   * ```
+   */
+  async listUsers(options?: { includeSettings?: boolean }): Promise<User[]> {
+    try {
+      return await listUsersHelper(this, options);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || 'Failed to list users',
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Get a specific user by ID
+   *
+   * @example
+   * ```ts
+   * const user = await client.getUser('user_alice_123', { includeSettings: true });
+   * console.log(user.name, user.settings);
+   * ```
+   */
+  async getUser(userId: string, options?: { includeSettings?: boolean }): Promise<User> {
+    try {
+      return await getUserHelper(this, userId, options);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to get user ${userId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Invite a new user to the organization
+   *
+   * @example
+   * ```ts
+   * const user = await client.inviteUser({
+   *   email: 'alice@example.com',
+   *   name: 'Alice',
+   *   role: 'member'
+   * });
+   * ```
+   */
+  async inviteUser(input: InviteUserInput): Promise<User> {
+    try {
+      return await inviteUserHelper(this, input);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || 'Failed to invite user',
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Update a user
+   *
+   * @example
+   * ```ts
+   * await client.updateUser('user_alice_123', {
+   *   name: 'Alice Smith',
+   *   settings: { role: 'admin' }
+   * });
+   * ```
+   */
+  async updateUser(userId: string, input: UpdateUserInput): Promise<User> {
+    try {
+      return await updateUserHelper(this, userId, input);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to update user ${userId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Delete a user
+   *
+   * @example
+   * ```ts
+   * await client.deleteUser('user_alice_123');
+   * ```
+   */
+  async deleteUser(userId: string): Promise<void> {
+    try {
+      await deleteUserHelper(this, userId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to delete user ${userId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  // ========================================================================
+  // Refs & Access Control
+  // ========================================================================
+
+  /**
+   * List all refs for a node
+   *
+   * @example
+   * ```ts
+   * const refs = await client.listRefs(taskId);
+   * console.log(refs); // [{ refName: 'userRef', toNodeId: 'user_alice_123', ... }]
+   * ```
+   */
+  async listRefs(nodeId: string): Promise<Ref[]> {
+    try {
+      return await listRefsHelper(this, nodeId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to list refs for node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Create a new ref on a node
+   *
+   * @example
+   * ```ts
+   * await client.createRef(taskId, {
+   *   refName: 'userRef',
+   *   toNodeId: 'user_alice_123',
+   *   displayName: 'Alice'
+   * });
+   * ```
+   */
+  async createRef(nodeId: string, input: CreateRefInput): Promise<Ref> {
+    try {
+      return await createRefHelper(this, nodeId, input);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to create ref on node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Delete all refs of a specific type from a node
+   *
+   * WARNING: This removes ALL refs with the given refName, not a specific target.
+   *
+   * @example
+   * ```ts
+   * await client.deleteRef(taskId, 'userRef'); // Removes ALL userRefs
+   * ```
+   */
+  async deleteRef(nodeId: string, refName: string): Promise<void> {
+    try {
+      await deleteRefHelper(this, nodeId, refName);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to delete ref ${refName} from node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Assign a team to a node (creates teamRef)
+   *
+   * @example
+   * ```ts
+   * await client.assignTeamToNode(taskId, 'team_001', 'Engineering');
+   * ```
+   */
+  async assignTeamToNode(nodeId: string, teamId: string, teamName?: string): Promise<Ref> {
+    try {
+      return await assignTeamToNodeHelper(this, nodeId, teamId, teamName);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to assign team ${teamId} to node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Assign a user to a node (creates userRef)
+   *
+   * @example
+   * ```ts
+   * await client.assignUserToNode(taskId, 'user_alice_123', 'Alice');
+   * ```
+   */
+  async assignUserToNode(nodeId: string, userId: string, userName?: string): Promise<Ref> {
+    try {
+      return await assignUserToNodeHelper(this, nodeId, userId, userName);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to assign user ${userId} to node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Remove all team assignments from a node
+   *
+   * WARNING: This removes ALL teamRefs from the node.
+   *
+   * @example
+   * ```ts
+   * await client.removeTeamsFromNode(taskId);
+   * ```
+   */
+  async removeTeamsFromNode(nodeId: string): Promise<void> {
+    try {
+      await removeTeamsFromNodeHelper(this, nodeId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to remove teams from node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Remove all user assignments from a node
+   *
+   * WARNING: This removes ALL userRefs from the node.
+   *
+   * @example
+   * ```ts
+   * await client.removeUsersFromNode(taskId);
+   * ```
+   */
+  async removeUsersFromNode(nodeId: string): Promise<void> {
+    try {
+      await removeUsersFromNodeHelper(this, nodeId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to remove users from node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Get all teams assigned to a node
+   *
+   * @example
+   * ```ts
+   * const teams = await client.getNodeTeams(taskId);
+   * console.log(teams.map(t => t.displayName)); // ["Engineering", "QA"]
+   * ```
+   */
+  async getNodeTeams(nodeId: string): Promise<Ref[]> {
+    try {
+      return await getNodeTeamsHelper(this, nodeId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to get teams for node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Get all users assigned to a node
+   *
+   * @example
+   * ```ts
+   * const users = await client.getNodeUsers(taskId);
+   * console.log(users.map(u => u.displayName)); // ["Alice", "Bob"]
+   * ```
+   */
+  async getNodeUsers(nodeId: string): Promise<Ref[]> {
+    try {
+      return await getNodeUsersHelper(this, nodeId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to get users for node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Check if a node is public (has no teamRef or userRef)
+   *
+   * @example
+   * ```ts
+   * const isPublic = await client.isNodePublic(taskId);
+   * if (isPublic) {
+   *   console.log('Task is visible to everyone');
+   * }
+   * ```
+   */
+  async isNodePublic(nodeId: string): Promise<boolean> {
+    try {
+      return await isNodePublicHelper(this, nodeId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to check if node ${nodeId} is public`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Replace all team assignments on a node
+   *
+   * Efficiently replaces all teamRefs with a new set of teams.
+   *
+   * @example
+   * ```ts
+   * await client.replaceNodeTeams(taskId, [
+   *   { teamId: 'team_001', teamName: 'Engineering' },
+   *   { teamId: 'team_002', teamName: 'QA' }
+   * ]);
+   * ```
+   */
+  async replaceNodeTeams(
+    nodeId: string,
+    teams: Array<{ teamId: string; teamName?: string }>
+  ): Promise<void> {
+    try {
+      await replaceNodeTeamsHelper(this, nodeId, teams);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to replace teams for node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Replace all user assignments on a node
+   *
+   * Efficiently replaces all userRefs with a new set of users.
+   *
+   * @example
+   * ```ts
+   * // Assign task to Alice only
+   * await client.replaceNodeUsers(taskId, [
+   *   { userId: 'user_alice_123', userName: 'Alice' }
+   * ]);
+   * ```
+   */
+  async replaceNodeUsers(
+    nodeId: string,
+    users: Array<{ userId: string; userName?: string }>
+  ): Promise<void> {
+    try {
+      await replaceNodeUsersHelper(this, nodeId, users);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to replace users for node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  // ========================================================================
   // Low-level API
   // ========================================================================
 
@@ -904,3 +1508,6 @@ export * from './query';
 export * from './node';
 export * from './url-builder';
 export * from './commands';
+export * from './teams';
+export * from './users';
+export * from './refs';

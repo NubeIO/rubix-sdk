@@ -35,7 +35,7 @@ describe('Node CRUD Operations', () => {
     it('should create a node with basic fields', async () => {
       const name = testName('test-node');
 
-      const node = await client.createNode({
+      const node = await client.createNode(undefined, {
         type: 'core.folder',
         name,
         position: { x: 100, y: 200 },
@@ -53,7 +53,7 @@ describe('Node CRUD Operations', () => {
     it('should create a node with settings', async () => {
       const name = testName('test-counter');
 
-      const node = await client.createNode({
+      const node = await client.createNode(undefined, {
         type: 'core.counter',
         name,
         settings: {
@@ -75,32 +75,26 @@ describe('Node CRUD Operations', () => {
     it('should create a child node with parentRef', async () => {
       // Create parent
       const parentName = testName('parent-folder');
-      const parent = await client.createNode({
+      const parent = await client.createNode(undefined, {
         type: 'core.folder',
         name: parentName,
       });
       createdNodes.push(parent.id!);
 
-      // Create child with parentRef
+      // Create child and let the SDK add parentRef automatically
       const childName = testName('child-node');
-      const child = await client.createNode({
+      const child = await client.createNode(parent.id, {
         type: 'core.counter',
         name: childName,
-        parentId: parent.id,
-        refs: [
-          {
-            refName: 'parentRef',
-            toNodeId: parent.id!,
-            toNodeName: parentName,
-          },
-        ],
       });
 
       expect(child.id).toBeDefined();
       expect(child.parentId).toBe(parent.id);
+      const refs = await client.listRefs(child.id!);
+      expect(refs.some((ref) => ref.refName === 'parentRef' && ref.toNodeId === parent.id)).toBe(true);
 
       createdNodes.push(child.id!);
-      console.log(`  ✓ Created child with parentRef: ${child.id} → ${parent.id}`);
+      console.log(`  ✓ Created child with auto parentRef: ${child.id} → ${parent.id}`);
     });
   });
 
@@ -108,7 +102,7 @@ describe('Node CRUD Operations', () => {
     let testNodeId: string;
 
     beforeAll(async () => {
-      const node = await client.createNode({
+      const node = await client.createNode(undefined, {
         type: 'core.folder',
         name: testName('read-test'),
         settings: { color: 'blue' },
@@ -157,7 +151,7 @@ describe('Node CRUD Operations', () => {
     let testNodeId: string;
 
     beforeAll(async () => {
-      const node = await client.createNode({
+      const node = await client.createNode(undefined, {
         type: 'core.counter',
         name: testName('update-test'),
         settings: { initialValue: 0 },
@@ -205,7 +199,7 @@ describe('Node CRUD Operations', () => {
 
   describe('Delete Node', () => {
     it('should delete a node', async () => {
-      const node = await client.createNode({
+      const node = await client.createNode(undefined, {
         type: 'core.folder',
         name: testName('delete-test'),
       });

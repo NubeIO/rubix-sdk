@@ -285,6 +285,84 @@ await client.createNode({
 
 ---
 
+## Understanding Parent Relationships
+
+Parent references work differently depending on whether you're **creating**, **querying**, or **reading** nodes:
+
+### When Creating Nodes
+
+Use `parentRef` (NOT `parentId`):
+
+```typescript
+// ✅ CORRECT
+await client.createNode({
+  type: 'plm.ticket',
+  name: 'Fix bug',
+  parentRef: taskId,  // ← Use parentRef
+  settings: { ... }
+});
+
+// ❌ WRONG - will create orphaned node!
+await client.createNode({
+  type: 'plm.ticket',
+  name: 'Fix bug',
+  parentId: taskId,  // ← Don't use parentId
+  settings: { ... }
+});
+```
+
+### When Querying Nodes
+
+Use `parent.id` or shorthand `p.id` in filters:
+
+```typescript
+// ✅ CORRECT - Full syntax
+const tickets = await client.queryNodes({
+  filter: `type is "plm.ticket" and parent.id is "${taskId}"`
+});
+
+// ✅ CORRECT - Shorthand syntax
+const tickets = await client.queryNodes({
+  filter: `type is "plm.ticket" and p.id is "${taskId}"`
+});
+
+// ✅ CORRECT - Query by parent type
+const tickets = await client.queryNodes({
+  filter: `type is "plm.ticket" and parent.type is "plm.task"`
+});
+
+// ✅ CORRECT - Multi-level query
+const tickets = await client.queryNodes({
+  filter: `type is "plm.ticket" and parent.parent.id is "${productId}"`
+});
+```
+
+### When Reading Node Responses
+
+The response includes `parentId` field:
+
+```typescript
+const node = await client.getNode(nodeId);
+
+console.log(node.parentId);  // ← Response has parentId
+// "parent_abc123"
+```
+
+### Summary
+
+| Operation | Field Name | Example |
+|-----------|-----------|---------|
+| **Create** | `parentRef` | `createNode({ parentRef: 'xyz' })` |
+| **Query** | `parent.id` or `p.id` | `filter: "p.id is 'xyz'"` |
+| **Read Response** | `parentId` | `node.parentId` |
+
+**Remember:**
+- CREATE with `parentRef`
+- QUERY with `parent.id` or `p.id`
+- RESPONSE has `parentId`
+
+---
+
 ## Complete Example: plm.task
 
 ### config/nodes.yaml
@@ -369,7 +447,7 @@ const tasks = await client.queryNodes({
 await client.createNode({
   type: 'plm.task',
   name: 'Fix bug',
-  parentId: productId,
+  parentRef: productId,  // ✅ Use parentRef, NOT parentId
   settings: {
     status: 'pending',
     priority: 'High'
@@ -416,7 +494,7 @@ curl -X POST "http://localhost:9000/api/v1/orgs/test/devices/$DEVICE_ID/nodes" \
   -d '{
     "type": "plm.task",
     "name": "Test Task",
-    "parentId": "parent_node_id",
+    "parentRef": "parent_node_id",
     "settings": {
       "status": "pending"
     }
@@ -449,8 +527,71 @@ Should return created node with:
 
 ---
 
+## Using Core Nodes Without Profiles
+
+Sometimes you don't need to customize a core node type at all - you just want to use it as-is. A great example is the **comments pattern** using `core.note`.
+
+### Example: Comments Using core.note
+
+The PLM plugin uses `core.note` nodes to store comments for tasks and tickets **without creating a profile or custom type**:
+
+**1. Declare core.note in plugin.json**
+
+```json
+{
+  "coreNodeTypes": [
+    "core.note",     // ← Just declare you're using it
+    "core.task",
+    "core.ticket"
+  ]
+}
+```
+
+**2. Create note nodes from frontend**
+
+```typescript
+// Create a hidden note child to store comments
+const noteNode = await client.createNode({
+  type: 'core.note',           // ← Use core type directly
+  name: '_comments',
+  parentRef: taskId,
+  settings: {
+    hidden: true,
+    noteType: 'comments'
+  }
+});
+
+// Execute commands on the note node
+await executePostCommand(client, noteNode.id, 'addComment', {
+  text: 'This is a comment'
+});
+```
+
+**Why this works:**
+- ✅ `core.note` already has `addComment`, `listComments`, `deleteComment` commands
+- ✅ No backend Go code needed in your plugin
+- ✅ No profile configuration needed
+- ✅ Just declare the core type and use it
+
+**See full example:** `/home/user/code/go/nube/rubix-sdk/docs/sessions/comments.md`
+
+### When to Use Core Nodes Directly
+
+Use a core node directly (without profile or custom type) when:
+- The core node already has the commands/behavior you need
+- You don't need custom defaults or validation
+- You want to minimize configuration
+- You're using it for internal/hidden functionality (like `_comments`)
+
+Common examples:
+- `core.note` - For comments, notes, logs
+- `core.folder` - For organizing child nodes
+- `core.document` - For storing files/attachments
+- `core.entry` - For time logs, activity feeds
+
 ## See Also
 
 - [Node Profiles Guide](/home/user/code/go/nube/rubix/docs/system/v1/plugins/NODE-PROFILES.md) - Complete node profiles documentation
 - [Plugin Backend](/home/user/code/go/nube/rubix/docs/system/v1/plugins/BACKEND.md) - Implementing node types
 - [Creating Nodes](/home/user/code/go/nube/rubix/docs/system/v1/nodes/CREATING-NODES.md) - Node creation API
+- [Comments Implementation](/home/user/code/go/nube/rubix-sdk/docs/sessions/comments.md) - Example of using core.note for comments

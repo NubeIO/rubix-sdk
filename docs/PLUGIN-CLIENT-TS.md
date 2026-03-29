@@ -102,7 +102,11 @@ function MyWidget({ orgId, deviceId, baseUrl, token }) {
   const newItem = await client.createNode({
     type: 'myplugin.item',
     name: 'Item 1',
-    parentRef: collectionId,
+    "refs": [
+      {
+        "refName": "parentRef",
+        "toNodeId": "container-1"
+      },
     settings: {
       field1: 'value1',
       field2: 123,
@@ -338,6 +342,402 @@ List all nodes (prefer queryNodes for filtering).
 ```typescript
 const allNodes = await client.listNodes();
 ```
+
+## Teams, Users & Access Control
+
+The plugin client provides full support for teams, users, and refs (references) including convenient helpers for access control patterns like task assignment.
+
+### Teams API
+
+#### client.listTeams()
+
+List all teams in the organization.
+
+```typescript
+const teams = await client.listTeams();
+console.log(teams.map(t => ({ id: t.id, name: t.name })));
+// [{ id: 'team_001', name: 'Engineering' }, { id: 'team_002', name: 'QA' }]
+```
+
+#### client.getTeam(teamId)
+
+Get a specific team by ID.
+
+```typescript
+const team = await client.getTeam('team_001');
+console.log(team.name, team.settings?.description);
+```
+
+#### client.createTeam(input)
+
+Create a new team.
+
+```typescript
+const team = await client.createTeam({
+  name: 'Engineering',
+  settings: {
+    description: 'Core engineering team',
+    department: 'R&D'
+  }
+});
+```
+
+#### client.updateTeam(teamId, input)
+
+Update a team.
+
+```typescript
+await client.updateTeam('team_001', {
+  name: 'Engineering Team',
+  settings: { description: 'Updated description' }
+});
+```
+
+#### client.deleteTeam(teamId)
+
+Delete a team.
+
+```typescript
+await client.deleteTeam('team_001');
+```
+
+#### client.addUserToTeam(teamId, userId)
+
+Add a user to a team.
+
+```typescript
+await client.addUserToTeam('team_001', 'user_alice_123');
+```
+
+#### client.removeUserFromTeam(teamId, userId)
+
+Remove a user from a team.
+
+```typescript
+await client.removeUserFromTeam('team_001', 'user_alice_123');
+```
+
+#### client.listTeamUsers(teamId)
+
+List all users in a team.
+
+```typescript
+const users = await client.listTeamUsers('team_001');
+console.log(users.map(u => u.name)); // ["Alice", "Bob", "Charlie"]
+```
+
+### Users API
+
+#### client.listUsers(options?)
+
+List all users in the organization.
+
+```typescript
+const users = await client.listUsers({ includeSettings: true });
+console.log(users.map(u => ({ id: u.id, name: u.name, email: u.settings?.email })));
+```
+
+#### client.getUser(userId, options?)
+
+Get a specific user by ID.
+
+```typescript
+const user = await client.getUser('user_alice_123', { includeSettings: true });
+console.log(user.name, user.settings?.email, user.settings?.role);
+```
+
+#### client.inviteUser(input)
+
+Invite a new user to the organization.
+
+```typescript
+const user = await client.inviteUser({
+  email: 'alice@example.com',
+  name: 'Alice',
+  role: 'member',
+  settings: {
+    department: 'Engineering'
+  }
+});
+```
+
+#### client.updateUser(userId, input)
+
+Update a user.
+
+```typescript
+await client.updateUser('user_alice_123', {
+  name: 'Alice Smith',
+  settings: { role: 'admin', department: 'Engineering' }
+});
+```
+
+#### client.deleteUser(userId)
+
+Delete a user.
+
+```typescript
+await client.deleteUser('user_alice_123');
+```
+
+### Refs API (General)
+
+Refs are references between nodes. The most common use cases are:
+- **Access Control**: `teamRef`, `userRef` - Control who can see a node
+- **Hierarchy**: `parentRef`, `siteRef`, `equipRef` - Organize nodes
+- **Cross-references**: `driverRef`, `meterRef` - Link related nodes
+
+#### client.listRefs(nodeId)
+
+List all refs for a node.
+
+```typescript
+const refs = await client.listRefs(taskId);
+console.log(refs);
+// [
+//   { refName: 'userRef', toNodeId: 'user_alice_123', displayName: 'Alice' },
+//   { refName: 'teamRef', toNodeId: 'team_001', displayName: 'Engineering' }
+// ]
+```
+
+#### client.createRef(nodeId, input)
+
+Create a new ref on a node.
+
+```typescript
+await client.createRef(taskId, {
+  refName: 'userRef',
+  toNodeId: 'user_alice_123',
+  displayName: 'Alice',
+  order: 0,
+  metadata: { assignedAt: new Date().toISOString() }
+});
+```
+
+#### client.deleteRef(nodeId, refName)
+
+Delete all refs of a specific type from a node.
+
+**⚠️ WARNING:** This removes ALL refs with the given refName, not a specific target.
+
+```typescript
+// Remove ALL userRefs from the task
+await client.deleteRef(taskId, 'userRef');
+```
+
+### Access Control Helpers
+
+Convenient methods for common access control patterns (teamRef/userRef management).
+
+#### client.assignUserToNode(nodeId, userId, userName?)
+
+Assign a user to a node (creates userRef). Perfect for task assignment.
+
+```typescript
+// Assign task to Alice (only she can see it)
+await client.assignUserToNode(taskId, 'user_alice_123', 'Alice');
+```
+
+#### client.assignTeamToNode(nodeId, teamId, teamName?)
+
+Assign a team to a node (creates teamRef).
+
+```typescript
+// Assign task to Engineering team
+await client.assignTeamToNode(taskId, 'team_001', 'Engineering');
+```
+
+#### client.getNodeUsers(nodeId)
+
+Get all users assigned to a node.
+
+```typescript
+const users = await client.getNodeUsers(taskId);
+console.log(users.map(u => u.displayName)); // ["Alice", "Bob"]
+```
+
+#### client.getNodeTeams(nodeId)
+
+Get all teams assigned to a node.
+
+```typescript
+const teams = await client.getNodeTeams(taskId);
+console.log(teams.map(t => t.displayName)); // ["Engineering", "QA"]
+```
+
+#### client.removeUsersFromNode(nodeId)
+
+Remove all user assignments from a node.
+
+**⚠️ WARNING:** This removes ALL userRefs from the node.
+
+```typescript
+await client.removeUsersFromNode(taskId);
+```
+
+#### client.removeTeamsFromNode(nodeId)
+
+Remove all team assignments from a node.
+
+**⚠️ WARNING:** This removes ALL teamRefs from the node.
+
+```typescript
+await client.removeTeamsFromNode(taskId);
+```
+
+#### client.isNodePublic(nodeId)
+
+Check if a node is public (has no teamRef or userRef).
+
+```typescript
+const isPublic = await client.isNodePublic(taskId);
+if (isPublic) {
+  console.log('Task is visible to everyone in the organization');
+}
+```
+
+#### client.replaceNodeUsers(nodeId, users)
+
+Efficiently replace all user assignments with a new list.
+
+```typescript
+// Reassign task to Alice only (removes all other users)
+await client.replaceNodeUsers(taskId, [
+  { userId: 'user_alice_123', userName: 'Alice' }
+]);
+```
+
+#### client.replaceNodeTeams(nodeId, teams)
+
+Efficiently replace all team assignments with a new list.
+
+```typescript
+// Assign task to Engineering and QA teams only
+await client.replaceNodeTeams(taskId, [
+  { teamId: 'team_001', teamName: 'Engineering' },
+  { teamId: 'team_002', teamName: 'QA' }
+]);
+```
+
+### Access Control Patterns
+
+**Pattern 1: User-Only Task Assignment**
+
+```typescript
+// Create task and assign to specific user
+const task = await client.createNode({
+  type: 'plm.task',
+  name: 'Fix login bug',
+  settings: { status: 'pending', priority: 'high' }
+});
+
+await client.assignUserToNode(task.id, 'user_alice_123', 'Alice');
+// Now only Alice can see this task
+```
+
+**Pattern 2: Team-Only Access**
+
+```typescript
+// Create task visible to entire team
+const task = await client.createNode({
+  type: 'plm.task',
+  name: 'Deploy to production',
+  settings: { status: 'pending' }
+});
+
+await client.assignTeamToNode(task.id, 'team_ops', 'Operations');
+// All Operations team members can see this task
+```
+
+**Pattern 3: Hybrid Access (Team + Specific Users)**
+
+```typescript
+// Create task visible to team + additional users
+const task = await client.createNode({
+  type: 'plm.task',
+  name: 'Security audit',
+  settings: { status: 'pending' }
+});
+
+// Assign to Security team
+await client.assignTeamToNode(task.id, 'team_security', 'Security');
+
+// Also give access to CTO (not on Security team)
+await client.assignUserToNode(task.id, 'user_cto_999', 'CTO');
+// Now visible to: Security team members + CTO
+```
+
+**Pattern 4: Public Task (Everyone Can See)**
+
+```typescript
+// Create task without any refs = public
+const task = await client.createNode({
+  type: 'plm.task',
+  name: 'Company-wide announcement',
+  settings: { status: 'pending' }
+});
+
+// Verify it's public
+const isPublic = await client.isNodePublic(task.id);
+console.log(isPublic); // true
+```
+
+**Pattern 5: Reassign Task**
+
+```typescript
+const taskId = 'task_001';
+
+// Reassign from Alice to Bob
+await client.replaceNodeUsers(taskId, [
+  { userId: 'user_bob_456', userName: 'Bob' }
+]);
+```
+
+**Pattern 6: Create Task with Initial Assignment**
+
+```typescript
+// Create task with userRef in one API call
+const task = await client.createNode({
+  type: 'plm.task',
+  name: 'Review PR #123',
+  settings: { status: 'pending' },
+  refs: [
+    {
+      refName: 'userRef',
+      toNodeId: 'user_alice_123',
+      displayName: 'Alice'
+    }
+  ]
+});
+// Task is created and assigned to Alice in one call
+```
+
+**Pattern 7: Filter Tasks by Current User**
+
+```typescript
+const currentUserId = 'user_alice_123';
+
+// Get all tasks
+const allTasks = await client.queryNodes({
+  filter: 'type is "plm.task"'
+});
+
+// Filter to tasks assigned to current user or public
+const myTasks = [];
+for (const task of allTasks) {
+  const users = await client.getNodeUsers(task.id);
+  const isAssignedToMe = users.some(u => u.toNodeId === currentUserId);
+  const isPublic = await client.isNodePublic(task.id);
+
+  if (isAssignedToMe || isPublic) {
+    myTasks.push(task);
+  }
+}
+
+console.log('My tasks:', myTasks.map(t => t.name));
+```
+
+**💡 See [examples/access-control-usage.ts](../frontend-sdk/plugin-client/examples/access-control-usage.ts) for complete working examples!**
 
 ## Working with Settings Schemas
 
@@ -1599,7 +1999,56 @@ await rasClient.pages.resolve({ ... });
 ## FAQ
 
 **Q: Should I use `parentId` or `parentRef` when creating nodes?**
-A: Always use `parentRef`. The field is called `parentRef` in the API.
+
+A: **Always use `parentRef`** when creating nodes. The parent field naming differs based on context:
+
+| Context | Field Name | Example |
+|---------|-----------|---------|
+| **Creating nodes** | `parentRef` | `createNode({ parentRef: 'xyz' })` |
+| **Querying nodes** | `parent.id` or `p.id` | `filter: "parent.id is 'xyz'"` or `filter: "p.id is 'xyz'"` |
+| **Reading responses** | `parentId` | `node.parentId` returns the parent ID |
+
+**Examples:**
+
+```typescript
+// ✅ CORRECT - Creating with parentRef
+await client.createNode({
+  type: 'plm.ticket',
+  parentRef: taskId,  // ← Use parentRef
+  settings: { ... }
+});
+
+// ❌ WRONG - Using parentId creates orphaned node!
+await client.createNode({
+  type: 'plm.ticket',
+  parentId: taskId,  // ← Don't use parentId here
+  settings: { ... }
+});
+
+// ✅ CORRECT - Querying with parent.id
+const tickets = await client.queryNodes({
+  filter: `type is "plm.ticket" and parent.id is "${taskId}"`
+});
+
+// ✅ CORRECT - Querying with shorthand p.id
+const tickets = await client.queryNodes({
+  filter: `type is "plm.ticket" and p.id is "${taskId}"`
+});
+
+// ✅ CORRECT - Multi-level parent query
+const tickets = await client.queryNodes({
+  filter: `type is "plm.ticket" and parent.parent.id is "${productId}"`
+});
+
+// ✅ CORRECT - Reading response
+const node = await client.getNode(nodeId);
+console.log(node.parentId);  // Response contains parentId
+```
+
+**Key Points:**
+- CREATE: Use `parentRef` (establishes parent relationship)
+- QUERY: Use `parent.id` or `p.id` (filter syntax)
+- RESPONSE: Contains `parentId` (read-only field)
 
 **Q: How do I update node settings?**
 A: Use the settings PATCH endpoint, NOT `updateNode()`:

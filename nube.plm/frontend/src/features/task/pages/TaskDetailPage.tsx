@@ -22,10 +22,11 @@ import { TaskSidebarNavigation } from '../components/TaskSidebarNavigation';
 import { TaskOverviewSection } from '../sections/TaskOverviewSection';
 const TaskBasicInfoSection = lazy(() => import('../sections/TaskBasicInfoSection').then(m => ({ default: m.TaskBasicInfoSection })));
 const TicketsSectionV2 = lazy(() => import('../sections/TicketsSectionV2').then(m => ({ default: m.TicketsSectionV2 })));
+const TaskCommentsSection = lazy(() => import('../sections/TaskCommentsSection').then(m => ({ default: m.TaskCommentsSection })));
 const TaskTimeEntriesSection = lazy(() => import('../sections/TaskTimeEntriesSection').then(m => ({ default: m.TaskTimeEntriesSection })));
 const TaskSystemInfoSection = lazy(() => import('../sections/TaskSystemInfoSection').then(m => ({ default: m.TaskSystemInfoSection })));
 
-export type TaskSectionId = 'overview' | 'basic-info' | 'tickets' | 'time-entries' | 'system-info';
+export type TaskSectionId = 'overview' | 'basic-info' | 'tickets' | 'comments' | 'time-entries' | 'system-info';
 
 // Loading fallback for lazy sections
 function SectionLoadingFallback() {
@@ -140,6 +141,8 @@ export function TaskDetailPage({
         return <TaskBasicInfoSection {...commonProps} />;
       case 'tickets':
         return <TicketsSectionV2 {...commonProps} onStatsUpdate={updateStats} />;
+      case 'comments':
+        return <TaskCommentsSection {...commonProps} />;
       case 'time-entries':
         return <TaskTimeEntriesSection {...commonProps} onStatsUpdate={updateStats} />;
       case 'system-info':

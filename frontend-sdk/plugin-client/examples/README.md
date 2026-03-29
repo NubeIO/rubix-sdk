@@ -18,6 +18,21 @@ Complete examples for working with node settings using URL builders:
 - **Example 8**: Execute node command
 - **Example 9**: List nodes with query parameters
 
+### [access-control-usage.ts](./access-control-usage.ts)
+
+Complete examples for access control, teams, users, and refs:
+
+- **Example 1**: Assign task to specific user (user-only access)
+- **Example 2**: Assign task to multiple users
+- **Example 3**: Assign task to team (team-only access)
+- **Example 4**: Reassign task (replace user assignments)
+- **Example 5**: Make task public (remove all access control)
+- **Example 6**: Query tasks for current user (filtered by assignment)
+- **Example 7**: Create task with initial assignment (one API call)
+- **Example 8**: Hybrid access (team + specific users)
+- **Example 9**: List all teams and users (for UI pickers)
+- **Example 10**: Complex workflow (task assignment with notification)
+
 ## Quick Start
 
 ```typescript

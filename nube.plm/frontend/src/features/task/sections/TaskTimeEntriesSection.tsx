@@ -47,7 +47,7 @@ export function TaskTimeEntriesSection({
     try {
       setIsLoading(true);
       const tickets = await client.queryNodes({
-        filter: `type is "core.ticket" and parent.id is "${task.id}"`,
+        filter: `type is "plm.ticket" and parent.id is "${task.id}"`,
       }) as Ticket[];
 
       const entryGroups = await Promise.all(

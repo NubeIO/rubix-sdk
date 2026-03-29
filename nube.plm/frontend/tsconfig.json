@@ -17,8 +17,11 @@
     /* Path mappings */
     "baseUrl": ".",
     "paths": {
+      "@/*": ["./src/*"],
       "@rubix/sdk": ["../../frontend-sdk/index.ts"],
       "@rubix/sdk/*": ["../../frontend-sdk/*"],
+      "@rubix-sdk/frontend": ["../../frontend-sdk/index.ts"],
+      "@rubix-sdk/frontend/*": ["../../frontend-sdk/*"],
       "@features/*": ["./src/features/*"],
       "@shared/*": ["./src/shared/*"]
     },

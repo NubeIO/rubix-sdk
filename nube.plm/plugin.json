@@ -11,8 +11,8 @@
     "plm.product",
     "plm.products",
     "plm.task",
-    "plm.prototest",
-    "plm.manufacturing-unit"
+    "plm.ticket",
+    "plm.manufacturing-run"
   ],
   "coreNodeTypes": [
     "core.asset",
@@ -40,8 +40,8 @@
       "plm.product",
       "plm.products",
       "plm.task",
-      "plm.prototest",
-      "plm.manufacturing-unit"
+      "plm.ticket",
+      "plm.manufacturing-run"
     ],
     "_comment": "Add other node types here when implementing additional collections",
     "hooks": {
@@ -132,18 +132,50 @@
       }
     },
     {
-      "type": "plm.manufacturing-unit",
-      "displayName": "Manufacturing Unit",
-      "description": "Serialized hardware unit",
-      "icon": "cpu",
-      "color": "#ef4444",
+      "type": "plm.manufacturing-run",
+      "displayName": "Manufacturing Run",
+      "description": "Production batch for hardware manufacturing",
+      "icon": "factory",
+      "color": "#f59e0b",
+      "category": "manufacturing",
+      "propertyPanels": ["node-settings", "tags-references"],
+      "constraints": {
+        "allowedParents": ["plm.product", "core.product"]
+      },
+      "autoFields": {
+        "identity": ["manufacturing", "plm", "run"],
+        "pluginId": true
+      }
+    },
+    {
+      "type": "plm.task",
+      "displayName": "Task",
+      "description": "Product development task or work item",
+      "icon": "list-checks",
+      "color": "#8b5cf6",
       "category": "manufacturing",
       "propertyPanels": ["node-settings", "tags-references"],
       "constraints": {
         "allowedParents": ["plm.product"]
       },
       "autoFields": {
-        "identity": ["asset", "unit", "manufacturing", "plm"],
+        "identity": ["task", "plm"],
+        "pluginId": true
+      }
+    },
+    {
+      "type": "plm.ticket",
+      "displayName": "Ticket",
+      "description": "Work item, bug, feature request, or chore",
+      "icon": "check-square",
+      "color": "#6366f1",
+      "category": "manufacturing",
+      "propertyPanels": ["node-settings", "tags-references"],
+      "constraints": {
+        "allowedParents": ["plm.product", "plm.task"]
+      },
+      "autoFields": {
+        "identity": ["ticket", "plm"],
         "pluginId": true
       }
     },
@@ -167,22 +199,6 @@
       }
     },
     {
-      "type": "plm.task",
-      "displayName": "Task",
-      "description": "Product development task or work item",
-      "icon": "list-checks",
-      "color": "#8b5cf6",
-      "category": "manufacturing",
-      "propertyPanels": ["node-settings", "tags-references"],
-      "constraints": {
-        "allowedParents": ["plm.product"]
-      },
-      "autoFields": {
-        "identity": ["task", "plm"],
-        "pluginId": true
-      }
-    },
-    {
       "type": "core.entry",
       "profile": "plm-time-entry",
       "displayName": "Time Entry",
@@ -201,21 +217,6 @@
       }
     },
     {
-      "type": "core.ticket",
-      "profile": "plm-work-item",
-      "displayName": "Work Item",
-      "description": "Task, bug, or feature request",
-      "icon": "check-square",
-      "color": "#6366f1",
-      "category": "manufacturing",
-      "constraints": {
-        "allowedParents": ["plm.product"]
-      },
-      "autoFields": {
-        "identity": ["ticket", "work-item", "plm"]
-      }
-    },
-    {
       "type": "core.asset",
       "profile": "plm-unit",
       "displayName": "Hardware Unit",
@@ -224,7 +225,7 @@
       "color": "#ef4444",
       "category": "manufacturing",
       "constraints": {
-        "allowedParents": ["plm.product", "plm.manufacturing-unit"]
+        "allowedParents": ["plm.manufacturing-run"]
       },
       "autoFields": {
         "identity": ["asset", "unit", "hardware", "plm"]

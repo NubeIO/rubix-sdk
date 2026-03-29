@@ -23,6 +23,10 @@ interface OverviewSectionProps {
     bomItemsCount: number;
     bomItemsPending: number;
     totalCost: number;
+    totalTickets: number;
+    blockedTickets: number;
+    completedTickets: number;
+    ticketsByStatus: Record<string, number>;
     lastActivity: string;
   };
   onStatsUpdate: (stats: any) => void;
@@ -152,12 +156,11 @@ export function OverviewSection({
       {/* Stat cards grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Tasks"
-          value={stats.totalTasks.toLocaleString()}
-          description={`${stats.tasksCompletedThisWeek} completed this week`}
+          title="Tasks & Tickets"
+          value={`${stats.totalTasks} / ${stats.totalTickets}`}
+          description={`${stats.totalTasks} tasks • ${stats.totalTickets} tickets • ${stats.blockedTickets} blocked`}
           icon={CheckSquare}
           iconBgColor="bg-blue-500"
-          trend={stats.tasksCompletedThisWeek > 0 ? { value: '+12%', positive: true } : undefined}
         />
 
         <StatCard

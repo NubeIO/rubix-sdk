@@ -44,7 +44,7 @@ export function TaskOverviewSection({
   const fetchOverviewData = async () => {
     try {
       const nodes = await client.queryNodes({
-        filter: `type is "core.ticket" and parent.id is "${task.id}"`,
+        filter: `type is "plm.ticket" and parent.id is "${task.id}"`,
       });
 
       const tickets = (nodes || []) as Ticket[];

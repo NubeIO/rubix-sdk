@@ -79,12 +79,8 @@ func main() {
 		switch nodeType {
 		case "plm.products":
 			return &nodes.ProductsCollectionNode{}
-		case "plm.prototest":
-			return &nodes.ProtoTestNode{}
-		case "plm.manufacturing-unit":
-			// Manufacturing unit with port profile (config/nodes.yaml)
-			// Example: testOutput = testInput + 100
-			return &nodes.ManufacturingUnitNode{}
+		case "plm.manufacturing-run":
+			return &nodes.ManufacturingRunNode{}
 		default:
 			return nil
 		}

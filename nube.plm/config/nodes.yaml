@@ -102,6 +102,37 @@ nodeTypes:
       color: "#10b981"
 
   # ---------------------------------------------------------------------------
+  # Manufacturing Run (custom type - no core equivalent)
+  # ---------------------------------------------------------------------------
+  - type: plm.manufacturing-run
+    displayName: Manufacturing Run
+    description: Production batch tracking for hardware manufacturing
+    autoPluginId: true
+    autoIdentity: [manufacturing, plm, run]
+
+    defaults:
+      runNumber: ""
+      hardwareVersion: ""
+      targetQuantity: 0
+      producedCount: 0
+      status: "planned"
+      qaFailures: 0
+
+    validation:
+      required: [hardwareVersion, targetQuantity]
+      rules:
+        status:
+          enum: [planned, in-progress, qa, completed, cancelled]
+          message: "Invalid status"
+        targetQuantity:
+          min: 1
+          message: "Target quantity must be at least 1"
+
+    uiHints:
+      icon: factory
+      color: "#f59e0b"
+
+  # ---------------------------------------------------------------------------
   # PLM Task (extends core.task)
   # ---------------------------------------------------------------------------
   - type: plm.task
@@ -136,32 +167,6 @@ nodeTypes:
 
     # Commands for task operations
     commands:
-      - name: listComments
-        description: List all comments on this task
-        method: GET
-
-      - name: addComment
-        description: Add a comment to this task
-        method: POST
-        params:
-          - name: text
-            type: string
-            required: true
-          - name: userId
-            type: string
-            required: true
-          - name: userName
-            type: string
-            required: false
-
-      - name: deleteComment
-        description: Delete a comment from this task
-        method: DELETE
-        params:
-          - name: commentId
-            type: string
-            required: true
-
       - name: listTickets
         description: List all tickets under this task
         method: GET
@@ -175,171 +180,53 @@ nodeTypes:
       color: "#8b5cf6"
 
   # ---------------------------------------------------------------------------
-  # Manufacturing Unit (extends core.asset)
+  # PLM Ticket (extends core.ticket)
   # ---------------------------------------------------------------------------
-  - type: plm.manufacturing-unit
-    baseType: core.asset
-    displayName: Manufacturing Unit
-    description: PLM-managed manufacturing equipment with serialization tracking
+  - type: plm.ticket
+    baseType: core.ticket
+    displayName: Ticket
+    description: Work item, bug, feature request, or chore
     autoPluginId: true
-    autoIdentity: [asset, manufacturing, plm, unit]
+    autoIdentity: [ticket, plm]
+
     defaults:
-      assetType: manufacturing-unit
-      status: production
-      trackSerialNumbers: true
+      ticketType: "task"
+      status: "pending"
+      priority: "Medium"
+      actualHours: 0
+
     validation:
-      required: [serialNumber, hardwareRevision]
+      required: []
       rules:
-        serialNumber:
-          pattern: "^[A-Z]+-[A-Z]-\\d+$"
-          message: "Serial number must match format: EC-C-1402"
-          example: "EC-C-1402"
-        hardwareRevision:
-          pattern: "^rev-[a-z]$"
-          message: "Hardware revision must match format: rev-c"
-          example: "rev-c"
-        firmwareVersion:
-          pattern: "^v\\d+\\.\\d+\\.\\d+$"
-          message: "Firmware version must be semantic version (e.g., v1.2.3)"
-          example: "v1.0.0"
         status:
-          enum: [production, testing, maintenance, decommissioned]
-          message: "Status must be one of: production, testing, maintenance, decommissioned"
-    refs:
-      optional: [runRef, siteRef, equipRef]
-      constraints:
-        runRef:
-          targetTypes: [plm.production-run]
-          onTargetDelete: restrict
+          enum: [pending, in-progress, blocked, review, completed, cancelled]
+          message: "Invalid status"
+        priority:
+          enum: [Low, Medium, High, Critical]
+          message: "Invalid priority"
+        ticketType:
+          enum: [task, bug, feature, chore]
+          message: "Invalid ticket type"
+        estimatedHours:
+          min: 0
+          message: "Hours must be non-negative"
+        actualHours:
+          min: 0
+          message: "Hours must be non-negative"
+
+    # Commands for ticket operations
+    commands:
+      - name: listTimeEntries
+        description: List all time entries for this ticket
+        method: GET
+
+      - name: recalculateHours
+        description: Recalculate actual hours from time entries
+        method: POST
+
     uiHints:
-      icon: factory
-      color: "#3b82f6"
-      displayFields: [serialNumber, hardwareRevision, status]
-      searchFields: [serialNumber, hardwareRevision]
-      sections:
-        - name: Hardware
-          fields: [serialNumber, hardwareRevision, firmwareVersion]
-        - name: Status
-          fields: [status, assetType, trackSerialNumbers]
-
-    # Port Profiles - Auto-create ports for manufacturing units
-    ports:
-      inputs:
-        # ✅ TEST PORT: testOutput = testInput + 100
-        - handle: testInput
-          type: number
-          default: 0
-          label: Test Input Value
-          description: Test input for demonstration (testOutput = testInput + 100)
-          unit: units
-          facets:
-            precision: 2
-
-        - handle: targetRate
-          type: number
-          default: 100
-          label: Target Production Rate
-          description: Target units per hour
-          unit: units/hr
-          validation:
-            min: 0
-            max: 1000
-            required: true
-          facets:
-            precision: 0
-            min: 0
-            max: 500
-          uiHints:
-            widget: slider
-            step: 10
-
-        - handle: enable
-          type: bool
-          default: false
-          label: Enable Production
-          description: Start/stop production
-          validation:
-            required: true
-          facets:
-            trueText: Running
-            falseText: Stopped
-          uiHints:
-            widget: toggle
-
-        - handle: mode
-          type: string
-          default: auto
-          label: Operating Mode
-          description: Unit operating mode
-          validation:
-            enum: [auto, manual, maintenance, calibration]
-          uiHints:
-            widget: select
-
-      outputs:
-        # ✅ TEST PORT: testOutput = testInput + 100
-        - handle: testOutput
-          type: number
-          default: 100
-          label: Test Output Value
-          description: Test output (always testInput + 100)
-          unit: units
-          facets:
-            precision: 2
-
-        - handle: actualRate
-          type: number
-          default: 0
-          label: Actual Production Rate
-          description: Current units per hour
-          unit: units/hr
-          facets:
-            precision: 1
-            min: 0
-            max: 500
-
-        - handle: totalCount
-          type: number
-          default: 0
-          label: Total Unit Count
-          description: Cumulative production count
-          unit: units
-          facets:
-            precision: 0
-
-        - handle: temperature
-          type: number
-          default: 20
-          label: Operating Temperature
-          description: Current equipment temperature
-          unit: degC
-          validation:
-            min: -40
-            max: 125
-          facets:
-            precision: 1
-            min: 0
-            max: 100
-
-        - handle: status
-          type: string
-          default: idle
-          label: Runtime Status
-          description: Current operational status
-          validation:
-            enum: [idle, running, error, maintenance, calibrating]
-
-        - handle: lastError
-          type: string
-          default: ""
-          label: Last Error
-          description: Most recent error message
-
-        - handle: metrics
-          type: object
-          default: {}
-          label: Performance Metrics
-          description: Real-time operational metrics
+      icon: check-square
+      color: "#6366f1"
 
 # =============================================================================
 # Node Profiles - Core types customized by PLM plugin
@@ -391,79 +278,6 @@ nodeProfiles:
       icon: clock
       color: "#10b981"
 
-  # ---------------------------------------------------------------------------
-  # Work Item (core.ticket + plm-work-item profile)
-  # ---------------------------------------------------------------------------
-  - nodeType: core.ticket
-    profile: plm-work-item
-    displayName: Work Item
-    description: Task, bug, or feature request
-    identity: [ticket, work-item, plm]
-
-    defaults:
-      ticketType: "task"
-      status: "pending"
-      priority: "Medium"
-      actualHours: 0
-
-    validation:
-      required: []
-      rules:
-        status:
-          enum: [pending, in-progress, blocked, review, completed, cancelled]
-          message: "Invalid status"
-        priority:
-          enum: [Low, Medium, High, Critical]
-          message: "Invalid priority"
-        ticketType:
-          enum: [task, bug, feature, chore]
-          message: "Invalid ticket type"
-        estimatedHours:
-          min: 0
-          message: "Hours must be non-negative"
-        actualHours:
-          min: 0
-          message: "Hours must be non-negative"
-
-    # Commands for ticket operations
-    commands:
-      - name: listComments
-        description: List all comments on this ticket
-        method: GET
-
-      - name: addComment
-        description: Add a comment to this ticket
-        method: POST
-        params:
-          - name: text
-            type: string
-            required: true
-          - name: userId
-            type: string
-            required: true
-          - name: userName
-            type: string
-            required: false
-
-      - name: deleteComment
-        description: Delete a comment from this ticket
-        method: DELETE
-        params:
-          - name: commentId
-            type: string
-            required: true
-
-      - name: listTimeEntries
-        description: List all time entries for this ticket
-        method: GET
-
-      - name: recalculateHours
-        description: Recalculate actual hours from time entries
-        method: POST
-
-    uiHints:
-      icon: check-square
-      color: "#6366f1"
 
   # ---------------------------------------------------------------------------
   # Hardware Unit (core.asset + plm-unit profile)
