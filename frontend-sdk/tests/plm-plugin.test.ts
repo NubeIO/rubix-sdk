@@ -37,7 +37,7 @@ describe('PLM Plugin - Product Management', () => {
       console.log(`  📁 Using existing Products collection: ${productsCollectionId}`);
     } else {
       // Create products collection if it doesn't exist
-      const collection = await client.createNode({
+      const collection = await client.createNode(undefined, {
         type: 'plm.products',
         name: 'Products',
       });
@@ -56,21 +56,13 @@ describe('PLM Plugin - Product Management', () => {
     it('should create a product with hardware settings', async () => {
       const productName = testName('HW-Product');
 
-      const product = await client.createNode({
+      const product = await client.createNode(productsCollectionId, {
         type: 'plm.product',
         name: productName,
-        parentId: productsCollectionId,
         settings: {
           productCode: testName('HW'),
           tags: ['Electronics', 'Components'],
         },
-        refs: [
-          {
-            refName: 'parentRef',
-            toNodeId: productsCollectionId,
-            toNodeName: 'Products',
-          },
-        ],
       });
 
       expect(product.id).toBeDefined();
@@ -87,21 +79,13 @@ describe('PLM Plugin - Product Management', () => {
     it('should create a product with software settings', async () => {
       const productName = testName('SW-Product');
 
-      const product = await client.createNode({
+      const product = await client.createNode(productsCollectionId, {
         type: 'plm.product',
         name: productName,
-        parentId: productsCollectionId,
         settings: {
           productCode: testName('SW'),
           features: ['API', 'Web UI', 'Cloud'],
         },
-        refs: [
-          {
-            refName: 'parentRef',
-            toNodeId: productsCollectionId,
-            toNodeName: 'Products',
-          },
-        ],
       });
 
       expect(product.id).toBeDefined();
@@ -111,23 +95,17 @@ describe('PLM Plugin - Product Management', () => {
       console.log(`  ✓ Created software product: ${product.id}`);
     });
 
-    it('should fail when creating product without parentRef', async () => {
-      try {
-        await client.createNode({
-          type: 'plm.product',
-          name: testName('Invalid-Product'),
-          parentId: productsCollectionId,
-          settings: { productCode: 'TEST' },
-          // Missing refs!
-        });
-        throw new Error('Should have failed without refs');
-      } catch (err: any) {
-        // This might succeed depending on backend validation
-        // If it does, clean it up
-        if (!err.message.includes('Should have failed')) {
-          console.log('  ⚠️  Backend allows products without parentRef (might be okay)');
-        }
-      }
+    it('should auto-create parentRef when parentId is provided', async () => {
+      const product = await client.createNode(productsCollectionId, {
+        type: 'plm.product',
+        name: testName('Auto-ParentRef'),
+        settings: { productCode: 'TEST' },
+      });
+
+      createdNodes.push(product.id!);
+
+      const refs = await client.listRefs(product.id!);
+      expect(refs.some((ref) => ref.refName === 'parentRef' && ref.toNodeId === productsCollectionId)).toBe(true);
     });
   });
 
@@ -135,20 +113,13 @@ describe('PLM Plugin - Product Management', () => {
     let testProductId: string;
 
     beforeAll(async () => {
-      const product = await client.createNode({
+      const product = await client.createNode(productsCollectionId, {
         type: 'plm.product',
         name: testName('Query-Test'),
-        parentId: productsCollectionId,
         settings: {
           productCode: 'QT-001',
           tags: ['Electronics'],
         },
-        refs: [
-          {
-            refName: 'parentRef',
-            toNodeId: productsCollectionId,
-          },
-        ],
       });
       testProductId = product.id!;
       createdNodes.push(testProductId);
@@ -215,20 +186,13 @@ describe('PLM Plugin - Product Management', () => {
     let testProductId: string;
 
     beforeAll(async () => {
-      const product = await client.createNode({
+      const product = await client.createNode(productsCollectionId, {
         type: 'plm.product',
         name: testName('Update-Test'),
-        parentId: productsCollectionId,
         settings: {
           productCode: 'UT-001',
           tags: ['Electronics'],
         },
-        refs: [
-          {
-            refName: 'parentRef',
-            toNodeId: productsCollectionId,
-          },
-        ],
       });
       testProductId = product.id!;
       createdNodes.push(testProductId);
@@ -281,17 +245,10 @@ describe('PLM Plugin - Product Management', () => {
 
   describe('Delete Product', () => {
     it('should delete a product', async () => {
-      const product = await client.createNode({
+      const product = await client.createNode(productsCollectionId, {
         type: 'plm.product',
         name: testName('Delete-Test'),
-        parentId: productsCollectionId,
         settings: { productCode: 'DT-001' },
-        refs: [
-          {
-            refName: 'parentRef',
-            toNodeId: productsCollectionId,
-          },
-        ],
       });
 
       const productId = product.id!;
@@ -311,17 +268,10 @@ describe('PLM Plugin - Product Management', () => {
     });
 
     it('should verify delete from query results', async () => {
-      const product = await client.createNode({
+      const product = await client.createNode(productsCollectionId, {
         type: 'plm.product',
         name: testName('Delete-Query-Test'),
-        parentId: productsCollectionId,
         settings: { productCode: 'DQT-001' },
-        refs: [
-          {
-            refName: 'parentRef',
-            toNodeId: productsCollectionId,
-          },
-        ],
       });
 
       const productId = product.id!;

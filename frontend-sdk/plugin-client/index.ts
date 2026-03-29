@@ -16,7 +16,7 @@
  *   const products = await client.queryNodes({ filter: 'type is "plm.product"' });
  *
  *   // Create node
- *   const newProduct = await client.createNode({
+ *   const newProduct = await client.createNode(undefined, {
  *     type: 'plm.product',
  *     name: 'Widget Pro',
  *     settings: { productCode: 'WGT-001', price: 99.99 }
@@ -255,7 +255,7 @@ export class PluginClient {
    *
    * @example
    * ```ts
-   * const product = await client.createNode({
+   * const product = await client.createNode(undefined, {
    *   type: 'plm.product',
    *   name: 'Widget Pro',
    *   settings: {
@@ -267,9 +267,12 @@ export class PluginClient {
    * });
    * ```
    */
-  async createNode(input: CreateNodeInput): Promise<Node> {
+  async createNode(
+    parentId: string | undefined,
+    input: Omit<CreateNodeInput, 'parentId' | 'refs'> & { refs?: NodeRef[] }
+  ): Promise<Node> {
     try {
-      return await createNodeHelper(this, input);
+      return await createNodeHelper(this, parentId, input);
     } catch (err: any) {
       console.error('[PluginClient] createNode failed:', err);
       throw new PluginClientError(

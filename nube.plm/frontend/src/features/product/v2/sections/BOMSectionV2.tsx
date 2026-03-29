@@ -112,17 +112,10 @@ export function BOMSectionV2({ product, client, onStatsUpdate }: BOMSectionV2Pro
     console.log('[BOMSectionV2] Adding BOM item:', bomItem);
 
     // Create BOM item using SDK
-    await client.createNode({
+    await client.createNode(product.id, {
       type: 'core.document',
       profile: 'plm-bom',
       name: bomItem.partCode,
-      parentId: product.id,
-      refs: [
-        {
-          refName: 'parentRef',
-          toNodeId: product.id,
-        },
-      ],
       settings: {
         documentType: 'bom-item',
         description: bomItem.description,

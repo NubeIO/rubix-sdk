@@ -16,7 +16,7 @@
  *   const products = await client.queryNodes({ filter: 'type is "plm.product"' });
  *
  *   // Create node
- *   const newProduct = await client.createNode({
+ *   const newProduct = await client.createNode(undefined, {
  *     type: 'plm.product',
  *     name: 'Widget Pro',
  *     settings: { productCode: 'WGT-001', price: 99.99 }
@@ -94,7 +94,9 @@ export interface UpdateNodeInput {
     };
 }
 export declare function getNode(client: PluginClient, nodeId: string): Promise<Node>;
-export declare function createNode(client: PluginClient, input: CreateNodeInput): Promise<Node>;
+export declare function createNode(client: PluginClient, parentId: string | undefined, input: Omit<CreateNodeInput, 'parentId' | 'refs'> & {
+    refs?: NodeRef[];
+}): Promise<Node>;
 export declare function updateNode(client: PluginClient, nodeId: string, input: UpdateNodeInput): Promise<Node>;
 export declare function deleteNode(client: PluginClient, nodeId: string): Promise<void>;
 export declare function listNodes(client: PluginClient): Promise<Node[]>;
@@ -141,7 +143,7 @@ export declare class PluginClient {
      *
      * @example
      * ```ts
-     * const product = await client.createNode({
+     * const product = await client.createNode(undefined, {
      *   type: 'plm.product',
      *   name: 'Widget Pro',
      *   settings: {
@@ -153,7 +155,9 @@ export declare class PluginClient {
      * });
      * ```
      */
-    createNode(input: CreateNodeInput): Promise<Node>;
+    createNode(parentId: string | undefined, input: Omit<CreateNodeInput, 'parentId' | 'refs'> & {
+        refs?: NodeRef[];
+    }): Promise<Node>;
     /**
      * Update an existing node
      *

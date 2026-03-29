@@ -44,7 +44,7 @@ export function usePLMService(config: PLMClientConfig | null): UsePLMServiceResu
           setPlmServiceId(nodes[0].id);
         } else {
           // Create new PLM service root node
-          const created = await client.createNode({
+          const created = await client.createNode(undefined, {
             type: PLM_SERVICE_TYPE,
             name: 'PLM System',
             settings: {

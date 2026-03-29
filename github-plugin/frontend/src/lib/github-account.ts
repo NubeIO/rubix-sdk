@@ -50,7 +50,7 @@ export async function createGitHubAccount(
   }
 ): Promise<void> {
   const client = createGitHubPluginClient(context);
-  await client.createNode({
+  await client.createNode(undefined, {
     type: 'github.account',
     name: input.name,
     settings: {

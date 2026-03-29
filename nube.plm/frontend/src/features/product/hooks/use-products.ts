@@ -117,10 +117,9 @@ export function useProducts(config: UseProductsConfig): UseProductsResult {
       }
 
       // Use SDK createNode instead of ProductsAPI
-      await client.createNode({
+      await client.createNode(input.parentId, {
         type: 'plm.product',
         name: input.name,
-        parentId: input.parentId,
         settings: input.settings,
       });
       await fetchProducts();

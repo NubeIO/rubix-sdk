@@ -50,16 +50,14 @@ export async function createCommentsNode(
   client: PluginClient,
   taskId: string
 ): Promise<string> {
-  const node = await (client as any).createNode({
+  const node = await (client as any).createNode(taskId, {
     type: 'core.note',
     name: '_comments',
-    parentId: taskId,
     settings: {
       hidden: true,
       noteType: 'comments',
     },
     refs: [
-      { refName: 'parentRef', toNodeId: taskId },
       { refName: 'taskRef',   toNodeId: taskId },
     ],
   });

@@ -94,17 +94,10 @@ export function TicketDialog({ client, taskId, ticket, onClose, onSuccess }: Tic
 
         await client.updateNodeSettings(ticket.id, payload);
       } else {
-        await client.createNode({
+        await client.createNode(taskId, {
           type: 'plm.ticket',
           name: values.name.trim(),
-          parentId: taskId,
           identity,
-          refs: [
-            {
-              refName: 'parentRef',
-              toNodeId: taskId,
-            },
-          ],
           settings: payload,
         });
       }

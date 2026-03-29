@@ -124,10 +124,9 @@ export function TaskDialog({ client, productId, task, onClose, onSuccess }: Task
         });
       } else {
         // Create new task
-        const task = await client.createNode({
+        const task = await client.createNode(productId, {
           type: 'plm.task',
           name: name.trim(),
-          parentId: productId,
           settings,
         });
         // Create the bound comments node immediately

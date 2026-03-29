@@ -24,7 +24,7 @@ const client = createPluginClient({
 
 async function assignTaskToUser() {
   // Create a task
-  const task = await client.createNode({
+  const task = await client.createNode(undefined, {
     type: 'plm.task',
     name: 'Implement user authentication',
     settings: {
@@ -37,16 +37,16 @@ async function assignTaskToUser() {
   console.log('Created task:', task.id, task.name);
 
   // Assign to Alice (only she can see it)
-  await client.assignUserToNode(task.id, 'user_alice_123', 'Alice');
+  await client.assignUserToNode(task.id!, 'user_alice_123', 'Alice');
 
   console.log('✅ Task assigned to Alice');
 
   // Verify task is private to Alice
-  const isPublic = await client.isNodePublic(task.id);
+  const isPublic = await client.isNodePublic(task.id!);
   console.log('Is task public?', isPublic); // false
 
   // Get assigned users
-  const users = await client.getNodeUsers(task.id);
+  const users = await client.getNodeUsers(task.id!);
   console.log('Assigned users:', users.map((u) => u.displayName)); // ["Alice"]
 }
 
@@ -55,20 +55,20 @@ async function assignTaskToUser() {
 // ============================================================================
 
 async function assignTaskToMultipleUsers() {
-  const task = await client.createNode({
+  const task = await client.createNode(undefined, {
     type: 'plm.task',
     name: 'Review API design',
     settings: { status: 'pending' },
   });
 
   // Assign to Alice and Bob
-  await client.assignUserToNode(task.id, 'user_alice_123', 'Alice');
-  await client.assignUserToNode(task.id, 'user_bob_456', 'Bob');
+  await client.assignUserToNode(task.id!, 'user_alice_123', 'Alice');
+  await client.assignUserToNode(task.id!, 'user_bob_456', 'Bob');
 
   console.log('✅ Task assigned to Alice and Bob');
 
   // Get all assigned users
-  const users = await client.getNodeUsers(task.id);
+  const users = await client.getNodeUsers(task.id!);
   console.log('Assigned users:', users.map((u) => u.displayName)); // ["Alice", "Bob"]
 }
 
@@ -77,19 +77,19 @@ async function assignTaskToMultipleUsers() {
 // ============================================================================
 
 async function assignTaskToTeam() {
-  const task = await client.createNode({
+  const task = await client.createNode(undefined, {
     type: 'plm.task',
     name: 'Deploy to production',
     settings: { status: 'pending' },
   });
 
   // Assign to Engineering team
-  await client.assignTeamToNode(task.id, 'team_engineering', 'Engineering');
+  await client.assignTeamToNode(task.id!, 'team_engineering', 'Engineering');
 
   console.log('✅ Task assigned to Engineering team');
 
   // Get assigned teams
-  const teams = await client.getNodeTeams(task.id);
+  const teams = await client.getNodeTeams(task.id!);
   console.log('Assigned teams:', teams.map((t) => t.displayName)); // ["Engineering"]
 }
 
@@ -139,9 +139,9 @@ async function getMyTasks() {
   // Filter to tasks assigned to current user
   const myTasks = [];
   for (const task of allTasks) {
-    const users = await client.getNodeUsers(task.id);
+    const users = await client.getNodeUsers(task.id!);
     const isAssignedToMe = users.some((u) => u.toNodeId === currentUserId);
-    const isPublic = await client.isNodePublic(task.id);
+    const isPublic = await client.isNodePublic(task.id!);
 
     if (isAssignedToMe || isPublic) {
       myTasks.push(task);
@@ -157,7 +157,7 @@ async function getMyTasks() {
 
 async function createTaskWithAssignment() {
   // Create task with userRef in one call
-  const task = await client.createNode({
+  const task = await client.createNode(undefined, {
     type: 'plm.task',
     name: 'Fix login bug',
     settings: {
@@ -181,23 +181,23 @@ async function createTaskWithAssignment() {
 // ============================================================================
 
 async function hybridAccess() {
-  const task = await client.createNode({
+  const task = await client.createNode(undefined, {
     type: 'plm.task',
     name: 'Security audit',
     settings: { status: 'pending' },
   });
 
   // Assign to Security team
-  await client.assignTeamToNode(task.id, 'team_security', 'Security');
+  await client.assignTeamToNode(task.id!, 'team_security', 'Security');
 
   // Also give access to CTO (not on Security team)
-  await client.assignUserToNode(task.id, 'user_cto_999', 'CTO');
+  await client.assignUserToNode(task.id!, 'user_cto_999', 'CTO');
 
   console.log('✅ Task visible to Security team + CTO');
 
   // Check access
-  const teams = await client.getNodeTeams(task.id);
-  const users = await client.getNodeUsers(task.id);
+  const teams = await client.getNodeTeams(task.id!);
+  const users = await client.getNodeUsers(task.id!);
 
   console.log('Teams:', teams.map((t) => t.displayName)); // ["Security"]
   console.log('Users:', users.map((u) => u.displayName)); // ["CTO"]

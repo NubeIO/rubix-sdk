@@ -49,18 +49,11 @@ export async function createTimeEntryWithRecalc(
     }
 
     // Create the time entry
-    const entry = await client.createNode({
+    const entry = await client.createNode(input.parentId, {
       type: 'core.entry',
       profile: 'plm-time-log',
       name: input.name,
-      parentId: input.parentId,
       identity: ['entry', 'time-log', 'plm'],
-      refs: [
-        {
-          refName: 'parentRef',
-          toNodeId: input.parentId,
-        },
-      ],
       settings: {
         date: input.date,
         hours: input.hours,

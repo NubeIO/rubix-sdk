@@ -135,6 +135,22 @@ export function MultiSettingsDialog({
     }
   }, [selectedSchemaName, currentSettings]);
 
+  React.useEffect(() => {
+    if (!open) {
+      setSubmitError(null);
+    }
+  }, [open]);
+
+  React.useEffect(() => {
+    if (!schemas.length) {
+      return;
+    }
+
+    if (!selectedSchema) {
+      setSelectedSchemaName(initialSchemaName);
+    }
+  }, [schemas, selectedSchema, initialSchemaName]);
+
   const handleSchemaSelect = (schemaName: string) => {
     setSubmitError(null);
     setSelectedSchemaName(schemaName);
@@ -161,17 +177,6 @@ export function MultiSettingsDialog({
     }
     onOpenChange(false);
   };
-
-  if (!selectedSchema) {
-    console.warn('[MultiSettingsDialog] No schema found for:', selectedSchemaName);
-    return null;
-  }
-
-  React.useEffect(() => {
-    if (!open) {
-      setSubmitError(null);
-    }
-  }, [open]);
 
   // Step 1: Show schema selection cards (like frontend node settings)
   if (viewStep === 'selecting' && schemas.length > 1) {
@@ -237,8 +242,16 @@ export function MultiSettingsDialog({
             </div>
           )}
 
+          {!selectedSchema && (
+            <div className="rounded-md border border-muted bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
+              {schemas.length
+                ? `No schema found for: ${selectedSchemaName}`
+                : 'Loading configuration schema...'}
+            </div>
+          )}
+
           {/* Schema indicator with Change Type button */}
-          {schemas.length > 1 && (
+          {selectedSchema && schemas.length > 1 && (
             <div className="flex items-center justify-between gap-3 pb-3 border-b">
               <div className="flex-1">
                 <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -261,32 +274,34 @@ export function MultiSettingsDialog({
           )}
 
           {/* RJSF Form */}
-          <Form
-            schema={selectedSchema.schema as RJSFSchema}
-            formData={formData}
-            validator={validator as any}
-            onChange={(e) => setFormData(e.formData || {})}
-            onSubmit={handleFormSubmit}
-            liveValidate={false}
-            showErrorList="top"
-            noHtml5Validate={true}
-            disabled={isSubmitting}
-            widgets={customWidgets}
-            templates={{
-              FieldTemplate: CompactFieldTemplate,
-              ObjectFieldTemplate: CompactObjectFieldTemplate,
-              DescriptionFieldTemplate: CustomDescriptionField,
-              ArrayFieldTemplate: CustomArrayFieldTemplate
-            }}
-            uiSchema={{
-              'ui:submitButtonOptions': {
-                norender: true // We render our own submit button in DialogFooter
-              }
-            }}
-          >
-            {/* Hidden submit - form submits via footer button */}
-            <button type="submit" style={{ display: 'none' }} />
-          </Form>
+          {selectedSchema && (
+            <Form
+              schema={selectedSchema.schema as RJSFSchema}
+              formData={formData}
+              validator={validator as any}
+              onChange={(e) => setFormData(e.formData || {})}
+              onSubmit={handleFormSubmit}
+              liveValidate={false}
+              showErrorList="top"
+              noHtml5Validate={true}
+              disabled={isSubmitting}
+              widgets={customWidgets}
+              templates={{
+                FieldTemplate: CompactFieldTemplate,
+                ObjectFieldTemplate: CompactObjectFieldTemplate,
+                DescriptionFieldTemplate: CustomDescriptionField,
+                ArrayFieldTemplate: CustomArrayFieldTemplate
+              }}
+              uiSchema={{
+                'ui:submitButtonOptions': {
+                  norender: true // We render our own submit button in DialogFooter
+                }
+              }}
+            >
+              {/* Hidden submit - form submits via footer button */}
+              <button type="submit" style={{ display: 'none' }} />
+            </Form>
+          )}
         </div>
 
         <DialogFooter>
@@ -304,7 +319,7 @@ export function MultiSettingsDialog({
               const form = document.querySelector('form') as HTMLFormElement;
               if (form) form.requestSubmit();
             }}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !selectedSchema}
           >
             {isSubmitting ? (
               <>

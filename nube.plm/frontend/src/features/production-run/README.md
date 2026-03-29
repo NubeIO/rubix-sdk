@@ -10,9 +10,6 @@ This directory will contain all code related to **Production Runs** (manufacturi
 
 ```
 production-run/
-├── api/
-│   ├── production-run-api.ts       # CRUD operations
-│   └── index.ts
 ├── hooks/
 │   ├── use-production-runs.ts      # Multiple runs hook
 │   ├── use-production-run.ts       # Single run hook

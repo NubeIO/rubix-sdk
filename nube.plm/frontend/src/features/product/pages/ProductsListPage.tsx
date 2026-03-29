@@ -67,10 +67,9 @@ function ProductsPage({
     if (!collections.products) {
       throw new Error('Products collection not found - restart plugin');
     }
-    await client.createNode({
+    await client.createNode(input.parentId, {
       type: 'plm.product',
       name: input.name,
-      parentId: input.parentId,
       settings: input.settings,
     });
   }, [client, collections.products]);
@@ -223,10 +222,9 @@ function ProductsPage({
   // Create task - use SDK directly!
   const createTask = useCallback(async (input: CreateTaskInput) => {
     console.log('[ProductsPage] Creating task:', input);
-    const task = await client.createNode({
+    const task = await client.createNode(input.parentId, {
       type: 'plm.task',
       name: input.name,
-      parentId: input.parentId,
       settings: input.settings || {},
     });
     // Create the bound comments node immediately
