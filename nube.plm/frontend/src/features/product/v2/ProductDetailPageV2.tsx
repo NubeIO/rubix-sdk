@@ -177,6 +177,10 @@ export function ProductDetailPageV2({
       case 'tasks':
         return <TasksSectionV2 {...commonProps} onStatsUpdate={updateStats} />;
       case 'manufacturing':
+        // Manufacturing is only for hardware products
+        if (isSoftware) {
+          return <OverviewSection {...commonProps} stats={stats} onStatsUpdate={updateStats} />;
+        }
         return <ManufacturingSection {...commonProps} onStatsUpdate={updateStats} />;
       case 'tickets':
         return <TicketsSection {...commonProps} onStatsUpdate={updateStats} />;

@@ -45,9 +45,9 @@ export function SidebarNavigation({
     { id: 'system-info', label: 'System Info', icon: Settings },
   ];
 
-  // Filter out BOM for software products (BOM is hardware-only)
+  // Filter out BOM and Manufacturing for software products (hardware-only features)
   const navItems = allNavItems.filter(item => {
-    if (item.id === 'bom' && productType === 'software') {
+    if ((item.id === 'bom' || item.id === 'manufacturing') && productType === 'software') {
       return false;
     }
     return true;
