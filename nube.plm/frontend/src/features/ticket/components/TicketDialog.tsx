@@ -9,10 +9,17 @@ import { TicketForm, type TicketFormValues } from './TicketForm';
 import type { Ticket } from '../types/ticket.types';
 import { normalizeTicketStatus, TICKET_IDENTITY } from '../utils/ticket-helpers';
 
+interface Task {
+  id: string;
+  name: string;
+}
+
 interface TicketDialogProps {
   client: any;
   taskId: string;
   ticket?: Ticket;
+  tasks?: Task[]; // Optional: available tasks for selection
+  productId?: string; // Optional: product ID for product-level tickets
   onClose: () => void;
   onSuccess: () => void | Promise<void>;
 }
@@ -28,11 +35,14 @@ const DEFAULT_VALUES: TicketFormValues = {
   estimatedHours: '',
 };
 
-export function TicketDialog({ client, taskId, ticket, onClose, onSuccess }: TicketDialogProps) {
+export function TicketDialog({ client, taskId, ticket, tasks, productId, onClose, onSuccess }: TicketDialogProps) {
   const isEditMode = Boolean(ticket);
   const [values, setValues] = useState<TicketFormValues>(DEFAULT_VALUES);
+  const [selectedParentId, setSelectedParentId] = useState<string>(taskId);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const showTaskSelector = !isEditMode && tasks && tasks.length > 0 && productId;
 
   useEffect(() => {
     if (!ticket) {
@@ -94,7 +104,7 @@ export function TicketDialog({ client, taskId, ticket, onClose, onSuccess }: Tic
 
         await client.updateNodeSettings(ticket.id, payload);
       } else {
-        await client.createNode(taskId, {
+        await client.createNode(selectedParentId, {
           type: 'plm.ticket',
           name: values.name.trim(),
           identity,
@@ -123,6 +133,31 @@ export function TicketDialog({ client, taskId, ticket, onClose, onSuccess }: Tic
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          {showTaskSelector && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Parent Task <span className="text-muted-foreground">(optional)</span>
+              </label>
+              <select
+                value={selectedParentId}
+                onChange={(e) => setSelectedParentId(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md bg-background"
+                disabled={isSubmitting}
+              >
+                <option value={productId}>Product-level (Support, RMA, etc.)</option>
+                {tasks.map((task) => (
+                  <option key={task.id} value={task.id}>
+                    {task.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Choose a task for work items (e.g., "buy cheese" for task "make pizza"),
+                or select Product-level for general tickets (Support, RMA, etc.)
+              </p>
+            </div>
+          )}
+
           <TicketForm values={values} onChange={setValues} disabled={isSubmitting} />
 
           {error && (

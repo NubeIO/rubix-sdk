@@ -159,6 +159,8 @@ export function ProductDetailPageV2({
       onRefresh: refreshProduct,
     };
 
+    const isSoftware = product.settings?.productType === 'software';
+
     switch (activeSection) {
       case 'overview':
         return <OverviewSection {...commonProps} stats={stats} onStatsUpdate={updateStats} />;
@@ -167,6 +169,10 @@ export function ProductDetailPageV2({
       case 'pricing':
         return <PricingSection {...commonProps} />;
       case 'bom':
+        // BOM is only for hardware products
+        if (isSoftware) {
+          return <OverviewSection {...commonProps} stats={stats} onStatsUpdate={updateStats} />;
+        }
         return <BOMSectionV2 {...commonProps} onStatsUpdate={updateStats} />;
       case 'tasks':
         return <TasksSectionV2 {...commonProps} onStatsUpdate={updateStats} />;
@@ -211,6 +217,7 @@ export function ProductDetailPageV2({
         <SidebarNavigation
           activeSection={activeSection}
           onSectionChange={setActiveSection}
+          productType={product.settings?.productType}
           stats={stats}
         />
       </div>

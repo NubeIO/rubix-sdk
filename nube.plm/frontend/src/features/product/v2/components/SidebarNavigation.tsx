@@ -18,6 +18,7 @@ interface NavItem {
 interface SidebarNavigationProps {
   activeSection: SectionId;
   onSectionChange: (section: SectionId) => void;
+  productType?: 'software' | 'hardware';
   stats: {
     totalTasks: number;
     totalTickets?: number;
@@ -30,9 +31,10 @@ interface SidebarNavigationProps {
 export function SidebarNavigation({
   activeSection,
   onSectionChange,
+  productType,
   stats,
 }: SidebarNavigationProps) {
-  const navItems: NavItem[] = [
+  const allNavItems: NavItem[] = [
     { id: 'overview', label: 'Overview', icon: Grid3x3 },
     { id: 'basic-info', label: 'Basic Info', icon: Info },
     { id: 'pricing', label: 'Pricing', icon: DollarSign },
@@ -42,6 +44,14 @@ export function SidebarNavigation({
     { id: 'tickets', label: 'Tickets', icon: Ticket, badge: stats.totalTickets },
     { id: 'system-info', label: 'System Info', icon: Settings },
   ];
+
+  // Filter out BOM for software products (BOM is hardware-only)
+  const navItems = allNavItems.filter(item => {
+    if (item.id === 'bom' && productType === 'software') {
+      return false;
+    }
+    return true;
+  });
 
   // Fake workspace progress for now
   const workspaceProgress = 65;
