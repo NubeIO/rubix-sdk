@@ -172,6 +172,18 @@ function generateSchemaVariants(profile: NodeProfile): SchemaInfoWithSchema[] {
     },
   };
 
+  // Project variant (generic, no extra fields)
+  const projectSchema = {
+    ...baseSchema,
+    properties: {
+      ...baseProperties,
+      category: {
+        ...categoryProp,
+        default: 'project',
+      },
+    },
+  };
+
   return [
     {
       name: 'hardware',
@@ -186,6 +198,13 @@ function generateSchemaVariants(profile: NodeProfile): SchemaInfoWithSchema[] {
       description: 'Digital products (applications, licenses, SaaS)',
       isDefault: false,
       schema: softwareSchema,
+    },
+    {
+      name: 'project',
+      displayName: 'Project',
+      description: 'Generic project (planning, tracking, documentation)',
+      isDefault: false,
+      schema: projectSchema,
     },
   ];
 }

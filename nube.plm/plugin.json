@@ -308,15 +308,16 @@
       }
     },
     {
-      "pageId": "proof-shared",
-      "title": "✅ PROOF: Shared Component",
-      "icon": "check-circle-2",
-      "description": "Proves plugin uses EXACT SAME DeleteDialog as host",
+      "pageId": "reports",
+      "title": "Reporting Dashboard",
+      "icon": "bar-chart-3",
+      "description": "Cross-product analytics, time tracking, and manufacturing reports",
+      "nodeTypes": ["plm.service", "plm.products"],
       "enabled": true,
       "isDefault": false,
-      "order": 11,
+      "order": 15,
       "props": {
-        "exposedPath": "./ProofShared",
+        "exposedPath": "./Reports",
         "useMountPattern": true
       }
     }

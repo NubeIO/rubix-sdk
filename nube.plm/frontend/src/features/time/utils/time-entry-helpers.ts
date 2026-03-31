@@ -48,7 +48,11 @@ export async function createTimeEntryWithRecalc(
       throw new Error('Invalid parentId: must be a valid ticket ID');
     }
 
-    // Create the time entry
+    // Create the time entry with createdByRef for audit tracking
+    const refs = input.userNodeId
+      ? [{ refName: 'createdByRef', toNodeId: input.userNodeId }]
+      : [];
+
     const entry = await client.createNode(input.parentId, {
       type: 'core.entry',
       profile: 'plm-time-log',
@@ -62,6 +66,7 @@ export async function createTimeEntryWithRecalc(
         description: input.description,
         category: input.category,
       },
+      refs,
     });
 
     // Recalculate ticket actualHours

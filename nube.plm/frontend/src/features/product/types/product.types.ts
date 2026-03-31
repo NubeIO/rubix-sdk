@@ -19,9 +19,9 @@ export type Product = Node & {
   settings?: ProductSettings;
 };
 
-export type ProductType = 'software' | 'hardware';
+export type ProductType = 'software' | 'hardware' | 'project';
 
-export const PRODUCT_TYPES: ProductType[] = ['software', 'hardware'];
+export const PRODUCT_TYPES: ProductType[] = ['software', 'hardware', 'project'];
 
 export type ProductStatus = 'Design' | 'Prototype' | 'Production' | 'Discontinued';
 
