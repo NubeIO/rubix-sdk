@@ -1,6 +1,6 @@
 # PLM Plugin
 
-**Product Lifecycle Management system built on Rubix**
+**Project Lifecycle Management system built on Rubix**
 
 **Status:** ✅ **Phase 1 Complete** - Production ready for CRUD operations
 
@@ -14,12 +14,12 @@
 
 **Backend:**
 - ✅ Plugin loads and connects to Rubix via NATS
-- ✅ `plm.product` node type registered
-- ✅ CREATE - Products created via API
-- ✅ READ - Products retrieved by ID
-- ✅ UPDATE - Product settings modified
-- ✅ QUERY - Products searched by type
-- ✅ DELETE - Products removed
+- ✅ `plm.project` node type registered
+- ✅ CREATE - Projects created via API
+- ✅ READ - Projects retrieved by ID
+- ✅ UPDATE - Project settings modified
+- ✅ QUERY - Projects searched by type
+- ✅ DELETE - Projects removed
 - ✅ Settings validation via JSON Schema
 
 **Frontend:**
@@ -30,11 +30,11 @@
 
 **Test Results:**
 ```
-CREATE:  ✅ 3 products created successfully
-READ:    ✅ Products retrieved with all settings
+CREATE:  ✅ 3 projects created successfully
+READ:    ✅ Projects retrieved with all settings
 UPDATE:  ✅ Price updated 250 → 299.99, Status changed
-QUERY:   ✅ All products returned (3/3)
-DELETE:  ✅ Product removed, verified with query (0 results)
+QUERY:   ✅ All projects returned (3/3)
+DELETE:  ✅ Project removed, verified with query (0 results)
 WIDGET:  ✅ remoteEntry.js built (75KB), HTTP accessible
 ```
 
@@ -42,7 +42,7 @@ WIDGET:  ✅ remoteEntry.js built (75KB), HTTP accessible
 
 These require opening Rubix frontend in browser:
 - [ ] Widget loads in scene builder
-- [ ] Widget displays products in table
+- [ ] Widget displays projects in table
 - [ ] Widget settings UI works (when implemented)
 - [ ] Widget auto-refresh functionality
 
@@ -73,60 +73,60 @@ DEVICE_ID=$(curl -s -X POST http://localhost:9000/api/v1/auth/login \
   -d '{"email":"admin@rubix.io","password":"admin@rubix.io"}' \
   | jq -r '.data.deviceId')
 
-# Create a product
+# Create a project
 curl -X POST "http://localhost:9000/api/v1/orgs/test/devices/$DEVICE_ID/nodes" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "type": "plm.product",
+    "type": "plm.project",
     "name": "Widget Pro",
     "settings": {
-      "productCode": "WP-001",
+      "projectCode": "WP-001",
       "description": "Premium widget",
       "status": "Production",
       "price": 250.00
     }
   }'
 
-# Query all products
+# Query all projects
 curl -X POST "http://localhost:9000/api/v1/orgs/test/devices/$DEVICE_ID/query" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"filter": "type is \"plm.product\""}'
+  -d '{"filter": "type is \"plm.project\""}'
 ```
 
 ---
 
 ## 📦 What's Included
 
-### Node Type: `plm.product`
+### Node Type: `plm.project`
 
 **Settings Schema:**
 ```json
 {
-  "productCode": "WP-001",      // String - Unique SKU
-  "description": "...",         // String - Product description
+  "projectCode": "WP-001",      // String - Unique SKU
+  "description": "...",         // String - Project description
   "status": "Production",       // Enum - Design|Prototype|Production|Discontinued
-  "price": 250.00              // Number - Product price (>= 0)
+  "price": 250.00              // Number - Project price (>= 0)
 }
 ```
 
-### Widget: Product Table
+### Widget: Project Table
 
 **Features:**
-- Displays all products in a table
-- Shows: Name, Product Code, Status (colored badge), Price
+- Displays all projects in a table
+- Shows: Name, Project Code, Status (colored badge), Price
 - Auto-refresh every 30 seconds (configurable)
 - Loading/error/empty states
 
 **Settings (YAML):**
 ```yaml
-# product-table-widget-settings.yaml
+# project-table-widget-settings.yaml
 schema:
   type: object
   properties:
     display:
-      showCode: boolean       # Show/hide product code column
+      showCode: boolean       # Show/hide project code column
       showStatus: boolean     # Show/hide status column
       showPrice: boolean      # Show/hide price column
       compactMode: boolean    # Reduce spacing
@@ -140,7 +140,7 @@ schema:
 ## 🏗️ Architecture
 
 **All-Nodes Approach:**
-- Products stored as Rubix nodes (not separate database table)
+- Projects stored as Rubix nodes (not separate database table)
 - Uses standard node API for all CRUD operations
 - Settings stored in JSONB (flexible schema)
 - No custom backend code needed for basic CRUD
@@ -165,13 +165,13 @@ YAML file → widgetsettings.LoadFromFile() → JSON Schema
 nube.plm/
 ├── main.go                          # Plugin entry point (NATS + PluginServer)
 ├── plugin.json                      # Manifest (node types, widgets)
-├── product-table-widget-settings.yaml  # Widget settings schema
+├── project-table-widget-settings.yaml  # Widget settings schema
 ├── internal/
 │   └── nodes/
-│       └── product_node.go          # ProductNode implementation
+│       └── project_node.go          # ProjectNode implementation
 ├── frontend/
 │   ├── src/widgets/
-│   │   └── ProductTableWidget.tsx   # React widget component
+│   │   └── ProjectTableWidget.tsx   # React widget component
 │   ├── vite.config.ts               # Module Federation config
 │   └── package.json                 # Frontend dependencies
 └── README.md                        # This file
@@ -181,8 +181,8 @@ nube.plm/
 
 ## 🗺️ Roadmap
 
-### ✅ Phase 1: Product CRUD (COMPLETE)
-- Basic product management
+### ✅ Phase 1: Project CRUD (COMPLETE)
+- Basic project management
 - Widget with table display
 - YAML-based widget settings
 - Full CRUD via API
@@ -209,7 +209,7 @@ nube.plm/
 
 ## 🧪 Test Data
 
-Sample products in test database:
+Sample projects in test database:
 
 | Name | Code | Status | Price |
 |------|------|--------|-------|
@@ -265,16 +265,16 @@ pnpm dev  # http://localhost:5173
 **Phase 1 Goals:**
 - [x] Plugin builds without errors
 - [x] Plugin loads in Rubix
-- [x] Products can be created via API
-- [x] Products can be read via API
-- [x] Products can be updated via API
-- [x] Products can be queried via API
-- [x] Products can be deleted via API
+- [x] Projects can be created via API
+- [x] Projects can be read via API
+- [x] Projects can be updated via API
+- [x] Projects can be queried via API
+- [x] Projects can be deleted via API
 - [x] Widget builds with Module Federation
 - [x] Widget accessible via HTTP
 - [x] Settings defined in YAML (not Go)
 - [ ] Widget displays in scene builder (needs manual test)
-- [ ] Widget shows products in table (needs manual test)
+- [ ] Widget shows projects in table (needs manual test)
 
 **13 / 15 Complete (87%)**
 
@@ -283,8 +283,8 @@ pnpm dev  # http://localhost:5173
 ## 🎯 Next Actions
 
 1. **Test widget in UI** - Open scene builder, drag widget onto canvas
-2. **Create products** - Use API or UI to create test products
-3. **Verify display** - Widget should show products in table
+2. **Create projects** - Use API or UI to create test projects
+3. **Verify display** - Widget should show projects in table
 4. **Document results** - Update this README with UI test results
 5. **Plan Phase 2** - BOM relationships and cost calculation
 

@@ -24,9 +24,9 @@ export default defineConfig({
       name: 'nube_plm',
       filename: 'remoteEntry.js',
       exposes: {
-        './ProductTableWidget': './src/features/product/widgets/ProductTableWidget.tsx',
-        './Page': './src/features/product/pages/ProductsListPage.tsx',
-        './ProductDetail': './src/features/product/pages/ProductDetailPageV2Entry.tsx',
+        './ProjectTableWidget': './src/features/project/widgets/ProjectTableWidget.tsx',
+        './Page': './src/features/project/pages/ProjectsListPage.tsx',
+        './ProjectDetail': './src/features/project/pages/ProjectDetailPageV2Entry.tsx',
         './TaskDetail': './src/features/task/pages/TaskDetailPageEntry.tsx',
         './ProofShared': './src/test/ProveItsShared.tsx',
       },

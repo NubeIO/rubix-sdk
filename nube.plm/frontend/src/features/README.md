@@ -11,7 +11,7 @@ This directory contains all **PLM domain features**, organized by business capab
 
 ```
 features/
-├── product/              ✅ IMPLEMENTED - Product catalog & lifecycle
+├── project/              ✅ IMPLEMENTED - Project catalog & lifecycle
 ├── task/                 🚧 READY - Tasks & time tracking
 ├── production-run/       🚧 PLACEHOLDER - Manufacturing runs
 ├── serialized-unit/      🚧 PLACEHOLDER - Individual units
@@ -37,12 +37,12 @@ Each directory is a self-contained domain with its own:
 
 ```typescript
 // ✅ CORRECT: Use @features/* path alias
-import { Product } from '@features/product/types/product.types';
-import { ProductsAPI } from '@features/product/api/product-api';
+import { Project } from '@features/project/types/project.types';
+import { ProjectsAPI } from '@features/project/api/project-api';
 import { TaskList } from '@features/task/components/TaskList';
 
 // ❌ WRONG: Relative paths across features
-import { Product } from '../../product/types/product.types';
+import { Project } from '../../project/types/project.types';
 ```
 
 ### 3. **Domain Independence**
@@ -57,7 +57,7 @@ import { Product } from '../../product/types/product.types';
 
 | Feature | Status | Description | Core Node Types |
 |---------|--------|-------------|-----------------|
-| **product** | ✅ **IMPLEMENTED** | Product catalog, BOM, lifecycle | `core.product`, `core.document` |
+| **project** | ✅ **IMPLEMENTED** | Project catalog, BOM, lifecycle | `core.project`, `core.document` |
 | **task** | 🚧 **READY** | Tasks, time tracking, timesheets | `core.ticket`, `core.entry` |
 | **production-run** | 🚧 Placeholder | Manufacturing runs | `plm.manufacturing-run` |
 | **serialized-unit** | 🚧 Placeholder | Individual produced units | `core.asset` |
@@ -79,13 +79,13 @@ mkdir -p my-feature/{api,hooks,types,components,pages,widgets,utils}
 
 ### 2. Copy from Template
 
-Use `product/` as reference implementation:
+Use `project/` as reference implementation:
 ```bash
 # Study the structure
-ls -la product/
+ls -la project/
 
 # Copy README template
-cp product/README.md my-feature/README.md
+cp project/README.md my-feature/README.md
 ```
 
 ### 3. Set Up Exports
@@ -154,26 +154,26 @@ Follow the standard structure:
 
 ## 🔗 Feature Relationships
 
-### Product → Task
+### Project → Task
 ```typescript
-// product/pages/product-tasks-tab.tsx
+// project/pages/project-tasks-tab.tsx
 import { TaskList } from '@features/task/components/TaskList';
 
-// Query tasks for this product
+// Query tasks for this project
 const tasks = await apiClient.get('/v1/nodes', {
   type: 'core.ticket',
-  parentId: productId,
+  parentId: projectId,
   identity: 'ticket,task'
 });
 ```
 
-### Product → BOM
+### Project → BOM
 ```typescript
-// product/v2/sections/BOMSectionV2.tsx
+// project/v2/sections/BOMSectionV2.tsx
 // BOM is core.document - no separate feature needed
 const bomDocs = await apiClient.get('/v1/nodes', {
   type: 'core.document',
-  parentId: productId,
+  parentId: projectId,
   identity: 'document,source,bom'
 });
 ```
@@ -196,7 +196,7 @@ const timeEntries = await apiClient.get('/v1/nodes', {
 ## 📚 Key Resources
 
 ### Reference Implementation
-- [product/README.md](./product/README.md) - Complete feature guide
+- [project/README.md](./project/README.md) - Complete feature guide
 - [task/README.md](./task/README.md) - Task & time tracking architecture
 
 ### Architecture Docs
@@ -233,20 +233,20 @@ When adding a new feature:
 
 ### Directories
 - **Lowercase with hyphens**: `production-run/`, `serialized-unit/`
-- **Singular for domain name**: `product/`, `task/` (not `products/`, `tasks/`)
+- **Singular for domain name**: `project/`, `task/` (not `projects/`, `tasks/`)
 
 ### Files
-- **PascalCase for components**: `ProductTable.tsx`, `TaskCard.tsx`
-- **kebab-case for utilities**: `product-api.ts`, `time-calculations.ts`
-- **Descriptive names**: `use-products.ts`, `product.types.ts`
+- **PascalCase for components**: `ProjectTable.tsx`, `TaskCard.tsx`
+- **kebab-case for utilities**: `project-api.ts`, `time-calculations.ts`
+- **Descriptive names**: `use-projects.ts`, `project.types.ts`
 
 ### Types
-- **PascalCase for interfaces**: `Product`, `Task`, `TimeEntry`
-- **Descriptive suffixes**: `CreateProductInput`, `UpdateTaskInput`
+- **PascalCase for interfaces**: `Project`, `Task`, `TimeEntry`
+- **Descriptive suffixes**: `CreateProjectInput`, `UpdateTaskInput`
 
 ### Imports
-- **Use path aliases**: `@features/product/...`, `@shared/...`
-- **Named exports preferred**: `import { Product } from '...'`
+- **Use path aliases**: `@features/project/...`, `@shared/...`
+- **Named exports preferred**: `import { Project } from '...'`
 - **Avoid default exports** for components (easier to refactor)
 
 ---

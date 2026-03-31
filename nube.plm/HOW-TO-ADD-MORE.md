@@ -12,7 +12,7 @@ Complete guide for extending the PLM plugin with new nodes, pages, and UI compon
 
 - [Adding Nodes](#adding-nodes) - Core nodes vs custom nodes
 - [Adding Pages](#adding-pages) - Module Federation pages
-- [Product Sections](#product-sections) - Collapsible sections pattern  
+- [Project Sections](#project-sections) - Collapsible sections pattern  
 - [SDK Table Component](#sdk-table-component) - FilteredTableWithTabs
 - [SDK Overview](#sdk-overview) - Frontend SDK reference
 
@@ -29,7 +29,7 @@ Complete guide for extending the PLM plugin with new nodes, pages, and UI compon
 - `core.document` - Files, specs, documentation
 - `core.release` - Software releases, versions
 - `core.asset` - Hardware units, physical items
-- `core.product` - Products, catalog items
+- `core.project` - Projects, catalog items
 - `core.service` - Service roots
 - `core.component` - Parts, BOM items
 
@@ -51,7 +51,7 @@ Complete guide for extending the PLM plugin with new nodes, pages, and UI compon
   "icon": "list-checks",
   "color": "#8b5cf6",
   "constraints": {
-    "allowedParents": ["plm.product"]
+    "allowedParents": ["plm.project"]
   },
   "autoFields": {
     "identity": ["task", "plm"]
@@ -62,7 +62,7 @@ Complete guide for extending the PLM plugin with new nodes, pages, and UI compon
 3. **Query in frontend:**
 ```typescript
 const tasks = await client.queryNodes({
-  filter: 'type is "core.task" and parentId is "${productId}"'
+  filter: 'type is "core.task" and parentId is "${projectId}"'
 });
 ```
 
@@ -119,7 +119,7 @@ Pages load via Module Federation and appear in Rubix UI.
     "pageId": "tasks-manager",
     "title": "Task Management",
     "icon": "list-checks",
-    "nodeTypes": ["plm.product"],
+    "nodeTypes": ["plm.project"],
     "enabled": true,
     "props": {
       "exposedPath": "./TasksPage",
@@ -176,18 +176,18 @@ make build-frontend && make build && ./deploy.sh
 
 ---
 
-## Product Sections
+## Project Sections
 
-Collapsible sections for detail pages (like Product Detail).
+Collapsible sections for detail pages (like Project Detail).
 
 ### Section Component Pattern
 
 ```tsx
-// frontend/src/features/product/components/sections/TasksSection.tsx
+// frontend/src/features/project/components/sections/TasksSection.tsx
 import { SettingsSection } from '@rubix-sdk/frontend/common/ui/settings-section';
 
 interface TasksSectionProps {
-  product: Product;
+  project: Project;
   orgId: string;
   deviceId: string;
   baseUrl?: string;
@@ -197,7 +197,7 @@ interface TasksSectionProps {
 }
 
 export function TasksSection({
-  product,
+  project,
   isExpanded,
   onToggle,
   ...fetchProps
@@ -226,7 +226,7 @@ export function TasksSection({
 ### Using in Detail Page
 
 ```tsx
-function ProductDetailView({ product }) {
+function ProjectDetailView({ project }) {
   const [expandedSections, setExpandedSections] = useState(new Set(['basic-info']));
 
   const toggleSection = (id: string) => {
@@ -240,7 +240,7 @@ function ProductDetailView({ product }) {
   return (
     <div>
       <TasksSection
-        product={product}
+        project={project}
         isExpanded={expandedSections.has('tasks')}
         onToggle={() => toggleSection('tasks')}
       />
@@ -267,13 +267,13 @@ const TABS = [
   { value: 'done', label: 'Done', filter: 'settings.status is "completed"' },
 ];
 
-export function TasksPageTabs({ orgId, deviceId, baseUrl, token, productId }) {
+export function TasksPageTabs({ orgId, deviceId, baseUrl, token, projectId }) {
   const client = createPluginClient({ orgId, deviceId, baseUrl, token });
 
   return (
     <FilteredTableWithTabs
       tabs={TABS}
-      baseFilter={`type is "core.task" and parentId is "${productId}"`}
+      baseFilter={`type is "core.task" and parentId is "${projectId}"`}
       client={client}
       renderTable={(tasks) => <TaskTable tasks={tasks} />}
       renderEmpty={() => <div>No tasks found</div>}
@@ -377,7 +377,7 @@ nube.plm/
 ├── frontend/
 │   ├── vite.config.ts            # Module Federation
 │   └── src/features/
-│       ├── product/
+│       ├── project/
 │       │   ├── types/            # TypeScript types
 │       │   ├── api/              # API classes
 │       │   ├── components/       # Reusable components
@@ -392,9 +392,9 @@ nube.plm/
 ## Real Examples
 
 See existing implementations:
-- **Product**: `frontend/src/features/product/`
+- **Project**: `frontend/src/features/project/`
 - **Task**: `frontend/src/features/task/`
-- **Sections**: `frontend/src/features/product/components/sections/`
+- **Sections**: `frontend/src/features/project/components/sections/`
 - **Pages**: `frontend/src/features/*/pages/`
 
 ---

@@ -19,7 +19,7 @@ Refactored the PLM plugin frontend from **type-first** to **feature-first** arch
 ```
 src/
 ├── types/
-│   ├── product.ts
+│   ├── project.ts
 │   ├── forms.ts
 │   └── widget.ts
 ├── lib/
@@ -32,11 +32,11 @@ src/
 │   ├── dialogs/
 │   └── tables/
 └── widgets/
-    └── ProductTableWidget.tsx (962 LINES!)
+    └── ProjectTableWidget.tsx (962 LINES!)
 ```
 
 **Problems:**
-- 🔴 Everything product-related scattered across 10+ directories
+- 🔴 Everything project-related scattered across 10+ directories
 - 🔴 962-line widget file - hard to maintain
 - 🔴 Doesn't scale to manufacturing, work items, deployments
 - 🔴 Merge conflicts when team grows
@@ -47,13 +47,13 @@ src/
 
 ```
 src/
-├── products/                      # COMPLETE PRODUCT FEATURE
-│   ├── common/                    # Product logic (types, API, hooks, utils)
-│   ├── components/                # Product UI components
-│   ├── dialogs/                   # Product dialogs
-│   ├── widget/                    # Product widgets (140 lines)
-│   ├── node/                      # Product node view (future)
-│   └── page/                      # Product pages (future)
+├── projects/                      # COMPLETE PROJECT FEATURE
+│   ├── common/                    # Project logic (types, API, hooks, utils)
+│   ├── components/                # Project UI components
+│   ├── dialogs/                   # Project dialogs
+│   ├── widget/                    # Project widgets (140 lines)
+│   ├── node/                      # Project node view (future)
+│   └── page/                      # Project pages (future)
 │
 ├── shared/                        # Cross-feature code
 │   ├── components/                # Icons, generic UI
@@ -61,11 +61,11 @@ src/
 │   └── constants.ts
 │
 └── widgets/                       # Legacy exports (backwards compat)
-    └── ProductTableWidget.tsx     # Re-exports from products/widget/
+    └── ProjectTableWidget.tsx     # Re-exports from projects/widget/
 ```
 
 **Benefits:**
-- ✅ All product code in `products/` - easy to find!
+- ✅ All project code in `projects/` - easy to find!
 - ✅ Widget is thin orchestrator (140 lines)
 - ✅ Ready for manufacturing, work items, deployments
 - ✅ Parallel development - no conflicts
@@ -78,13 +78,13 @@ src/
 | Metric | Before | After |
 |--------|--------|-------|
 | **Widget file size** | 962 lines | 140 lines |
-| **Product files** | Scattered | 13 files in `products/` |
+| **Project files** | Scattered | 13 files in `projects/` |
 | **Feature isolation** | ❌ Mixed | ✅ Complete |
 | **Scalability** | ❌ Limited | ✅ Excellent |
 
 ### Files Structure
 ```
-products/
+projects/
 ├── common/
 │   ├── types.ts          (36 lines)
 │   ├── api.ts            (95 lines)
@@ -92,17 +92,17 @@ products/
 │   ├── utils.ts          (27 lines)
 │   └── index.ts
 ├── components/
-│   ├── product-form-fields.tsx      (98 lines)
-│   ├── product-table.tsx            (108 lines)
-│   ├── product-status-badge.tsx     (34 lines)
+│   ├── project-form-fields.tsx      (98 lines)
+│   ├── project-table.tsx            (108 lines)
+│   ├── project-status-badge.tsx     (34 lines)
 │   └── index.ts
 ├── dialogs/
-│   ├── create-product-dialog.tsx    (75 lines)
-│   ├── edit-product-dialog.tsx      (83 lines)
-│   ├── delete-product-dialog.tsx    (62 lines)
+│   ├── create-project-dialog.tsx    (75 lines)
+│   ├── edit-project-dialog.tsx      (83 lines)
+│   ├── delete-project-dialog.tsx    (62 lines)
 │   └── index.ts
 └── widget/
-    ├── ProductTableWidget.tsx       (140 lines)
+    ├── ProjectTableWidget.tsx       (140 lines)
     └── index.ts
 ```
 
@@ -159,22 +159,22 @@ See [ARCHITECTURE.md](src/ARCHITECTURE.md) for:
 ### Structure Check
 ```bash
 cd nube.plm/frontend/src
-tree -L 2 products/
+tree -L 2 projects/
 tree -L 2 shared/
 ```
 
 ### Import Check
 ```typescript
 // ✅ Clean imports from feature root
-import { Product, useProducts, ProductTable } from '../products';
+import { Project, useProjects, ProjectTable } from '../projects';
 import { PlusIcon, usePLMService } from '../shared';
 ```
 
 ### Widget Works
 ```typescript
-import { ProductTableWidget } from './products/widget';
+import { ProjectTableWidget } from './projects/widget';
 // or
-import ProductTableWidget from './widgets/ProductTableWidget'; // Legacy path
+import ProjectTableWidget from './widgets/ProjectTableWidget'; // Legacy path
 ```
 
 ---
@@ -183,7 +183,7 @@ import ProductTableWidget from './widgets/ProductTableWidget'; // Legacy path
 
 ### Feature-First > Type-First
 - **Before:** All types together, all components together
-- **After:** Products together, manufacturing together
+- **After:** Projects together, manufacturing together
 - **Result:** Easier to find, easier to scale
 
 ### Thin Orchestrators
@@ -192,7 +192,7 @@ import ProductTableWidget from './widgets/ProductTableWidget'; // Legacy path
 - **Result:** Testable, maintainable, reusable
 
 ### Ready for Growth
-- Products → ✅ Done
+- Projects → ✅ Done
 - Manufacturing → Ready to add
 - Work Items → Ready to add
 - Deployments → Ready to add
@@ -204,9 +204,9 @@ import ProductTableWidget from './widgets/ProductTableWidget'; // Legacy path
 ### Backwards Compatibility
 Old import path still works:
 ```typescript
-import ProductTableWidget from './widgets/ProductTableWidget';
+import ProjectTableWidget from './widgets/ProjectTableWidget';
 ```
-It re-exports from `products/widget/ProductTableWidget.tsx`
+It re-exports from `projects/widget/ProjectTableWidget.tsx`
 
 ### No Breaking Changes
 - Widget props unchanged

@@ -73,12 +73,12 @@ func main() {
 	defer hookHandler.Unsubscribe()
 
 	// Node factory
-	// Note: plm.service and plm.product migrated to core.service and core.product
+	// Note: plm.service and plm.project migrated to core.service and core.project
 	// with node profiles in config/nodes.yaml - no Go code needed!
 	factory := func(nodeType string) pluginnode.PluginNode {
 		switch nodeType {
-		case "plm.products":
-			return &nodes.ProductsCollectionNode{}
+		case "plm.projects":
+			return &nodes.ProjectsCollectionNode{}
 		case "plm.manufacturing-run":
 			return &nodes.ManufacturingRunNode{}
 		default:
@@ -138,11 +138,11 @@ func main() {
 	} else {
 		logger.Info().
 			Str("serviceId", hierarchyIDs["service"]).
-			Str("productsId", hierarchyIDs["products"]).
+			Str("projectsId", hierarchyIDs["projects"]).
 			Msg("✅ PLM hierarchy ready")
 	}
 
-	logger.Info().Msg("PLM plugin started — product nodes ready + CRUD hooks active")
+	logger.Info().Msg("PLM plugin started — project nodes ready + CRUD hooks active")
 
 	// Wait for shutdown signal
 	sigCh := make(chan os.Signal, 1)

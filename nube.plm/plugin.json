@@ -2,14 +2,14 @@
   "id": "nube.plm",
   "vendor": "nube",
   "name": "plm",
-  "displayName": "Product Lifecycle Management",
+  "displayName": "Project Lifecycle Management",
   "version": "1.0.0",
-  "description": "Product management system",
+  "description": "Project management system",
   "category": "manufacturing",
   "nodeTypes": [
     "plm.service",
-    "plm.product",
-    "plm.products",
+    "plm.project",
+    "plm.projects",
     "plm.task",
     "plm.ticket",
     "plm.manufacturing-run"
@@ -19,7 +19,7 @@
     "core.component",
     "core.document",
     "core.entry",
-    "core.product",
+    "core.project",
     "core.service",
     "core.task",
     "core.ticket"
@@ -37,8 +37,8 @@
   "policy": {
     "nodeTypes": [
       "plm.service",
-      "plm.product",
-      "plm.products",
+      "plm.project",
+      "plm.projects",
       "plm.task",
       "plm.ticket",
       "plm.manufacturing-run"
@@ -66,23 +66,23 @@
   },
   "widgets": [
     {
-      "id": "product-table-widget",
-      "displayName": "Product Table",
-      "description": "Display products in a table",
-      "moduleId": "./ProductTableWidget",
+      "id": "project-table-widget",
+      "displayName": "Project Table",
+      "description": "Display projects in a table",
+      "moduleId": "./ProjectTableWidget",
       "category": "Manufacturing",
       "icon": "Package",
       "supportsQuery": false,
       "requiresBackend": false,
       "defaultSize": { "w": 6, "h": 4 },
-      "settingsSchemaFile": "product-table-widget-settings.yaml"
+      "settingsSchemaFile": "project-table-widget-settings.yaml"
     }
   ],
   "nodes": [
     {
       "type": "plm.service",
       "displayName": "PLM Service",
-      "description": "Product lifecycle management root service",
+      "description": "Project lifecycle management root service",
       "icon": "factory",
       "color": "#8b5cf6",
       "category": "manufacturing",
@@ -97,25 +97,25 @@
       }
     },
     {
-      "type": "plm.product",
-      "displayName": "Product",
-      "description": "PLM-managed product with BOM and releases",
+      "type": "plm.project",
+      "displayName": "Project",
+      "description": "PLM-managed project with BOM and releases",
       "icon": "package",
       "color": "#3b82f6",
       "category": "manufacturing",
       "propertyPanels": ["node-settings", "history-analytics", "tags-references"],
       "constraints": {
-        "allowedParents": ["plm.service", "plm.products"]
+        "allowedParents": ["plm.service", "plm.projects"]
       },
       "autoFields": {
-        "identity": ["product", "plm"],
+        "identity": ["project", "plm"],
         "pluginId": true
       }
     },
     {
-      "type": "plm.products",
-      "displayName": "Products Collection",
-      "description": "Container for product catalog",
+      "type": "plm.projects",
+      "displayName": "Projects Collection",
+      "description": "Container for project catalog",
       "icon": "package",
       "color": "#3b82f6",
       "category": "manufacturing",
@@ -127,7 +127,7 @@
         "allowedParents": ["plm.service"]
       },
       "autoFields": {
-        "identity": ["collection", "products", "plm"],
+        "identity": ["collection", "projects", "plm"],
         "pluginId": true
       }
     },
@@ -140,7 +140,7 @@
       "category": "manufacturing",
       "propertyPanels": ["node-settings", "tags-references"],
       "constraints": {
-        "allowedParents": ["plm.product", "core.product"]
+        "allowedParents": ["plm.project", "core.project"]
       },
       "autoFields": {
         "identity": ["manufacturing", "plm", "run"],
@@ -150,13 +150,13 @@
     {
       "type": "plm.task",
       "displayName": "Task",
-      "description": "Product development task or work item",
+      "description": "Project development task or work item",
       "icon": "list-checks",
       "color": "#8b5cf6",
       "category": "manufacturing",
       "propertyPanels": ["node-settings", "tags-references"],
       "constraints": {
-        "allowedParents": ["plm.product"]
+        "allowedParents": ["plm.project"]
       },
       "autoFields": {
         "identity": ["task", "plm"],
@@ -172,7 +172,7 @@
       "category": "manufacturing",
       "propertyPanels": ["node-settings", "tags-references"],
       "constraints": {
-        "allowedParents": ["plm.product", "plm.task"]
+        "allowedParents": ["plm.project", "plm.task"]
       },
       "autoFields": {
         "identity": ["ticket", "plm"],
@@ -192,7 +192,7 @@
         "hideIn": ["wiresheet"]
       },
       "constraints": {
-        "allowedParents": ["plm.product"]
+        "allowedParents": ["plm.project"]
       },
       "autoFields": {
         "identity": ["document", "bom", "plm"]
@@ -234,11 +234,11 @@
   ],
   "pages": [
     {
-      "pageId": "products-manager",
-      "title": "Product Management",
+      "pageId": "projects-manager",
+      "title": "Project Management",
       "icon": "package",
-      "description": "Manage PLM products",
-      "nodeTypes": ["plm.products"],
+      "description": "Manage PLM projects",
+      "nodeTypes": ["plm.projects"],
       "enabled": true,
       "isDefault": true,
       "order": 10,
@@ -249,32 +249,32 @@
       }
     },
     {
-      "pageId": "product-detail",
-      "title": "Product Details",
+      "pageId": "project-detail",
+      "title": "Project Details",
       "icon": "package",
-      "description": "View product overview and BOM",
-      "nodeTypes": ["plm.product"],
+      "description": "View project overview and BOM",
+      "nodeTypes": ["plm.project"],
       "enabled": true,
       "isDefault": true,
       "order": 10,
       "propertyPanels": ["node-settings", "history-analytics", "tags-references"],
       "props": {
-        "exposedPath": "./ProductDetail",
+        "exposedPath": "./ProjectDetail",
         "useMountPattern": true
       }
     },
     {
-      "pageId": "product-detail-v2",
-      "title": "Product Details V2 (Modern UI)",
+      "pageId": "project-detail-v2",
+      "title": "Project Details V2 (Modern UI)",
       "icon": "package",
-      "description": "Modern workspace UI for product management",
-      "nodeTypes": ["plm.product"],
+      "description": "Modern workspace UI for project management",
+      "nodeTypes": ["plm.project"],
       "enabled": true,
       "isDefault": false,
       "order": 10,
       "propertyPanels": ["node-settings", "history-analytics", "tags-references"],
       "props": {
-        "exposedPath": "./ProductDetailV2",
+        "exposedPath": "./ProjectDetailV2",
         "useMountPattern": true
       }
     },
@@ -282,8 +282,8 @@
       "pageId": "tasks-manager",
       "title": "Task Management",
       "icon": "list-checks",
-      "description": "Manage product tasks",
-      "nodeTypes": ["plm.product"],
+      "description": "Manage project tasks",
+      "nodeTypes": ["plm.project"],
       "enabled": true,
       "isDefault": false,
       "order": 11,

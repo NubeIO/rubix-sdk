@@ -42,22 +42,22 @@ if (input.settings) {
 - ✅ `/features/task/pages/TasksPage.tsx`
   - Updated `updateTask` to use `updateNodeSettings`
 
-### Product Features
-- ✅ `/features/product/pages/ProductsListPage.tsx`
-  - Updated `updateProduct` to use `updateNodeSettings`
+### Project Features
+- ✅ `/features/project/pages/ProjectsListPage.tsx`
+  - Updated `updateProject` to use `updateNodeSettings`
   - Updated `updateTask` to use `updateNodeSettings`
 
-- ✅ `/features/product/hooks/use-products.ts`
-  - Updated `updateProduct` to use `updateNodeSettings`
+- ✅ `/features/project/hooks/use-projects.ts`
+  - Updated `updateProject` to use `updateNodeSettings`
 
-- ✅ `/features/product/pages/product-detail-view.tsx`
-  - Updated `handleProductUpdate` to use `updateNodeSettings`
+- ✅ `/features/project/pages/project-detail-view.tsx`
+  - Updated `handleProjectUpdate` to use `updateNodeSettings`
 
-- ✅ `/features/product/pages/product-overview-tab.tsx`
-  - Updated `handleProductUpdate` to use `updateNodeSettings`
+- ✅ `/features/project/pages/project-overview-tab.tsx`
+  - Updated `handleProjectUpdate` to use `updateNodeSettings`
 
-- ✅ `/features/product/v2/ProductDetailPageV2.tsx`
-  - Updated `updateProduct` to use `updateNodeSettings`
+- ✅ `/features/project/v2/ProjectDetailPageV2.tsx`
+  - Updated `updateProject` to use `updateNodeSettings`
 
 ## Total Files Changed: 6
 
@@ -65,9 +65,9 @@ if (input.settings) {
 
 After this migration, test:
 
-- [ ] Creating new products works
-- [ ] Updating product name works
-- [ ] Updating product settings works
+- [ ] Creating new projects works
+- [ ] Updating project name works
+- [ ] Updating project settings works
 - [ ] Partial settings updates preserve other fields (deep merge)
 - [ ] Creating new tasks works
 - [ ] Updating task name works

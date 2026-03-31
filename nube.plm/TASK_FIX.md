@@ -1,4 +1,4 @@
-# Fix Task Implementation - Use plm.task (Same as plm.product)
+# Fix Task Implementation - Use plm.task (Same as plm.project)
 
 ## Current Status
 
@@ -26,7 +26,7 @@
 ## What Needs to Change
 
 ### 1. TaskDialog.tsx
-**File:** `nube.plm/frontend/src/features/product/v2/components/TaskDialog.tsx`
+**File:** `nube.plm/frontend/src/features/project/v2/components/TaskDialog.tsx`
 
 **Line ~58:** Change from:
 ```typescript
@@ -64,29 +64,29 @@ await client.createNode({
 ---
 
 ### 2. TasksSectionV2.tsx
-**File:** `nube.plm/frontend/src/features/product/v2/sections/TasksSectionV2.tsx`
+**File:** `nube.plm/frontend/src/features/project/v2/sections/TasksSectionV2.tsx`
 
 **Line ~42:** Change from:
 ```typescript
-filter: `parent.id is "${product.id}" and type is "core.task"`,
+filter: `parent.id is "${project.id}" and type is "core.task"`,
 ```
 To:
 ```typescript
-filter: `parent.id is "${product.id}" and type is "plm.task"`,
+filter: `parent.id is "${project.id}" and type is "plm.task"`,
 ```
 
 ---
 
 ## Summary
 
-**Pattern:** plm.task follows the EXACT same pattern as plm.product
+**Pattern:** plm.task follows the EXACT same pattern as plm.project
 
-| | plm.product | plm.task |
+| | plm.project | plm.task |
 |---|---|---|
-| **Type in code** | `'plm.product'` | `'plm.task'` ✅ |
+| **Type in code** | `'plm.project'` | `'plm.task'` ✅ |
 | **nodes.yaml** | Custom type | Custom type ✅ |
 | **plugin.json nodeTypes** | Listed | Listed ✅ |
-| **plugin.json nodes array** | `"type": "plm.product"` | `"type": "plm.task"` ✅ |
-| **Frontend** | Uses `'plm.product'` | Should use `'plm.task'` ❌ |
+| **plugin.json nodes array** | `"type": "plm.project"` | `"type": "plm.task"` ✅ |
+| **Frontend** | Uses `'plm.project'` | Should use `'plm.task'` ❌ |
 
 **Total Changes Needed:** 4 lines in 2 files (all change `'core.task'` → `'plm.task'`)

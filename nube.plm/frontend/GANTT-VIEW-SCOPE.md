@@ -5,8 +5,8 @@
 **Library**: [gantt-task-react](https://www.npmjs.com/package/gantt-task-react)
 
 **Use Cases**:
-1. **Products Page** - All tasks across all products (TasksListTab)
-2. **Single Product Page** - Tasks for specific product (TasksSectionV2)
+1. **Projects Page** - All tasks across all projects (TasksListTab)
+2. **Single Project Page** - Tasks for specific project (TasksSectionV2)
 
 ---
 
@@ -40,10 +40,10 @@ TasksGanttView (Reusable)
 ```typescript
 interface TasksGanttViewProps {
   tasks: Task[];
-  products?: Product[]; // Optional: for multi-product view
+  projects?: Project[]; // Optional: for multi-project view
   client: PluginClient;
-  context: 'all-products' | 'single-product';
-  productId?: string; // Required when context='single-product'
+  context: 'all-projects' | 'single-project';
+  projectId?: string; // Required when context='single-project'
   onTaskEdit?: (task: Task) => void;
   onTaskDelete?: (taskId: string) => void;
 }
@@ -72,7 +72,7 @@ interface GanttTask {
     progressColor?: string;
     backgroundSelectedColor?: string;
   };
-  project?: string; // Product name
+  project?: string; // Project name
   hideChildren?: boolean; // For collapsed state
 }
 ```
@@ -170,7 +170,7 @@ const ganttData = useMemo(() => {
 
   tasks.forEach(task => {
     // Add task
-    items.push(transformTaskToGantt(task, products));
+    items.push(transformTaskToGantt(task, projects));
 
     // Add tickets if expanded
     if (expandedTasks.has(task.id)) {
@@ -182,7 +182,7 @@ const ganttData = useMemo(() => {
   });
 
   return items;
-}, [tasks, products, expandedTasks, taskTickets]);
+}, [tasks, projects, expandedTasks, taskTickets]);
 ```
 
 ---
@@ -199,25 +199,25 @@ import { Calendar, ChevronDown, ChevronRight } from 'lucide-react';
 // @ts-ignore
 import { Button } from '@rubix-sdk/frontend/common/ui';
 import type { Task } from '@features/task/types/task.types';
-import type { Product } from '@features/product/types/product.types';
+import type { Project } from '@features/project/types/project.types';
 import type { Ticket } from '@features/ticket/types/ticket.types';
 import type { PluginClient } from '@rubix-sdk/frontend/plugin-client';
 
 interface TasksGanttViewProps {
   tasks: Task[];
-  products?: Product[];
+  projects?: Project[];
   client: PluginClient;
-  context: 'all-products' | 'single-product';
-  productId?: string;
+  context: 'all-projects' | 'single-project';
+  projectId?: string;
   onTaskEdit?: (task: Task) => void;
 }
 
 export function TasksGanttView({
   tasks,
-  products = [],
+  projects = [],
   client,
   context,
-  productId,
+  projectId,
   onTaskEdit
 }: TasksGanttViewProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Week);
@@ -232,7 +232,7 @@ export function TasksGanttView({
     tasks.forEach(task => {
       // Add task with expand icon
       items.push({
-        ...transformTaskToGantt(task, products),
+        ...transformTaskToGantt(task, projects),
         displayOrder: items.length,
       });
 
@@ -249,7 +249,7 @@ export function TasksGanttView({
     });
 
     return items;
-  }, [tasks, products, expandedTasks, taskTickets]);
+  }, [tasks, projects, expandedTasks, taskTickets]);
 
   const handleExpandTask = useCallback(async (taskId: string) => {
     // Toggle expanded state
@@ -386,7 +386,7 @@ export function TasksGanttView({
 
 ## 6. Integration Points
 
-### 6.1 Products Page (TasksListTab)
+### 6.1 Projects Page (TasksListTab)
 
 ```typescript
 // tasks-list-tab.tsx
@@ -406,7 +406,7 @@ return (
     {viewMode === 'table' ? (
       <TasksDataTable
         tasks={tasks}
-        products={products}
+        projects={projects}
         client={client}
         onEdit={onEdit}
         onDelete={onDelete}
@@ -414,9 +414,9 @@ return (
     ) : (
       <TasksGanttView
         tasks={tasks}
-        products={products}
+        projects={projects}
         client={client}
-        context="all-products"
+        context="all-projects"
         onTaskEdit={onEdit}
       />
     )}
@@ -424,11 +424,11 @@ return (
 );
 ```
 
-### 6.2 Single Product Page (TasksSectionV2)
+### 6.2 Single Project Page (TasksSectionV2)
 
 ```typescript
 // TasksSectionV2.tsx
-import { TasksGanttView } from '@features/product/pages/tasks-gantt-view';
+import { TasksGanttView } from '@features/project/pages/tasks-gantt-view';
 
 const [viewMode, setViewMode] = useState<'kanban' | 'gantt'>('kanban');
 
@@ -447,8 +447,8 @@ return (
       <TasksGanttView
         tasks={tasks}
         client={client}
-        context="single-product"
-        productId={product.id}
+        context="single-project"
+        projectId={project.id}
         onTaskEdit={setEditingTask}
       />
     )}
@@ -475,7 +475,7 @@ return (
 - 🔲 Drag to reschedule tasks (update dueDate)
 - 🔲 Drag progress bar (update progress %)
 - 🔲 Click ticket to view/edit in dialog
-- 🔲 Filter by product (multi-product view)
+- 🔲 Filter by project (multi-project view)
 - 🔲 Filter by date range
 - 🔲 Export to PNG/PDF
 - ⏱️ **Estimated: 8-10 hours**
@@ -565,7 +565,7 @@ return (
 ## 11. File Structure
 
 ```
-features/product/pages/
+features/project/pages/
 ├── tasks-list-tab.tsx           # All tasks view (with Table/Gantt toggle)
 ├── tasks-data-table.tsx         # Table view (existing, with expandable tickets)
 ├── tasks-nested-tickets.tsx     # Nested tickets table (existing)
@@ -573,8 +573,8 @@ features/product/pages/
 └── utils/
     └── tasks-gantt-transform.ts # NEW - Transform utilities
 
-features/product/v2/sections/
-└── TasksSectionV2.tsx           # Single product tasks (Board/Gantt toggle)
+features/project/v2/sections/
+└── TasksSectionV2.tsx           # Single project tasks (Board/Gantt toggle)
 ```
 
 ---
@@ -586,7 +586,7 @@ features/product/v2/sections/
 ```typescript
 import type { Task } from '@features/task/types/task.types';
 import type { Ticket } from '@features/ticket/types/ticket.types';
-import type { Product } from '@features/product/types/product.types';
+import type { Project } from '@features/project/types/project.types';
 
 export interface GanttItem {
   id: string;
@@ -607,7 +607,7 @@ export interface GanttItem {
 
 export function transformTaskToGantt(
   task: Task,
-  products: Product[] = []
+  projects: Project[] = []
 ): GanttItem {
   const startDate = task.settings?.startDate
     ? new Date(task.settings.startDate)
@@ -618,7 +618,7 @@ export function transformTaskToGantt(
     : new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000); // +7 days
 
   const progress = calculateTaskProgress(task);
-  const product = products.find(p => p.id === task.parentId);
+  const project = projects.find(p => p.id === task.parentId);
 
   return {
     id: task.id,
@@ -627,7 +627,7 @@ export function transformTaskToGantt(
     end: endDate,
     progress,
     type: 'task',
-    project: product?.name || 'Unknown Product',
+    project: project?.name || 'Unknown Project',
     styles: {
       backgroundColor: getTaskStatusColor(task.settings?.status),
       progressColor: '#4caf50',
@@ -716,8 +716,8 @@ function getTicketTypeColor(type?: string): string {
 ## 13. Testing Checklist
 
 ### MVP Features:
-- [ ] Gantt renders with tasks (all products context)
-- [ ] Gantt renders with tasks (single product context)
+- [ ] Gantt renders with tasks (all projects context)
+- [ ] Gantt renders with tasks (single project context)
 - [ ] View mode toggle works (Day/Week/Month)
 - [ ] Tasks color-coded by status
 - [ ] [+] icon expands task row
@@ -756,8 +756,8 @@ function getTicketTypeColor(type?: string): string {
 8. Handle loading states
 
 ### Step 3: Integration (2 hours)
-9. Add toggle to TasksListTab (Products Page)
-10. Add toggle to TasksSectionV2 (Product Page)
+9. Add toggle to TasksListTab (Projects Page)
+10. Add toggle to TasksSectionV2 (Project Page)
 11. Test both contexts
 12. Handle edge cases
 
@@ -777,8 +777,8 @@ function getTicketTypeColor(type?: string): string {
 npm install gantt-task-react
 
 # Create files
-touch features/product/pages/tasks-gantt-view.tsx
-touch features/product/pages/utils/tasks-gantt-transform.ts
+touch features/project/pages/tasks-gantt-view.tsx
+touch features/project/pages/utils/tasks-gantt-transform.ts
 
 # Integrate into existing pages
 # - Update TasksListTab.tsx

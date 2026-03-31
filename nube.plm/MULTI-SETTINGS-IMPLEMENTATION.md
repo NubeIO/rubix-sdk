@@ -32,25 +32,25 @@ type MultipleSettingsProvider interface {
 
 ---
 
-### 2. PLM Product Settings (✅ COMPLETE)
+### 2. PLM Project Settings (✅ COMPLETE)
 
-**File:** `/home/user/code/go/nube/rubix-sdk/nube.plm/internal/product/product.go`
+**File:** `/home/user/code/go/nube/rubix-sdk/nube.plm/internal/project/project.go`
 
-Extended `ProductSettings` struct to support both hardware and software products:
+Extended `ProjectSettings` struct to support both hardware and software projects:
 
 ```go
-type ProductSettings struct {
+type ProjectSettings struct {
     // Common fields
-    ProductCode string  `json:"productCode,omitempty"`
+    ProjectCode string  `json:"projectCode,omitempty"`
     Description string  `json:"description,omitempty"`
     Status      string  `json:"status,omitempty"`
     Price       float64 `json:"price,omitempty"`
-    ProductType string  `json:"productType,omitempty"` // "hardware" or "software"
+    ProjectType string  `json:"projectType,omitempty"` // "hardware" or "software"
 
     // Hardware-specific
     SKU            string             `json:"sku,omitempty"`
     Weight         float64            `json:"weight,omitempty"` // kg
-    Dimensions     *ProductDimensions `json:"dimensions,omitempty"`
+    Dimensions     *ProjectDimensions `json:"dimensions,omitempty"`
     WarrantyPeriod int                `json:"warrantyPeriod,omitempty"` // months
     Manufacturer   string             `json:"manufacturer,omitempty"`
     ModelNumber    string             `json:"modelNumber,omitempty"`
@@ -77,8 +77,8 @@ Implemented `MultipleSettingsProvider` interface:
 
 - **`ListSettingsSchemas()`** - Returns hardware and software schema metadata
 - **`GetSettingsSchema(name)`** - Returns specific schema by name
-- **`buildHardwareProductSchema()`** - Hardware product JSON Schema
-- **`buildSoftwareProductSchema()`** - Software product JSON Schema
+- **`buildHardwareProjectSchema()`** - Hardware project JSON Schema
+- **`buildSoftwareProjectSchema()`** - Software project JSON Schema
 
 **Schemas Provided:**
 1. `hardware` (default) - SKU, weight, dimensions, warranty, manufacturer, model, material
@@ -88,7 +88,7 @@ Implemented `MultipleSettingsProvider` interface:
 
 ### 4. PLM Node Integration (✅ COMPLETE)
 
-**File:** `/home/user/code/go/nube/rubix-sdk/nube.plm/internal/nodes/product_node.go`
+**File:** `/home/user/code/go/nube/rubix-sdk/nube.plm/internal/nodes/project_node.go`
 
 - Implements `nodedeps.MultipleSettingsProvider`
 - `SettingsSchema()` returns hardware schema as default (backwards compatible)
@@ -103,7 +103,7 @@ Implemented `MultipleSettingsProvider` interface:
 1. **SDK Foundation** - Interface and types defined
 2. **PLM Plugin** - Implements multiple settings schemas
 3. **Backwards Compatibility** - `SettingsSchema()` still works for single schema
-4. **Type Safety** - ProductSettings supports both product types
+4. **Type Safety** - ProjectSettings supports both project types
 5. **Validation** - JSON schemas enforce required fields and constraints
 
 ### ⚠️ What Needs Work (Rubix Core)
@@ -112,7 +112,7 @@ The **rubix core** needs updates to support external plugin multiple schemas:
 
 #### Problem
 
-External plugins communicate via NATS/Proto. When rubix calls `CreateNode("plm.product")`, it creates a **PluginNode proxy** that forwards RPC calls to the external plugin.
+External plugins communicate via NATS/Proto. When rubix calls `CreateNode("plm.project")`, it creates a **PluginNode proxy** that forwards RPC calls to the external plugin.
 
 Currently:
 - Rubix dispatcher checks: `if node.(shared.MultipleSettingsProvider)` ✅
@@ -163,14 +163,14 @@ Make the plugin return ALL schemas in a single response and let rubix handle the
 
 1. **Schema List API:**
    ```bash
-   curl http://localhost:9000/api/v1/orgs/test/devices/dev_123/nodes/{productId}/settings-schema/list
+   curl http://localhost:9000/api/v1/orgs/test/devices/dev_123/nodes/{projectId}/settings-schema/list
    ```
    Expected response:
    ```json
    {
      "schemas": [
-       {"name": "hardware", "displayName": "Hardware Product", "description": "Physical products", "isDefault": true},
-       {"name": "software", "displayName": "Software Product", "description": "Digital products", "isDefault": false}
+       {"name": "hardware", "displayName": "Hardware Project", "description": "Physical projects", "isDefault": true},
+       {"name": "software", "displayName": "Software Project", "description": "Digital projects", "isDefault": false}
      ],
      "supportsMultiple": true
    }
@@ -178,22 +178,22 @@ Make the plugin return ALL schemas in a single response and let rubix handle the
 
 2. **Hardware Schema API:**
    ```bash
-   curl http://localhost:9000/api/v1/orgs/test/devices/dev_123/nodes/{productId}/settings-schema/hardware
+   curl http://localhost:9000/api/v1/orgs/test/devices/dev_123/nodes/{projectId}/settings-schema/hardware
    ```
    Should return schema with: SKU, weight, dimensions, warranty, etc.
 
 3. **Software Schema API:**
    ```bash
-   curl http://localhost:9000/api/v1/orgs/test/devices/dev_123/nodes/{productId}/settings-schema/software
+   curl http://localhost:9000/api/v1/orgs/test/devices/dev_123/nodes/{projectId}/settings-schema/software
    ```
    Should return schema with: version, licenseType, platform, supportedOS, etc.
 
 4. **Frontend Flow:**
-   - Right-click product → "Edit Settings"
-   - Dialog shows: "Hardware Product" vs "Software Product"
+   - Right-click project → "Edit Settings"
+   - Dialog shows: "Hardware Project" vs "Software Project"
    - Select hardware → Form shows hardware fields only
    - Select software → Form shows software fields only
-   - Submit → Settings saved with `productType` field
+   - Submit → Settings saved with `projectType` field
 
 ---
 
@@ -209,9 +209,9 @@ Make the plugin return ALL schemas in a single response and let rubix handle the
 
 | File | Status | Purpose |
 |------|--------|---------|
-| `internal/product/product.go` | ✅ MODIFIED | Extended ProductSettings struct |
+| `internal/project/project.go` | ✅ MODIFIED | Extended ProjectSettings struct |
 | `internal/nodes/settings_schemas.go` | ✅ CREATED | Schema builders and interface implementation |
-| `internal/nodes/product_node.go` | ✅ MODIFIED | Updated SettingsSchema() to use builder |
+| `internal/nodes/project_node.go` | ✅ MODIFIED | Updated SettingsSchema() to use builder |
 
 ### Rubix Core (Needs Updates)
 
@@ -264,24 +264,24 @@ Make the plugin return ALL schemas in a single response and let rubix handle the
 Once fully implemented:
 
 1. **UX Improvement:** Settings forms show ~50% fewer fields (focused by type)
-2. **Data Quality:** Settings match product type (no irrelevant fields)
+2. **Data Quality:** Settings match project type (no irrelevant fields)
 3. **User Clarity:** Clear distinction between hardware vs software
 4. **Extensibility:** Pattern established for other plugins to use
-5. **Zero Breaking Changes:** Existing products continue working
+5. **Zero Breaking Changes:** Existing projects continue working
 
 ---
 
 ## Example Usage
 
-### Creating Hardware Product
+### Creating Hardware Project
 
 ```json
 {
-  "type": "plm.product",
+  "type": "plm.project",
   "name": "Premium Widget",
   "settings": {
-    "productType": "hardware",
-    "productCode": "HW-WIDGET-PRO",
+    "projectType": "hardware",
+    "projectCode": "HW-WIDGET-PRO",
     "description": "Premium aluminum widget",
     "status": "Active",
     "price": 149.99,
@@ -296,15 +296,15 @@ Once fully implemented:
 }
 ```
 
-### Creating Software Product
+### Creating Software Project
 
 ```json
 {
-  "type": "plm.product",
+  "type": "plm.project",
   "name": "Analytics Dashboard",
   "settings": {
-    "productType": "software",
-    "productCode": "SW-DASHBOARD",
+    "projectType": "software",
+    "projectCode": "SW-DASHBOARD",
     "description": "Enterprise analytics dashboard",
     "status": "Active",
     "price": 49.99,
@@ -321,15 +321,15 @@ Once fully implemented:
 
 ---
 
-## Questions for Product Owner
+## Questions for Project Owner
 
 Before proceeding with rubix core implementation:
 
 1. **Priority:** Is this feature high priority for the next release?
 2. **Timeline:** When do you need this feature delivered?
-3. **Scope:** Should we support changing product type after creation, or lock it?
-4. **Migration:** Are there existing PLM products that need migration?
-5. **Future:** Are there other product types needed (e.g., services, bundles)?
+3. **Scope:** Should we support changing project type after creation, or lock it?
+4. **Migration:** Are there existing PLM projects that need migration?
+5. **Future:** Are there other project types needed (e.g., services, bundles)?
 
 ---
 

@@ -11,7 +11,7 @@
    - [Reusing Core Nodes](#reusing-core-nodes)
    - [Creating Custom Nodes](#creating-custom-nodes)
 3. [Adding Pages](#adding-pages)
-4. [Using Product Sections Pattern](#using-product-sections-pattern)
+4. [Using Project Sections Pattern](#using-project-sections-pattern)
 5. [Using Frontend SDK Table](#using-frontend-sdk-table)
 6. [SDK Overview](#sdk-overview)
 
@@ -27,10 +27,10 @@ nube.plm/
 ├── internal/
 │   └── nodes/              # ← Custom Go node implementations (if needed)
 │       ├── service.go
-│       └── product.go
+│       └── project.go
 └── frontend/
     └── src/
-        ├── features/       # ← Feature modules (product, task, etc.)
+        ├── features/       # ← Feature modules (project, task, etc.)
         └── shared/         # ← Shared utilities
 ```
 

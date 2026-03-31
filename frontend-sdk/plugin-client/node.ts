@@ -33,27 +33,44 @@ export async function createNode(
     });
   }
 
+  const body = {
+    type: input.type,
+    profile: input.profile,
+    name: input.name,
+    identity: input.identity,
+    parentId,
+    settings: input.settings,
+    data: input.data,
+    ui: input.ui,
+    position: input.position,
+    refs,
+  };
+
   console.log('[PluginClient] createNode called:', {
     type: input.type,
     name: input.name,
     parentId,
   });
 
+  // Debug: detect non-serializable values before they hit JSON.stringify
+  try {
+    JSON.stringify(body);
+  } catch (serErr) {
+    console.error('[PluginClient] createNode body is not serializable!');
+    for (const [key, value] of Object.entries(body)) {
+      try {
+        JSON.stringify(value);
+      } catch {
+        console.error(`  Field "${key}" is not serializable:`, typeof value, value);
+      }
+    }
+    throw serErr;
+  }
+
   const result = await rasClient.nodes.create({
     orgId: config.orgId,
     deviceId: config.deviceId,
-    body: {
-      type: input.type,
-      profile: input.profile,
-      name: input.name,
-      identity: input.identity,
-      parentId,
-      settings: input.settings,
-      data: input.data,
-      ui: input.ui,
-      position: input.position,
-      refs,
-    },
+    body,
   });
 
   console.log('[PluginClient] createNode response:', result);

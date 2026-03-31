@@ -24,7 +24,7 @@ error="ensure service root: create node: NATS request failed: nats: timeout"
    rubix.plugins-manager
      └─ plugin_nube.plm (rubix.plugin)
          └─ plm.service (plm.service) ← Service root MUST have this parent
-             └─ plm.products (plm.products)
+             └─ plm.projects (plm.projects)
    ```
 
 3. According to [docs/system/v1/tagging/REFERENCES.md](/home/user/code/go/nube/rubix/docs/system/v1/tagging/REFERENCES.md):
@@ -102,7 +102,7 @@ Expected behavior:
 1. Plugin starts
 2. Constructs plugin node ID: `plugin_nube.plm`
 3. Creates `plm.service` with parent `plugin_nube.plm`
-4. Creates `plm.products` with parent `plm.service`
+4. Creates `plm.projects` with parent `plm.service`
 5. Bootstrap succeeds ✅
 
 ### Manual Verification
@@ -132,7 +132,7 @@ sqlite3 bin/dev/data/db/rubix.db "
 # Expected result:
 # plugin_nube.plm       | PLM           | rubix.plugin  | {plugins-manager-id}
 # plm_service_...       | PLM System    | plm.service   | plugin_nube.plm
-# plm_products_...      | Products      | plm.products  | plm_service_...
+# plm_projects_...      | Projects      | plm.projects  | plm_service_...
 
 # 5. Verify refs
 sqlite3 bin/dev/data/db/rubix.db "
@@ -144,7 +144,7 @@ sqlite3 bin/dev/data/db/rubix.db "
 
 # Expected result:
 # parentRef | plm_service_...  | plugin_nube.plm
-# parentRef | plm_products_... | plm_service_...
+# parentRef | plm_projects_... | plm_service_...
 ```
 
 ## Impact on Other Plugins

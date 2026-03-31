@@ -1,4 +1,4 @@
-# Product Table Widget - Settings Schema
+# Project Table Widget - Settings Schema
 # Auto-loaded by PLM plugin backend
 
 schema:
@@ -12,8 +12,8 @@ schema:
       properties:
         showCode:
           type: boolean
-          title: Show Product Code
-          description: Display product code column
+          title: Show Project Code
+          description: Display project code column
           default: true
         showStatus:
           type: boolean
@@ -40,7 +40,7 @@ schema:
         interval:
           type: number
           title: Refresh Interval (seconds)
-          description: How often to reload product data
+          description: How often to reload project data
           default: 30
           minimum: 5
           maximum: 300

@@ -7,12 +7,12 @@ nodeTypes:
   - type: plm.service
     baseType: core.service
     displayName: PLM Service
-    description: Product Lifecycle Management service root
+    description: Project Lifecycle Management service root
     autoPluginId: true
     autoIdentity: [service, plm]
 
     defaults:
-      serviceName: "Product Lifecycle Management"
+      serviceName: "Project Lifecycle Management"
       serviceType: "plm"
       status: "active"
       version: "2.0"
@@ -23,21 +23,21 @@ nodeTypes:
         serviceName:
           pattern: "^[A-Za-z0-9 \\-_]+$"
           message: "Service name must be alphanumeric"
-          example: "Product Lifecycle Management"
+          example: "Project Lifecycle Management"
 
     uiHints:
       icon: package-search
       color: "#3b82f6"
 
   # ---------------------------------------------------------------------------
-  # PLM Product (extends core.product)
+  # PLM Project (extends core.project)
   # ---------------------------------------------------------------------------
-  - type: plm.product
-    baseType: core.product
-    displayName: PLM Product
-    description: Product catalog with lifecycle tracking
+  - type: plm.project
+    baseType: core.project
+    displayName: PLM Project
+    description: Project catalog with lifecycle tracking
     autoPluginId: true
-    autoIdentity: [product, plm]
+    autoIdentity: [project, plm]
 
     defaults:
       category: "hardware"
@@ -45,16 +45,16 @@ nodeTypes:
       status: "Design"
 
     validation:
-      required: [productCode]
+      required: [projectCode]
       rules:
-        productCode:
-          message: "Product code must be at least 3 characters"
+        projectCode:
+          message: "Project code must be at least 3 characters"
           example: "edge-001"
         category:
-          enum: [hardware, software, hybrid, firmware, bundle]
+          enum: [hardware, software, project, hybrid, firmware, bundle]
           message: "Invalid category"
         status:
-          enum: [Design, Prototype, Production, Discontinued]
+          enum: [Design, Prototype, Production, Discontinued, planned, active, on_hold, completed, cancelled]
           message: "Invalid status"
         price:
           min: 0
@@ -138,7 +138,7 @@ nodeTypes:
   - type: plm.task
     baseType: core.task
     displayName: Task
-    description: Product development task or work item
+    description: Project development task or work item
     autoPluginId: true
     autoIdentity: [task, plm]
 
@@ -317,7 +317,7 @@ nodeProfiles:
   - nodeType: core.task
     profile: plm-task
     displayName: PLM Task
-    description: Product development task with kanban workflow
+    description: Project development task with kanban workflow
     identity: [task, plm]
 
     defaults:

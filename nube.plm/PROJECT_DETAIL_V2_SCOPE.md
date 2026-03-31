@@ -1,11 +1,11 @@
-# Product Detail Page V2 - Scope Document
+# Project Detail Page V2 - Scope Document
 
 ## Overview
-Create a modern, polished Product Detail Page based on the plm-workspace-pro example design. This replaces the current ProductDetailPage with a full-featured workspace view for managing a single product.
+Create a modern, polished Project Detail Page based on the plm-workspace-pro example design. This replaces the current ProjectDetailPage with a full-featured workspace view for managing a single project.
 
 ## Reference
 - **Example**: `/home/user/Downloads/plm-workspace-pro/src/App.tsx`
-- **Current Implementation**: `nube.plm/frontend/src/features/product/pages/ProductDetailPage.tsx`
+- **Current Implementation**: `nube.plm/frontend/src/features/project/pages/ProjectDetailPage.tsx`
 - **Screenshot**: Modern workspace with stat cards, sidebar navigation, and section-based content
 
 ## Goals
@@ -20,11 +20,11 @@ Create a modern, polished Product Detail Page based on the plm-workspace-pro exa
 
 ### 1. Header (Top Bar)
 **Left Side:**
-- Product icon (colored box with Package icon)
-- Product name (large, bold)
+- Project icon (colored box with Package icon)
+- Project name (large, bold)
 - Badge for status (e.g., "Design", "Production", "Active")
-- Product type indicator (hardware/software)
-- Product code and Node ID (small, muted text)
+- Project type indicator (hardware/software)
+- Project code and Node ID (small, muted text)
 
 **Right Side:**
 - Search box (rounded, with icon)
@@ -74,9 +74,9 @@ Scrollable content area with sections based on active tab:
     - "Export Report" (with icon)
 
 **2.2 Basic Info Section**
-- Product name field
+- Project name field
 - Description textarea
-- Product type selector
+- Project type selector
 - Status dropdown
 - Created/modified timestamps
 - Form validation
@@ -189,14 +189,14 @@ Inactive sections:
 - Separator
 - Tabs (custom styled)
 
-### 2. Product Detail Components
+### 2. Project Detail Components
 
 **Main Page:**
-- `ProductDetailPageV2.tsx` - Main container with layout
+- `ProjectDetailPageV2.tsx` - Main container with layout
 
 **Sections:**
 - `OverviewSection.tsx` - Stat cards + Recent Tasks + Quick Actions
-- `BasicInfoSection.tsx` - Product info form
+- `BasicInfoSection.tsx` - Project info form
 - `PricingSection.tsx` - Pricing management
 - `BOMSectionV2.tsx` - Modern BOM table with popovers
 - `TasksSectionV2.tsx` - Kanban-style task board
@@ -205,7 +205,7 @@ Inactive sections:
 **Shared Components:**
 - `StatCard.tsx` - Reusable stat card component
 - `SidebarNavigation.tsx` - Right sidebar with nav menu
-- `ProductHeader.tsx` - Top header bar
+- `ProjectHeader.tsx` - Top header bar
 - `QuickActions.tsx` - Quick actions card
 - `RecentTasks.tsx` - Recent tasks card
 - `BOMTableRow.tsx` - BOM table row with popover
@@ -215,13 +215,13 @@ Inactive sections:
 
 ## Data Integration (Real APIs)
 
-### Product Data
+### Project Data
 ```typescript
-// Fetch product on load
-const product = await client.getNode(productId);
+// Fetch project on load
+const project = await client.getNode(projectId);
 
-// Update product
-await client.updateNode(productId, {
+// Update project
+await client.updateNode(projectId, {
   name: newName,
   settings: { ...updatedSettings }
 });
@@ -229,9 +229,9 @@ await client.updateNode(productId, {
 
 ### BOM Items
 ```typescript
-// Query BOM items (children of product with type core.document/bom)
+// Query BOM items (children of project with type core.document/bom)
 const bomItems = await client.queryNodes({
-  filter: `parentId is "${productId}" and type is "core.document"`,
+  filter: `parentId is "${projectId}" and type is "core.document"`,
   // May need to check profile too: profile is "plm-bom"
 });
 
@@ -239,7 +239,7 @@ const bomItems = await client.queryNodes({
 await client.createNode({
   type: 'core.document',
   profile: 'plm-bom',
-  parentId: productId,
+  parentId: projectId,
   name: partCode,
   settings: { description, quantity, unitCost, status }
 });
@@ -247,16 +247,16 @@ await client.createNode({
 
 ### Tasks
 ```typescript
-// Query tasks (children of product with type core.task)
+// Query tasks (children of project with type core.task)
 const tasks = await client.queryNodes({
-  filter: `parentId is "${productId}" and type is "core.task"`,
+  filter: `parentId is "${projectId}" and type is "core.task"`,
 });
 
 // Create task
 await client.createNode({
   type: 'core.task',
   profile: 'plm-task',
-  parentId: productId,
+  parentId: projectId,
   name: taskName,
   settings: { status, priority, assignee, dueDate, progress }
 });
@@ -270,7 +270,7 @@ await client.createNode({
 - BOM Items: bomItems.length
 - Items Pending Release: filter by settings.status === 'Pending'
 - Total Cost: sum(bomItems.map(i => i.settings.quantity * i.settings.unitCost))
-- Activity: Use product.updatedAt timestamp
+- Activity: Use project.updatedAt timestamp
 ```
 
 ---
@@ -343,7 +343,7 @@ group-hover:opacity-100 (for hidden elements)
 ## Features
 
 ### Must Have (MVP)
-- ✅ Modern header with product info
+- ✅ Modern header with project info
 - ✅ Sidebar navigation
 - ✅ Overview section with stat cards
 - ✅ Recent tasks widget
@@ -401,14 +401,14 @@ nube.plm/frontend/src/
 ├── lib/
 │   └── utils.ts           ✅ Already created (cn function)
 │
-└── features/product/
+└── features/project/
     ├── pages/
-    │   ├── ProductDetailPage.tsx           (current v1)
-    │   └── ProductDetailPageV2.tsx         ⬜ TODO (new)
+    │   ├── ProjectDetailPage.tsx           (current v1)
+    │   └── ProjectDetailPageV2.tsx         ⬜ TODO (new)
     │
     └── components/
         └── detail-v2/                      ⬜ TODO (new folder)
-            ├── ProductHeader.tsx
+            ├── ProjectHeader.tsx
             ├── SidebarNavigation.tsx
             ├── StatCard.tsx
             ├── sections/
@@ -431,8 +431,8 @@ nube.plm/frontend/src/
 
 ### Phase 1: Foundation (1-2 hours)
 1. Create missing UI components (Input, Select, Progress, etc.)
-2. Set up ProductDetailPageV2 container
-3. Create ProductHeader component
+2. Set up ProjectDetailPageV2 container
+3. Create ProjectHeader component
 4. Create SidebarNavigation component
 5. Implement section routing/switching
 
@@ -490,8 +490,8 @@ nube.plm/frontend/src/
 - ✅ Proper hover/focus states
 
 ### Functional
-- ✅ All product data loads from real API
-- ✅ Can view and edit product info
+- ✅ All project data loads from real API
+- ✅ Can view and edit project info
 - ✅ Can manage BOM items (create, edit, delete)
 - ✅ Can manage tasks (create, edit, delete)
 - ✅ Stats calculate correctly
@@ -516,14 +516,14 @@ nube.plm/frontend/src/
 ## Migration Plan
 
 ### Option A: Side-by-side (Recommended)
-1. Keep ProductDetailPage.tsx as-is
-2. Create ProductDetailPageV2.tsx
+1. Keep ProjectDetailPage.tsx as-is
+2. Create ProjectDetailPageV2.tsx
 3. Add new page entry in plugin.json:
    ```json
    {
-     "pageId": "product-detail-v2",
-     "title": "Product Details V2 (Modern UI)",
-     "nodeTypes": ["plm.product"],
+     "pageId": "project-detail-v2",
+     "title": "Project Details V2 (Modern UI)",
+     "nodeTypes": ["plm.project"],
      "enabled": true,
      "isDefault": false
    }
@@ -533,8 +533,8 @@ nube.plm/frontend/src/
 6. Eventually remove v1
 
 ### Option B: Direct replacement
-1. Backup ProductDetailPage.tsx
-2. Replace with ProductDetailPageV2.tsx
+1. Backup ProjectDetailPage.tsx
+2. Replace with ProjectDetailPageV2.tsx
 3. Test thoroughly
 4. Remove backup if all good
 
@@ -573,7 +573,7 @@ nube.plm/frontend/src/
 
 1. ✅ Review and approve this scope
 2. ⬜ Create missing UI components
-3. ⬜ Build ProductDetailPageV2 container
+3. ⬜ Build ProjectDetailPageV2 container
 4. ⬜ Implement sections one by one
 5. ⬜ Test with real data
 6. ⬜ Add to plugin.json when ready
@@ -583,4 +583,4 @@ nube.plm/frontend/src/
 ---
 
 **Ready to start implementation?**
-This scope gives us a clear roadmap for creating a professional, modern Product Detail Page that matches the example design while using real APIs.
+This scope gives us a clear roadmap for creating a professional, modern Project Detail Page that matches the example design while using real APIs.
