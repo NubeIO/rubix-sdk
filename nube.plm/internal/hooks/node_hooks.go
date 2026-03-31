@@ -12,7 +12,7 @@ import (
 )
 
 // PLMNodeHooks implements the nodehooks.NodeHooks interface for PLM plugin
-// This controls CRUD operations on PLM node types (plm.product, plm.project, plm.task)
+// This controls CRUD operations on PLM node types (plm.project, plm.task)
 type PLMNodeHooks struct {
 	nodehooks.NoOpHooks // Embed default implementations
 	client              *bootstrap.Client
@@ -26,12 +26,10 @@ func NewPLMNodeHooks(client *bootstrap.Client) *PLMNodeHooks {
 // BeforeCreate validates a node before creation
 func (h *PLMNodeHooks) BeforeCreate(ctx context.Context, req *nodehooks.BeforeCreateRequest) (*nodehooks.BeforeCreateResponse, error) {
 	switch req.Node.Type {
-	case "plm.product":
-		return h.validateProductCreate(ctx, req)
-	case "plm.manufacturing-run":
-		return h.validateManufacturingRunCreate(ctx, req)
 	case "plm.project":
 		return h.validateProjectCreate(ctx, req)
+	case "plm.manufacturing-run":
+		return h.validateManufacturingRunCreate(ctx, req)
 	case "plm.task":
 		return h.validateTaskCreate(ctx, req)
 	default:
@@ -57,12 +55,10 @@ func (h *PLMNodeHooks) AfterCreate(ctx context.Context, req *nodehooks.AfterCrea
 // BeforeUpdate validates a node before update
 func (h *PLMNodeHooks) BeforeUpdate(ctx context.Context, req *nodehooks.BeforeUpdateRequest) (*nodehooks.BeforeUpdateResponse, error) {
 	switch req.NewNode.Type {
-	case "plm.product":
-		return h.validateProductUpdate(ctx, req)
-	case "plm.manufacturing-run":
-		return h.validateManufacturingRunUpdate(ctx, req)
 	case "plm.project":
 		return h.validateProjectUpdate(ctx, req)
+	case "plm.manufacturing-run":
+		return h.validateManufacturingRunUpdate(ctx, req)
 	case "plm.task":
 		return h.validateTaskUpdate(ctx, req)
 	default:
@@ -83,7 +79,7 @@ func (h *PLMNodeHooks) AfterUpdate(ctx context.Context, req *nodehooks.AfterUpda
 
 // BeforeDelete validates a node before deletion
 func (h *PLMNodeHooks) BeforeDelete(ctx context.Context, req *nodehooks.BeforeDeleteRequest) (*nodehooks.BeforeDeleteResponse, error) {
-	// Example: Could check if product has active orders, projects have tasks, etc.
+	// Example: Could check if project has active orders, projects have tasks, etc.
 	log.Debug().
 		Str("nodeId", req.Node.ID).
 		Str("type", req.Node.Type).
@@ -104,30 +100,30 @@ func (h *PLMNodeHooks) AfterDelete(ctx context.Context, req *nodehooks.AfterDele
 }
 
 // ============================================================================
-// Product Validation
+// Project Validation
 // ============================================================================
 
-func (h *PLMNodeHooks) validateProductCreate(ctx context.Context, req *nodehooks.BeforeCreateRequest) (*nodehooks.BeforeCreateResponse, error) {
+func (h *PLMNodeHooks) validateProjectCreate(ctx context.Context, req *nodehooks.BeforeCreateRequest) (*nodehooks.BeforeCreateResponse, error) {
 	// Validate required fields
-	productCode, ok := req.Node.Settings["productCode"].(string)
-	if !ok || productCode == "" {
+	projectCode, ok := req.Node.Settings["projectCode"].(string)
+	if !ok || projectCode == "" {
 		return &nodehooks.BeforeCreateResponse{
 			Allow:  false,
-			Reason: "productCode is required for plm.product nodes",
+			Reason: "projectCode is required for plm.project nodes",
 		}, nil
 	}
 
-	// Validate product code format (example: must start with letters)
-	if len(productCode) < 3 {
+	// Validate project code format (example: must start with letters)
+	if len(projectCode) < 3 {
 		return &nodehooks.BeforeCreateResponse{
 			Allow:  false,
-			Reason: "productCode must be at least 3 characters",
+			Reason: "projectCode must be at least 3 characters",
 		}, nil
 	}
 
 	// Validate status enum
 	status, ok := req.Node.Settings["status"].(string)
-	if ok && !isValidProductStatus(status) {
+	if ok && !isValidProjectStatus(status) {
 		return &nodehooks.BeforeCreateResponse{
 			Allow:  false,
 			Reason: fmt.Sprintf("invalid status '%s'. Must be: Design, Prototype, Production, or Discontinued", status),
@@ -144,14 +140,14 @@ func (h *PLMNodeHooks) validateProductCreate(ctx context.Context, req *nodehooks
 		}
 	}
 
-	duplicateExists, err := h.productCodeExists(ctx, productCode)
+	duplicateExists, err := h.projectCodeExists(ctx, projectCode)
 	if err != nil {
 		return nil, err
 	}
 	if duplicateExists {
 		return &nodehooks.BeforeCreateResponse{
 			Allow:  false,
-			Reason: fmt.Sprintf("productCode '%s' already exists", productCode),
+			Reason: fmt.Sprintf("projectCode '%s' already exists", projectCode),
 		}, nil
 	}
 
@@ -166,15 +162,15 @@ func (h *PLMNodeHooks) validateProductCreate(ctx context.Context, req *nodehooks
 	}, nil
 }
 
-func (h *PLMNodeHooks) validateProductUpdate(ctx context.Context, req *nodehooks.BeforeUpdateRequest) (*nodehooks.BeforeUpdateResponse, error) {
-	// Don't allow changing productCode after creation (immutable)
-	oldCode, _ := req.OldNode.Settings["productCode"].(string)
-	newCode, _ := req.NewNode.Settings["productCode"].(string)
+func (h *PLMNodeHooks) validateProjectUpdate(ctx context.Context, req *nodehooks.BeforeUpdateRequest) (*nodehooks.BeforeUpdateResponse, error) {
+	// Don't allow changing projectCode after creation (immutable)
+	oldCode, _ := req.OldNode.Settings["projectCode"].(string)
+	newCode, _ := req.NewNode.Settings["projectCode"].(string)
 
 	if oldCode != "" && newCode != oldCode {
 		return &nodehooks.BeforeUpdateResponse{
 			Allow:  false,
-			Reason: "productCode cannot be changed after creation",
+			Reason: "projectCode cannot be changed after creation",
 		}, nil
 	}
 
@@ -185,12 +181,12 @@ func (h *PLMNodeHooks) validateProductUpdate(ctx context.Context, req *nodehooks
 	if oldStatus == "Discontinued" && newStatus != "Discontinued" {
 		return &nodehooks.BeforeUpdateResponse{
 			Allow:  false,
-			Reason: "cannot reactivate a discontinued product",
+			Reason: "cannot reactivate a discontinued project",
 		}, nil
 	}
 
 	// Validate new status if changed
-	if newStatus != "" && !isValidProductStatus(newStatus) {
+	if newStatus != "" && !isValidProjectStatus(newStatus) {
 		return &nodehooks.BeforeUpdateResponse{
 			Allow:  false,
 			Reason: fmt.Sprintf("invalid status '%s'", newStatus),
@@ -294,38 +290,6 @@ func (h *PLMNodeHooks) validateManufacturingRunUpdate(ctx context.Context, req *
 }
 
 // ============================================================================
-// Project Validation
-// ============================================================================
-
-func (h *PLMNodeHooks) validateProjectCreate(ctx context.Context, req *nodehooks.BeforeCreateRequest) (*nodehooks.BeforeCreateResponse, error) {
-	// Example validation for projects
-	projectCode, ok := req.Node.Settings["projectCode"].(string)
-	if !ok || projectCode == "" {
-		return &nodehooks.BeforeCreateResponse{
-			Allow:  false,
-			Reason: "projectCode is required for plm.project nodes",
-		}, nil
-	}
-
-	return &nodehooks.BeforeCreateResponse{Allow: true}, nil
-}
-
-func (h *PLMNodeHooks) validateProjectUpdate(ctx context.Context, req *nodehooks.BeforeUpdateRequest) (*nodehooks.BeforeUpdateResponse, error) {
-	// Example: Don't allow changing project code
-	oldCode, _ := req.OldNode.Settings["projectCode"].(string)
-	newCode, _ := req.NewNode.Settings["projectCode"].(string)
-
-	if oldCode != "" && newCode != oldCode {
-		return &nodehooks.BeforeUpdateResponse{
-			Allow:  false,
-			Reason: "projectCode cannot be changed after creation",
-		}, nil
-	}
-
-	return &nodehooks.BeforeUpdateResponse{Allow: true}, nil
-}
-
-// ============================================================================
 // Task Validation
 // ============================================================================
 
@@ -357,12 +321,19 @@ func (h *PLMNodeHooks) validateTaskUpdate(ctx context.Context, req *nodehooks.Be
 // Helpers
 // ============================================================================
 
-func isValidProductStatus(status string) bool {
+func isValidProjectStatus(status string) bool {
 	validStatuses := map[string]bool{
+		// Hardware/software project statuses
 		"Design":       true,
 		"Prototype":    true,
 		"Production":   true,
 		"Discontinued": true,
+		// Project-type statuses
+		"planned":   true,
+		"active":    true,
+		"on_hold":   true,
+		"completed": true,
+		"cancelled": true,
 	}
 	return validStatuses[status]
 }
@@ -395,19 +366,19 @@ func extractNumericValue(value any) (float64, bool) {
 	}
 }
 
-func (h *PLMNodeHooks) productCodeExists(ctx context.Context, productCode string) (bool, error) {
+func (h *PLMNodeHooks) projectCodeExists(ctx context.Context, projectCode string) (bool, error) {
 	if h.client == nil {
 		return false, nil
 	}
 
-	if productCode == "" {
+	if projectCode == "" {
 		return false, nil
 	}
 
-	filter := fmt.Sprintf(`type is 'plm.product' and settings.productCode is "%s"`, escapeHaystackString(productCode))
+	filter := fmt.Sprintf(`type is 'plm.project' and settings.projectCode is "%s"`, escapeHaystackString(projectCode))
 	nodes, err := bootstrap.QueryNodes(ctx, h.client, filter)
 	if err != nil {
-		return false, fmt.Errorf("query existing products by productCode: %w", err)
+		return false, fmt.Errorf("query existing projects by projectCode: %w", err)
 	}
 
 	return len(nodes) > 0, nil

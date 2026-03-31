@@ -7,16 +7,16 @@ import { Filter, X, Search, Table2, CalendarRange } from 'lucide-react';
 // @ts-ignore - SDK types are resolved at build time
 import { Button } from '@rubix-sdk/frontend/common/ui';
 import { Input } from '@/components/ui/input';
-import type { Product } from '@features/product/types/product.types';
+import type { Project } from '@features/project/types/project.types';
 
 export interface TaskFiltersProps {
   statusFilter: string;
   onStatusFilterChange: (status: string) => void;
-  productFilter: string;
-  onProductFilterChange: (productId: string) => void;
+  projectFilter: string;
+  onProjectFilterChange: (projectId: string) => void;
   searchQuery?: string;
   onSearchQueryChange?: (query: string) => void;
-  products: Product[];
+  projects: Project[];
   showSearch?: boolean;
   resultCount?: number;
   totalCount?: number;
@@ -35,22 +35,22 @@ const STATUS_OPTIONS = [
 export function TaskFilters({
   statusFilter,
   onStatusFilterChange,
-  productFilter,
-  onProductFilterChange,
+  projectFilter,
+  onProjectFilterChange,
   searchQuery,
   onSearchQueryChange,
-  products,
+  projects,
   showSearch = false,
   resultCount,
   totalCount,
   view,
   onViewChange,
 }: TaskFiltersProps) {
-  const hasActiveFilters = statusFilter !== 'all' || productFilter !== 'all';
+  const hasActiveFilters = statusFilter !== 'all' || projectFilter !== 'all';
 
   const clearFilters = () => {
     onStatusFilterChange('all');
-    onProductFilterChange('all');
+    onProjectFilterChange('all');
   };
 
   return (
@@ -118,16 +118,16 @@ export function TaskFilters({
           ))}
         </div>
 
-        {/* Product Filter Dropdown */}
+        {/* Project Filter Dropdown */}
         <select
-          value={productFilter}
-          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onProductFilterChange(e.target.value)}
+          value={projectFilter}
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onProjectFilterChange(e.target.value)}
           className="h-7 px-3 text-sm border rounded-md bg-background"
         >
-          <option value="all">All Products</option>
-          {products.map((product) => (
-            <option key={product.id} value={product.id}>
-              {product.name}
+          <option value="all">All Projects</option>
+          {projects.map((project) => (
+            <option key={project.id} value={project.id}>
+              {project.name}
             </option>
           ))}
         </select>

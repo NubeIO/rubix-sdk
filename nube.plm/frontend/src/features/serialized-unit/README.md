@@ -56,7 +56,7 @@ interface SerializedUnit {
   type: 'plm.serialized-unit';
   settings: {
     serialNumber: string;         // Unique serial number
-    productRef: string;           // Link to product
+    projectRef: string;           // Link to project
     productionRunRef?: string;    // Link to production run
     status: 'in-production' | 'testing' | 'passed' | 'failed' | 'shipped' | 'in-service' | 'retired';
     manufacturedDate?: string;
@@ -80,7 +80,7 @@ interface SerializedUnit {
 
 ## 🚀 Getting Started (When Implementing)
 
-1. **Copy the product/ structure** as a template
+1. **Copy the project/ structure** as a template
 2. **Define types** in `types/serialized-unit.types.ts`
 3. **Create API client** in `api/serialized-unit-api.ts`
 4. **Build hooks** for data fetching
@@ -93,7 +93,7 @@ interface SerializedUnit {
 
 ## 📚 Related Domains
 
-- **product/** - Product definitions
+- **project/** - Project definitions
 - **production-run/** - Manufacturing runs that produce units
 - **work-item/** - Work performed on units
 - **site/** - Where units are located
@@ -103,7 +103,7 @@ interface SerializedUnit {
 ## 🎨 UI Considerations
 
 ### Views
-- **List View**: Filterable table (by product, run, status)
+- **List View**: Filterable table (by project, run, status)
 - **Scanner View**: Camera-based barcode/QR scanner
 - **Tracker View**: Visual timeline of unit journey
 - **Genealogy View**: Parent/child relationships (assemblies)
@@ -183,4 +183,4 @@ When implementing this domain:
 
 ---
 
-**See**: [`product/README.md`](../product/README.md) for the reference implementation pattern.
+**See**: [`project/README.md`](../project/README.md) for the reference implementation pattern.

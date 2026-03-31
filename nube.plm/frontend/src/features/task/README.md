@@ -61,7 +61,7 @@ task/
 ## 🎯 Key Features (Planned)
 
 ### Task Management (core.ticket)
-- **Create Tasks**: Add tasks to products, runs, or standalone
+- **Create Tasks**: Add tasks to projects, runs, or standalone
 - **Assign Tasks**: Assign to users or teams
 - **Track Status**: todo → in-progress → review → completed
 - **Set Priority**: low, medium, high, urgent
@@ -88,7 +88,7 @@ interface Task {
   name: string;                         // Task title
   type: 'core.ticket';
   identity: ['ticket', 'work-item', 'task'];
-  parentId?: string;                    // Product, run, or other parent
+  parentId?: string;                    // Project, run, or other parent
   settings: {
     // Core ticket fields
     ticketType: 'task' | 'bug' | 'feature' | 'chore';
@@ -115,7 +115,7 @@ interface Task {
     blocks?: string[];                  // Task IDs this blocks
 
     // Refs
-    productRef?: string;                // Link to product
+    projectRef?: string;                // Link to project
     runRef?: string;                    // Link to manufacturing run
 
     // Labels
@@ -155,7 +155,7 @@ interface TimeEntry {
 
     // Refs
     taskRef: string;                    // Link to parent task (same as parentId)
-    productRef?: string;                // Link to product (inherited)
+    projectRef?: string;                // Link to project (inherited)
     runRef?: string;                    // Link to run (inherited)
   };
 }
@@ -245,14 +245,14 @@ export class TimeEntryAPI {
 
 ### Step 5: Integration Points
 
-**Product Integration:**
+**Project Integration:**
 ```typescript
-// product/pages/product-tasks-tab.tsx
+// project/pages/project-tasks-tab.tsx
 import { TaskList, TaskForm } from '@/task/components';
-import { useTasksByProduct } from '@/task/hooks';
+import { useTasksByProject } from '@/task/hooks';
 
-export function ProductTasksTab({ productId }) {
-  const { tasks, createTask } = useTasksByProduct(productId);
+export function ProjectTasksTab({ projectId }) {
+  const { tasks, createTask } = useTasksByProject(projectId);
 
   return (
     <div>
@@ -267,7 +267,7 @@ export function ProductTasksTab({ productId }) {
 
 ## 📚 Related Domains
 
-- **product/** - Tasks assigned to products
+- **project/** - Tasks assigned to projects
 - **production-run/** - Tasks assigned to manufacturing runs
 - **serialized-unit/** - Tasks for unit-specific work
 
@@ -341,14 +341,14 @@ Week of March 24-30, 2026                    Total: 37.5 hrs
 
 ## 🔄 Query Patterns
 
-### Get Tasks for a Product
+### Get Tasks for a Project
 
 ```typescript
-// Query: core.ticket nodes where parentId = productId AND identity contains ['task']
+// Query: core.ticket nodes where parentId = projectId AND identity contains ['task']
 const tasks = await apiClient.get(`/v1/nodes`, {
   params: {
     type: 'core.ticket',
-    parentId: productId,
+    parentId: projectId,
     identity: 'ticket,work-item,task'
   }
 });
@@ -419,17 +419,17 @@ For timesheets with many entries:
 ## 🔐 Permissions
 
 ### Task Permissions
-- **Create**: Users can create tasks under products they have write access to
+- **Create**: Users can create tasks under projects they have write access to
 - **Assign**: Can assign to any user/team (or restrict to team members)
-- **Edit**: Task creator, assignee, or product owner
-- **Delete**: Task creator or product owner
-- **View**: Anyone with read access to parent product
+- **Edit**: Task creator, assignee, or project owner
+- **Delete**: Task creator or project owner
+- **View**: Anyone with read access to parent project
 
 ### Time Entry Permissions
 - **Log Time**: Only the assigned user or time entry owner
 - **Edit**: Only the user who logged the time
 - **Delete**: Only the user who logged the time (within time limit?)
-- **View**: Task assignee, time entry owner, product owner
+- **View**: Task assignee, time entry owner, project owner
 
 ---
 
@@ -470,7 +470,7 @@ When implementing this domain:
 - [ ] TimesheetWidget (weekly summary)
 
 ### Integration
-- [ ] Add tasks tab to product detail page
+- [ ] Add tasks tab to project detail page
 - [ ] Add tasks to production-run pages (future)
 - [ ] Add time tracking to user profile (future)
 
@@ -505,4 +505,4 @@ When implementing this domain:
 
 ---
 
-**See**: [`product/README.md`](../product/README.md) for the reference implementation pattern.
+**See**: [`project/README.md`](../project/README.md) for the reference implementation pattern.

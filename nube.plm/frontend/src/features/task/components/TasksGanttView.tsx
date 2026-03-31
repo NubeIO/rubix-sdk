@@ -13,13 +13,13 @@ import 'gantt-task-react/dist/index.css';
 // @ts-ignore - SDK types are resolved at build time
 import { Button } from '@rubix-sdk/frontend/common/ui';
 import type { PluginClient } from '@rubix-sdk/frontend/plugin-client';
-import type { Product } from '@features/product/types/product.types';
+import type { Project } from '@features/project/types/project.types';
 import type { Task } from '@features/task/types/task.types';
 import type { Ticket } from '@features/ticket/types/ticket.types';
 import type { ManufacturingRun } from '@features/production-run/types';
 import { TaskFilters } from './TaskFilters';
 
-type GanttContext = 'all-products' | 'single-product';
+type GanttContext = 'all-projects' | 'single-project';
 type GanttView = ViewMode.Day | ViewMode.Week | ViewMode.Month;
 
 interface GanttRow extends GanttTask {
@@ -29,10 +29,10 @@ interface GanttRow extends GanttTask {
 
 interface TasksGanttViewProps {
   tasks: Task[];
-  products?: Product[];
+  projects?: Project[];
   client: PluginClient;
   context: GanttContext;
-  productId?: string;
+  projectId?: string;
   onTaskEdit?: (task: Task) => void;
   view?: 'table' | 'gantt';
   onViewChange?: (view: 'table' | 'gantt') => void;
@@ -195,10 +195,10 @@ function ticketPalette(status?: string) {
 
 export function TasksGanttView({
   tasks,
-  products = [],
+  projects = [],
   client,
   context,
-  productId,
+  projectId,
   onTaskEdit,
   view,
   onViewChange,
@@ -210,16 +210,16 @@ export function TasksGanttView({
   const [taskTickets, setTaskTickets] = useState<Map<string, Ticket[]>>(new Map());
   const [loadingTickets, setLoadingTickets] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [productFilter, setProductFilter] = useState<string>('all');
+  const [projectFilter, setProjectFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [manufacturingRuns, setManufacturingRuns] = useState<ManufacturingRun[]>([]);
 
-  const productMap = useMemo(
-    () => products.reduce<Record<string, Product>>((acc, product) => {
-      acc[product.id] = product;
+  const projectMap = useMemo(
+    () => projects.reduce<Record<string, Project>>((acc, project) => {
+      acc[project.id] = project;
       return acc;
     }, {}),
-    [products]
+    [projects]
   );
 
   // Apply filters to tasks
@@ -229,8 +229,8 @@ export function TasksGanttView({
       if (statusFilter !== 'all' && task.settings?.status !== statusFilter) {
         return false;
       }
-      // Product filter
-      if (productFilter !== 'all' && task.parentId !== productFilter) {
+      // Project filter
+      if (projectFilter !== 'all' && task.parentId !== projectFilter) {
         return false;
       }
       // Search filter
@@ -240,7 +240,7 @@ export function TasksGanttView({
       }
       return true;
     });
-  }, [tasks, statusFilter, productFilter, searchQuery]);
+  }, [tasks, statusFilter, projectFilter, searchQuery]);
 
   const taskMap = useMemo(
     () => filteredTasks.reduce<Record<string, Task>>((acc, task) => {
@@ -250,22 +250,22 @@ export function TasksGanttView({
     [filteredTasks]
   );
 
-  // Fetch manufacturing runs for the selected products
+  // Fetch manufacturing runs for the selected projects
   useEffect(() => {
     const fetchManufacturingRuns = async () => {
       try {
-        // Get unique product IDs from filtered tasks
-        const productIds = Array.from(new Set(filteredTasks.map(task => task.parentId).filter(Boolean)));
+        // Get unique project IDs from filtered tasks
+        const projectIds = Array.from(new Set(filteredTasks.map(task => task.parentId).filter(Boolean)));
 
-        if (productIds.length === 0) {
+        if (projectIds.length === 0) {
           setManufacturingRuns([]);
           return;
         }
 
-        // Fetch manufacturing runs for these products
-        const filter = productIds.length === 1
-          ? `type is "plm.manufacturing-run" and parent.id is "${productIds[0]}"`
-          : `type is "plm.manufacturing-run" and (${productIds.map(id => `parent.id is "${id}"`).join(' or ')})`;
+        // Fetch manufacturing runs for these projects
+        const filter = projectIds.length === 1
+          ? `type is "plm.manufacturing-run" and parent.id is "${projectIds[0]}"`
+          : `type is "plm.manufacturing-run" and (${projectIds.map(id => `parent.id is "${id}"`).join(' or ')})`;
 
         const nodes = await client.queryNodes({ filter });
         setManufacturingRuns(nodes as ManufacturingRun[]);
@@ -336,10 +336,10 @@ export function TasksGanttView({
 
     filteredTasks.forEach((task) => {
       const dates = taskDates(task);
-      const productName =
-        context === 'single-product'
-          ? products[0]?.name || productId || 'Current product'
-          : productMap[task.parentId || '']?.name || 'Unassigned';
+      const projectName =
+        context === 'single-project'
+          ? projects[0]?.name || projectId || 'Current project'
+          : projectMap[task.parentId || '']?.name || 'Unassigned';
 
       // Check if this task has tickets loaded
       const tickets = taskTickets.get(task.id) || [];
@@ -355,7 +355,7 @@ export function TasksGanttView({
         progress: taskProgress(task),
         type: hasChildren ? 'project' : 'task',
         hideChildren: !expandedTasks.has(task.id),
-        project: productName,
+        project: projectName,
         styles: taskPalette(task.settings?.status),
       });
 
@@ -390,7 +390,7 @@ export function TasksGanttView({
         return;
       }
 
-      const productName = productMap[run.parentId || '']?.name || 'Unknown Product';
+      const projectName = projectMap[run.parentId || '']?.name || 'Unknown Project';
 
       rows.push({
         id: `mfg-${run.id}`,
@@ -402,7 +402,7 @@ export function TasksGanttView({
         progress: run.settings?.status === 'completed' ? 100 :
                   run.settings?.status === 'in-progress' ? 50 : 10,
         type: 'task',
-        project: productName,
+        project: projectName,
         styles: {
           backgroundColor: '#059669',
           backgroundSelectedColor: '#047857',
@@ -413,7 +413,7 @@ export function TasksGanttView({
     });
 
     return rows;
-  }, [context, expandedTasks, productId, productMap, products, taskTickets, filteredTasks, manufacturingRuns]);
+  }, [context, expandedTasks, projectId, projectMap, projects, taskTickets, filteredTasks, manufacturingRuns]);
 
   const handleExpanderClick = useCallback((item: GanttTask) => {
     console.log('[TasksGanttView] Expander clicked:', item);
@@ -485,8 +485,8 @@ export function TasksGanttView({
           const parentTask = isTicket ? taskMap[row.project || ''] : null;
           const isLoading = isTask && loadingTickets.has(row.sourceId);
           const isSelected = selectedTaskId === row.id;
-          const productName = isTask
-            ? productMap[taskMap[row.sourceId]?.parentId || '']?.name || row.project
+          const projectName = isTask
+            ? projectMap[taskMap[row.sourceId]?.parentId || '']?.name || row.project
             : isTicket
             ? parentTask?.name
             : row.project;
@@ -541,10 +541,10 @@ export function TasksGanttView({
                 </div>
                 <div className="truncate text-xs text-slate-500">
                   {isTicket
-                    ? `Ticket under ${productName || 'task'}`
+                    ? `Ticket under ${projectName || 'task'}`
                     : isMfgRun
-                    ? `Manufacturing run • ${productName || 'No product'}`
-                    : productName || 'No product'}
+                    ? `Manufacturing run • ${projectName || 'No project'}`
+                    : projectName || 'No project'}
                 </div>
               </button>
             </div>
@@ -552,7 +552,7 @@ export function TasksGanttView({
         })}
       </div>
     ),
-    [loadingTickets, onTaskEdit, productMap, taskMap, handleExpanderClick]
+    [loadingTickets, onTaskEdit, projectMap, taskMap, handleExpanderClick]
   );
 
   return (
@@ -561,11 +561,11 @@ export function TasksGanttView({
       <TaskFilters
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
-        productFilter={productFilter}
-        onProductFilterChange={setProductFilter}
+        projectFilter={projectFilter}
+        onProjectFilterChange={setProjectFilter}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
-        products={products}
+        projects={projects}
         showSearch={true}
         resultCount={filteredTasks.length}
         totalCount={tasks.length}

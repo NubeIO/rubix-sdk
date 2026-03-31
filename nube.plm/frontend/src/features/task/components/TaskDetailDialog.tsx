@@ -8,7 +8,7 @@ import { ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@rubix-sdk/frontend/common/ui';
 import type { PluginClient } from '@rubix-sdk/frontend/plugin-client';
 import type { Task } from '@features/task/types/task.types';
-import type { Product } from '@features/product/types/product.types';
+import type { Project } from '@features/project/types/project.types';
 import type { Ticket } from '@features/ticket/types/ticket.types';
 import { TicketDialog } from '@features/ticket/components/TicketDialog';
 import { DeleteTicketDialog } from '@features/ticket/components/DeleteTicketDialog';
@@ -17,7 +17,7 @@ import { TaskStatusBadge } from '@features/task/components/TaskStatusBadge';
 
 interface TaskDetailDialogProps {
   task: Task;
-  product?: Product;
+  project?: Project;
   client: PluginClient;
   onClose: () => void;
   onEdit: (task: Task) => void;
@@ -26,7 +26,7 @@ interface TaskDetailDialogProps {
 
 export function TaskDetailDialog({
   task,
-  product,
+  project,
   client,
   onClose,
   onEdit,
@@ -111,9 +111,9 @@ export function TaskDetailDialog({
           <div className="flex items-start justify-between mb-6">
             <div className="flex-1">
               <h2 className="text-2xl font-bold mb-2">{task.name}</h2>
-              {product && (
+              {project && (
                 <p className="text-sm text-muted-foreground">
-                  Product: <span className="font-medium">{product.name}</span>
+                  Project: <span className="font-medium">{project.name}</span>
                 </p>
               )}
             </div>

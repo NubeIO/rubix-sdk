@@ -67,7 +67,7 @@ function ProofComponent() {
         <div className="rounded-lg border p-6">
           <h2 className="text-lg font-semibold mb-4">🔌 Plugin Code</h2>
           <div className="rounded bg-zinc-900 p-4 text-sm font-mono text-zinc-100">
-            <div className="text-zinc-500">// delete-product-dialog-sdk.tsx</div>
+            <div className="text-zinc-500">// delete-project-dialog-sdk.tsx</div>
             <div className="text-blue-400">import</div> {'{ DeleteDialog }'} <div className="text-blue-400 inline">from</div> <span className="text-green-400">'@rubix-sdk/frontend'</span>;
             <div className="mt-4">
               <span className="text-purple-400">&lt;DeleteDialog</span>
@@ -76,9 +76,9 @@ function ProofComponent() {
                 <br />
                 onOpenChange={'{setOpen}'}
                 <br />
-                title=<span className="text-green-400">"Delete Product"</span>
+                title=<span className="text-green-400">"Delete Project"</span>
                 <br />
-                itemName={'{productName}'}
+                itemName={'{projectName}'}
                 <br />
                 onConfirm={'{handleDelete}'}
               </div>
@@ -139,8 +139,8 @@ function ProofComponent() {
       <DeleteDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Delete Product"
-        itemName="Example Product"
+        title="Delete Project"
+        itemName="Example Project"
         description={
           <div className="space-y-2">
             <p>This DeleteDialog is imported from <code className="bg-muted px-1 py-0.5 rounded text-xs">@rubix-sdk/frontend</code>.</p>

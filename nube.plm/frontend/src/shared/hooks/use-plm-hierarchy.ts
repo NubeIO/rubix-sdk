@@ -3,7 +3,7 @@ import { createPluginClient } from '@rubix-sdk/frontend/plugin-client';
 
 export interface PLMHierarchy {
   service?: string;
-  products?: string;
+  projects?: string;
   // TODO: Uncomment when other collections are enabled
   // productionRuns?: string;
   // serializedUnits?: string;
@@ -60,8 +60,8 @@ export function usePLMHierarchy(
         const hierarchy: PLMHierarchy = { service: serviceId };
         for (const node of collectionNodes) {
           switch (node.type) {
-            case 'plm.products':
-              hierarchy.products = node.id;
+            case 'plm.projects':
+              hierarchy.projects = node.id;
               break;
             // TODO: Uncomment when other collections are enabled
             // case 'plm.production-runs':

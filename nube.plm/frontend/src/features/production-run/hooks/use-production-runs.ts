@@ -8,7 +8,7 @@ import type {
 interface UseProductionRunsConfig {
   orgId: string;
   deviceId: string;
-  productId: string;
+  projectId: string;
   baseUrl?: string;
   token?: string;
 }
@@ -37,7 +37,7 @@ export function useProductionRuns(config: UseProductionRunsConfig) {
   }), [config.baseUrl, config.deviceId, config.orgId, config.token]);
 
   const fetchRuns = useCallback(async () => {
-    if (!config.productId) {
+    if (!config.projectId) {
       setRuns([]);
       setLoading(false);
       return;
@@ -46,7 +46,7 @@ export function useProductionRuns(config: UseProductionRunsConfig) {
     try {
       setLoading(true);
       const result = await client.queryNodes({
-        filter: `type is "plm.manufacturing-run" and parent.id is "${config.productId}"`,
+        filter: `type is "plm.manufacturing-run" and parent.id is "${config.projectId}"`,
       });
       setRuns(result as ManufacturingRun[]);
       setError(null);
@@ -56,17 +56,17 @@ export function useProductionRuns(config: UseProductionRunsConfig) {
     } finally {
       setLoading(false);
     }
-  }, [client, config.productId]);
+  }, [client, config.projectId]);
 
   const createRun = useCallback(async (input: CreateManufacturingRunInput) => {
-    await client.createNode(config.productId, {
+    await client.createNode(config.projectId, {
       type: 'plm.manufacturing-run',
       name: input.name,
       settings: input.settings,
     });
 
     await fetchRuns();
-  }, [client, config.productId, fetchRuns]);
+  }, [client, config.projectId, fetchRuns]);
 
   const updateRun = useCallback(async (input: UpdateManufacturingRunInput) => {
     if (input.name) {

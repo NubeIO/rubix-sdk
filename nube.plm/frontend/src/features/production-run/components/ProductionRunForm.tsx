@@ -111,7 +111,7 @@ export function ProductionRunForm({
         <DialogHeader>
           <DialogTitle>{run ? 'Edit Manufacturing Run' : 'Create Manufacturing Run'}</DialogTitle>
           <DialogDescription>
-            Capture the production batch details and keep unit tracking tied to the product.
+            Capture the production batch details and keep unit tracking tied to the project.
           </DialogDescription>
         </DialogHeader>
 

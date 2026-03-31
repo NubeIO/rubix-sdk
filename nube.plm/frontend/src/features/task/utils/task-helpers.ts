@@ -59,27 +59,27 @@ export async function recalculateTaskProgress(
 }
 
 /**
- * Get all tickets for a product (direct + in tasks)
+ * Get all tickets for a project (direct + in tasks)
  *
- * This requires 2 queries because tickets can be under Product OR Task
+ * This requires 2 queries because tickets can be under Project OR Task
  * (see DESIGN-DECISIONS.md L2 for details)
  *
- * @returns All tickets for the product (deduplicated)
+ * @returns All tickets for the project (deduplicated)
  * @throws Error if API calls fail
  */
-export async function getAllProductTickets(
+export async function getAllProjectTickets(
   client: PluginClient,
-  productId: string
+  projectId: string
 ): Promise<Ticket[]> {
   try {
-    // Query 1: Direct tickets under product
+    // Query 1: Direct tickets under project
     const directTickets = await client.queryNodes({
-      filter: `type is "plm.ticket" and parent.id is "${productId}"`
+      filter: `type is "plm.ticket" and parent.id is "${projectId}"`
     }) as Ticket[];
 
-    // Query 2: Tickets under tasks under product
+    // Query 2: Tickets under tasks under project
     const taskTickets = await client.queryNodes({
-      filter: `type is "plm.ticket" and parent.type is "plm.task" and parent.parent.id is "${productId}"`
+      filter: `type is "plm.ticket" and parent.type is "plm.task" and parent.parent.id is "${projectId}"`
     }) as Ticket[];
 
     // Merge and deduplicate by ID
@@ -90,7 +90,7 @@ export async function getAllProductTickets(
 
     return uniqueTickets;
   } catch (error) {
-    console.error(`Failed to get all product tickets for ${productId}:`, error);
+    console.error(`Failed to get all project tickets for ${projectId}:`, error);
     throw error;
   }
 }
@@ -139,21 +139,21 @@ export async function recalculateTaskActualHours(
 }
 
 /**
- * Recalculate progress and actualHours for all tasks in a product
+ * Recalculate progress and actualHours for all tasks in a project
  * Use for maintenance or fixing data drift
  *
  * @returns Summary of tasks fixed and any errors
  */
-export async function recalculateAllProductTasks(
+export async function recalculateAllProjectTasks(
   client: PluginClient,
-  productId: string
+  projectId: string
 ): Promise<{ tasksFixed: number; errors: string[] }> {
   const errors: string[] = [];
   let tasksFixed = 0;
 
   try {
     const tasks = await client.queryNodes({
-      filter: `type is "plm.task" and parent.id is "${productId}"`
+      filter: `type is "plm.task" and parent.id is "${projectId}"`
     });
 
     for (const task of tasks) {
@@ -169,7 +169,7 @@ export async function recalculateAllProductTasks(
 
     return { tasksFixed, errors };
   } catch (error) {
-    console.error(`Failed to recalculate all product tasks for ${productId}:`, error);
+    console.error(`Failed to recalculate all project tasks for ${projectId}:`, error);
     throw error;
   }
 }

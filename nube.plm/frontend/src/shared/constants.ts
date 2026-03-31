@@ -4,7 +4,7 @@
 
 export const PLM_NODE_TYPES = {
   SERVICE: 'plm.service',
-  PRODUCT: 'plm.product',
+  PROJECT: 'plm.project',
   MANUFACTURING_RUN: 'plm.manufacturing-run',
   PRODUCTION_RUN: 'plm.manufacturing-run',
   SERIALIZED_UNIT: 'core.asset',

@@ -37,7 +37,7 @@ export interface Task {
 
 export interface CreateTaskInput {
   name: string;
-  parentId: string; // Product ID
+  parentId: string; // Project ID
   settings?: Partial<TaskSettings>;
 }
 

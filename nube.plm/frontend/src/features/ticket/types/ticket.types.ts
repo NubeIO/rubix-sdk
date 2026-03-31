@@ -37,9 +37,9 @@ export interface Ticket {
 
 export interface CreateTicketInput {
   name: string;
-  parentId: string; // Task ID or Product ID
+  parentId: string; // Task ID or Project ID
   ticketType?: 'task' | 'bug' | 'feature' | 'chore';
-  productRef?: string; // Optional: Add productRef for single-query access
+  projectRef?: string; // Optional: Add projectRef for single-query access
   settings?: Partial<TicketSettings>;
 }
 

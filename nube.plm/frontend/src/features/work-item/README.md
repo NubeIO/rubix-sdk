@@ -73,7 +73,7 @@ interface WorkItem {
 
 ## 🚀 Getting Started (When Implementing)
 
-1. **Copy the product/ structure** as a template
+1. **Copy the project/ structure** as a template
 2. **Define types** in `types/work-item.types.ts`
 3. **Create API client** in `api/work-item-api.ts`
 4. **Build hooks** for data fetching
@@ -87,7 +87,7 @@ interface WorkItem {
 ## 📚 Related Domains
 
 - **production-run/** - Production runs that contain work items
-- **product/** - Products being worked on
+- **project/** - Projects being worked on
 - **site/** - Work locations
 - **serialized-unit/** - Units being processed
 
@@ -129,4 +129,4 @@ When implementing this domain:
 
 ---
 
-**See**: [`product/README.md`](../product/README.md) for the reference implementation pattern.
+**See**: [`project/README.md`](../project/README.md) for the reference implementation pattern.

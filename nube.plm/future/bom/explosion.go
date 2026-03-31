@@ -13,7 +13,7 @@ import (
 type BOMItem struct {
 	Level      int                    `json:"level"`      // Hierarchy depth (1, 2, 3...)
 	NodeID     string                 `json:"nodeId"`     // Part/assembly ID
-	NodeType   string                 `json:"nodeType"`   // plm.part or plm.product
+	NodeType   string                 `json:"nodeType"`   // plm.part or plm.project
 	PartNumber string                 `json:"partNumber"` // From settings
 	Name       string                 `json:"name"`
 	Quantity   float64                `json:"quantity"`   // Cumulative quantity
@@ -48,12 +48,12 @@ type Ref struct {
 	Metadata    map[string]interface{} `json:"metadata"`
 }
 
-// ExplodeBOM recursively explodes a product's BOM
-func ExplodeBOM(nc *natslib.Client, sb *natssubject.Builder, productID string) ([]BOMItem, error) {
+// ExplodeBOM recursively explodes a project's BOM
+func ExplodeBOM(nc *natslib.Client, sb *natssubject.Builder, projectID string) ([]BOMItem, error) {
 	items := []BOMItem{}
 	visited := make(map[string]bool) // Cycle detection
 
-	err := explodeRecursive(nc, sb, productID, 1, 1.0, visited, &items)
+	err := explodeRecursive(nc, sb, projectID, 1, 1.0, visited, &items)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func ExplodeBOM(nc *natslib.Client, sb *natssubject.Builder, productID string) (
 	return items, nil
 }
 
-// explodeRecursive recursively explodes a product/assembly BOM
+// explodeRecursive recursively explodes a project/assembly BOM
 func explodeRecursive(nc *natslib.Client, sb *natssubject.Builder, nodeID string, level int, qty float64, visited map[string]bool, items *[]BOMItem) error {
 	// Cycle detection
 	if visited[nodeID] {
@@ -170,8 +170,8 @@ func explodeRecursive(nc *natslib.Client, sb *natssubject.Builder, nodeID string
 
 		*items = append(*items, item)
 
-		// Recurse if this is a sub-assembly (another product)
-		if childNode.Type == "plm.product" {
+		// Recurse if this is a sub-assembly (another project)
+		if childNode.Type == "plm.project" {
 			err = explodeRecursive(nc, sb, childNode.ID, level+1, totalQty, visited, items)
 			if err != nil {
 				return err

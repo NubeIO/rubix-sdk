@@ -7,7 +7,7 @@ import { Activity, AlertTriangle, CheckCircle2, Clock3 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { StatCard } from '@features/product/v2/components/StatCard';
+import { StatCard } from '@features/project/v2/components/StatCard';
 import type { Task } from '../types/task.types';
 import type { Ticket } from '@features/ticket/types/ticket.types';
 import { normalizeTicketStatus } from '@features/ticket/utils/ticket-helpers';

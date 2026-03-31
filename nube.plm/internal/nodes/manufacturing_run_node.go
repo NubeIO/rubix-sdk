@@ -36,7 +36,7 @@ func (n *ManufacturingRunNode) Process(ctx context.Context, inputs map[string]pl
 // GetConstraints defines manufacturing run constraints
 func (n *ManufacturingRunNode) GetConstraints() nodedeps.NodeConstraints {
 	return nodedeps.NodeConstraints{
-		AllowedParents: []string{"plm.product", "core.product"},
+		AllowedParents: []string{"plm.project", "core.project"},
 		// AllowedChildren: []string{"core.asset"},
 		SupportsOwnership: true,
 	}

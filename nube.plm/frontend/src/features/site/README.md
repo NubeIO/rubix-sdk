@@ -84,7 +84,7 @@ interface Site {
 
 ## 🚀 Getting Started (When Implementing)
 
-1. **Copy the product/ structure** as a template
+1. **Copy the project/ structure** as a template
 2. **Define types** in `types/site.types.ts`
 3. **Create API client** in `api/site-api.ts`
 4. **Build hooks** for data fetching
@@ -99,7 +99,7 @@ interface Site {
 
 - **production-run/** - Runs at each site
 - **work-item/** - Work happening at sites
-- **product/** - Products manufactured at sites
+- **project/** - Projects manufactured at sites
 - **serialized-unit/** - Units produced at sites
 
 ---
@@ -160,4 +160,4 @@ When implementing this domain:
 
 ---
 
-**See**: [`product/README.md`](../product/README.md) for the reference implementation pattern.
+**See**: [`project/README.md`](../project/README.md) for the reference implementation pattern.

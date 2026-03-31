@@ -48,7 +48,7 @@ export function usePLMService(config: PLMClientConfig | null): UsePLMServiceResu
             type: PLM_SERVICE_TYPE,
             name: 'PLM System',
             settings: {
-              description: 'Product Lifecycle Management system root',
+              description: 'Project Lifecycle Management system root',
             },
           });
           setPlmServiceId(created.id);

@@ -9,11 +9,11 @@ import { TaskBoard } from './TaskBoard';
 
 interface TaskBoardViewProps {
   client: PluginClient;
-  productId: string;
+  projectId: string;
   refreshKey?: number;
 }
 
-export function TaskBoardView({ client, productId, refreshKey }: TaskBoardViewProps) {
+export function TaskBoardView({ client, projectId, refreshKey }: TaskBoardViewProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [localRefreshKey, setLocalRefreshKey] = useState(0);
@@ -23,7 +23,7 @@ export function TaskBoardView({ client, productId, refreshKey }: TaskBoardViewPr
       setIsLoading(true);
       try {
         const nodes = await client.queryNodes({
-          filter: `type is "plm.task" and parent.id is "${productId}"`,
+          filter: `type is "plm.task" and parent.id is "${projectId}"`,
         });
         setTasks(nodes as Task[]);
       } catch (error) {
@@ -34,7 +34,7 @@ export function TaskBoardView({ client, productId, refreshKey }: TaskBoardViewPr
     }
 
     fetchTasks();
-  }, [client, productId, refreshKey, localRefreshKey]);
+  }, [client, projectId, refreshKey, localRefreshKey]);
 
   const handleTaskUpdate = () => {
     setLocalRefreshKey((prev) => prev + 1);
@@ -54,7 +54,7 @@ export function TaskBoardView({ client, productId, refreshKey }: TaskBoardViewPr
         <div className="max-w-md mx-auto">
           <h3 className="text-lg font-semibold mb-2">No tasks yet</h3>
           <p className="text-muted-foreground">
-            Create your first task to start organizing work for this product.
+            Create your first task to start organizing work for this project.
           </p>
         </div>
       </div>

@@ -9,16 +9,16 @@ import (
 )
 
 // EnsurePLMHierarchy creates PLM service + collections (idempotent)
-// Returns map of collection IDs: {"service": "...", "products": "...", "productionRuns": "..."}
+// Returns map of collection IDs: {"service": "...", "projects": "...", "productionRuns": "..."}
 // pluginNodeID: ID of the plugin node (e.g., "plugin_nube.plm")
 func EnsurePLMHierarchy(ctx context.Context, client *pluginBootstrap.Client, pluginNodeID string) (map[string]string, error) {
 	spec := pluginBootstrap.HierarchySpec{
 		PluginNodeID: pluginNodeID,
 		ServiceNode: pluginBootstrap.NodeSpec{
 			Type: "plm.service",
-			Name: "Product Lifecycle Management",
+			Name: "Project Lifecycle Management",
 			Settings: map[string]interface{}{
-				"serviceName": "Product Lifecycle Management",
+				"serviceName": "Project Lifecycle Management",
 				"serviceType": "plm",
 				"status":      "active",
 				"version":     "2.0",
@@ -26,10 +26,10 @@ func EnsurePLMHierarchy(ctx context.Context, client *pluginBootstrap.Client, plu
 		},
 		Collections: []pluginBootstrap.NodeSpec{
 			{
-				Type: "plm.products",
-				Name: "Products",
+				Type: "plm.projects",
+				Name: "Projects",
 				Settings: map[string]interface{}{
-					"description": "Product definitions",
+					"description": "Project definitions",
 				},
 			},
 			// TODO: Uncomment when ready to test other collections
@@ -72,7 +72,7 @@ func EnsurePLMHierarchy(ctx context.Context, client *pluginBootstrap.Client, plu
 	// Return map for easy lookup
 	return map[string]string{
 		"service":  result.ServiceID,
-		"products": result.CollectionIDs["plm.products"],
+		"projects": result.CollectionIDs["plm.projects"],
 		// TODO: Uncomment when other collections are enabled
 		// "productionRuns":  result.CollectionIDs["plm.production-runs"],
 		// "serializedUnits": result.CollectionIDs["plm.serialized-units"],
@@ -88,9 +88,9 @@ func EnsurePLMHierarchyWithRetry(ctx context.Context, client *pluginBootstrap.Cl
 		PluginNodeID: pluginNodeID,
 		ServiceNode: pluginBootstrap.NodeSpec{
 			Type: "plm.service",
-			Name: "Product Lifecycle Management",
+			Name: "Project Lifecycle Management",
 			Settings: map[string]interface{}{
-				"serviceName": "Product Lifecycle Management",
+				"serviceName": "Project Lifecycle Management",
 				"serviceType": "plm",
 				"status":      "active",
 				"version":     "2.0",
@@ -98,10 +98,10 @@ func EnsurePLMHierarchyWithRetry(ctx context.Context, client *pluginBootstrap.Cl
 		},
 		Collections: []pluginBootstrap.NodeSpec{
 			{
-				Type: "plm.products",
-				Name: "Products",
+				Type: "plm.projects",
+				Name: "Projects",
 				Settings: map[string]interface{}{
-					"description": "Product definitions",
+					"description": "Project definitions",
 				},
 			},
 		},
@@ -114,18 +114,18 @@ func EnsurePLMHierarchyWithRetry(ctx context.Context, client *pluginBootstrap.Cl
 
 	// Extract IDs
 	serviceID := result.ServiceID
-	productsID := result.CollectionIDs["plm.products"]
+	projectsID := result.CollectionIDs["plm.projects"]
 
 	// Debug: log what we got
 	if serviceID == "" {
 		return nil, fmt.Errorf("bootstrap returned empty service ID")
 	}
-	if productsID == "" {
-		return nil, fmt.Errorf("bootstrap returned empty products collection ID")
+	if projectsID == "" {
+		return nil, fmt.Errorf("bootstrap returned empty projects collection ID")
 	}
 
 	return map[string]string{
 		"service":  serviceID,
-		"products": productsID,
+		"projects": projectsID,
 	}, nil
 }

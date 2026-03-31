@@ -19,7 +19,7 @@ interface TicketDialogProps {
   taskId: string;
   ticket?: Ticket;
   tasks?: Task[]; // Optional: available tasks for selection
-  productId?: string; // Optional: product ID for product-level tickets
+  projectId?: string; // Optional: project ID for project-level tickets
   onClose: () => void;
   onSuccess: () => void | Promise<void>;
 }
@@ -35,14 +35,14 @@ const DEFAULT_VALUES: TicketFormValues = {
   estimatedHours: '',
 };
 
-export function TicketDialog({ client, taskId, ticket, tasks, productId, onClose, onSuccess }: TicketDialogProps) {
+export function TicketDialog({ client, taskId, ticket, tasks, projectId, onClose, onSuccess }: TicketDialogProps) {
   const isEditMode = Boolean(ticket);
   const [values, setValues] = useState<TicketFormValues>(DEFAULT_VALUES);
   const [selectedParentId, setSelectedParentId] = useState<string>(taskId);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const showTaskSelector = !isEditMode && tasks && tasks.length > 0 && productId;
+  const showTaskSelector = !isEditMode && tasks && tasks.length > 0 && projectId;
 
   useEffect(() => {
     if (!ticket) {
@@ -104,12 +104,25 @@ export function TicketDialog({ client, taskId, ticket, tasks, productId, onClose
 
         await client.updateNodeSettings(ticket.id, payload);
       } else {
-        await client.createNode(selectedParentId, {
-          type: 'plm.ticket',
+        const createInput = {
+          type: 'plm.ticket' as const,
           name: values.name.trim(),
-          identity,
+          identity: [...identity],
           settings: payload,
-        });
+        };
+        // Debug: verify payload is serializable before sending
+        try {
+          JSON.stringify(createInput);
+        } catch (serErr) {
+          console.error('[TicketDialog] Payload is not serializable:', serErr);
+          console.error('[TicketDialog] createInput keys:', Object.keys(createInput));
+          console.error('[TicketDialog] settings keys:', Object.keys(payload));
+          for (const [k, v] of Object.entries(payload)) {
+            console.error(`  ${k}:`, typeof v, v);
+          }
+          throw serErr;
+        }
+        await client.createNode(selectedParentId, createInput);
       }
 
       await onSuccess();
@@ -144,7 +157,7 @@ export function TicketDialog({ client, taskId, ticket, tasks, productId, onClose
                 className="w-full px-3 py-2 border rounded-md bg-background"
                 disabled={isSubmitting}
               >
-                <option value={productId}>Product-level (Support, RMA, etc.)</option>
+                <option value={projectId}>Project-level (Support, RMA, etc.)</option>
                 {tasks.map((task) => (
                   <option key={task.id} value={task.id}>
                     {task.name}
@@ -153,7 +166,7 @@ export function TicketDialog({ client, taskId, ticket, tasks, productId, onClose
               </select>
               <p className="text-xs text-muted-foreground">
                 Choose a task for work items (e.g., "buy cheese" for task "make pizza"),
-                or select Product-level for general tickets (Support, RMA, etc.)
+                or select Project-level for general tickets (Support, RMA, etc.)
               </p>
             </div>
           )}

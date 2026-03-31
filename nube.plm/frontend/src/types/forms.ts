@@ -2,19 +2,19 @@
  * Form data types
  */
 
-export interface ProductFormData {
+export interface ProjectFormData {
   name: string;
-  productCode: string;
+  projectCode: string;
   description: string;
   status: string;
   price: string;
 }
 
-export type ProductFormErrors = Partial<Record<keyof ProductFormData, string>>;
+export type ProjectFormErrors = Partial<Record<keyof ProjectFormData, string>>;
 
-export const DEFAULT_FORM_DATA: ProductFormData = {
+export const DEFAULT_FORM_DATA: ProjectFormData = {
   name: '',
-  productCode: '',
+  projectCode: '',
   description: '',
   status: 'Design',
   price: '',
