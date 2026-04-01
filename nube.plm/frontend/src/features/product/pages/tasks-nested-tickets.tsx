@@ -3,7 +3,7 @@
  * Lazy loaded when task row is expanded
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 // @ts-ignore
 import { Button } from '@rubix-sdk/frontend/common/ui';
@@ -13,6 +13,16 @@ import type { Task } from '@features/task/types/task.types';
 import { Badge } from '@/components/ui/badge';
 import { TicketDialog } from '@features/ticket/components/TicketDialog';
 import { DeleteTicketDialog } from '@features/ticket/components/DeleteTicketDialog';
+
+function TicketAssigneeCell({ ticketId, client }: { ticketId: string; client: PluginClient }) {
+  const [names, setNames] = useState<string | null>(null);
+  useEffect(() => {
+    client.getAssignedUsers(ticketId).then((refs: any[]) => {
+      if (refs?.length) setNames(refs.map((r: any) => r.displayName || 'Unknown').join(', '));
+    }).catch(() => {});
+  }, [ticketId, client]);
+  return <>{names || <span className="text-muted-foreground">Unassigned</span>}</>;
+}
 
 interface TasksNestedTicketsProps {
   task: Task;
@@ -140,9 +150,7 @@ export function TasksNestedTickets({ task, client }: TasksNestedTicketsProps) {
                           </Badge>
                         </td>
                         <td className="p-2 text-xs">
-                          {ticket.settings?.assignee || (
-                            <span className="text-muted-foreground">Unassigned</span>
-                          )}
+                          <TicketAssigneeCell ticketId={ticket.id} client={client} />
                         </td>
                         <td className="p-2">
                           <div className="flex gap-1 justify-end">

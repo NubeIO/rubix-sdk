@@ -5,14 +5,17 @@
 import { useState, useEffect } from 'react';
 // @ts-ignore - SDK types
 import { Button, Input, Textarea, Select } from '@rubix-sdk/frontend/common/ui';
+// @ts-ignore - SDK user picker
+import { UserPicker, type SelectedUser } from '@rubix-sdk/frontend/common/ui/user-picker';
 import type { Product } from '@features/product/types/product.types';
 import type { CreateTaskInput } from '@features/task/types/task.types';
 import { getDefaultTaskDueDate } from '@features/task/utils/task-date';
 
 interface CreateTaskDialogProps {
   products: Product[];
+  client: any;
   onClose: () => void;
-  onCreate: (input: CreateTaskInput) => Promise<void>;
+  onCreate: (input: CreateTaskInput, assignees: SelectedUser[]) => Promise<void>;
 }
 
 const TASK_STATUSES = [
@@ -29,13 +32,13 @@ const TASK_PRIORITIES = [
   { value: 'critical', label: 'Critical' },
 ];
 
-export function CreateTaskDialog({ products, onClose, onCreate }: CreateTaskDialogProps) {
+export function CreateTaskDialog({ products, client, onClose, onCreate }: CreateTaskDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [productId, setProductId] = useState('');
   const [status, setStatus] = useState('pending');
   const [priority, setPriority] = useState('medium');
-  const [assignee, setAssignee] = useState('');
+  const [assignees, setAssignees] = useState<SelectedUser[]>([]);
   const [dueDate, setDueDate] = useState(getDefaultTaskDueDate());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,11 +74,10 @@ export function CreateTaskDialog({ products, onClose, onCreate }: CreateTaskDial
           description: description.trim() || undefined,
           status,
           priority,
-          assignee: assignee.trim() || undefined,
           dueDate,
           progress: 0,
         },
-      });
+      }, assignees);
       onClose();
     } catch (err) {
       console.error('[CreateTaskDialog] Failed to create task:', err);
@@ -190,13 +192,11 @@ export function CreateTaskDialog({ products, onClose, onCreate }: CreateTaskDial
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Assignee</label>
-              <input
-                type="text"
-                value={assignee}
-                onChange={(e) => setAssignee(e.target.value)}
-                placeholder="Enter assignee name..."
-                className="w-full px-3 py-2 border rounded-md text-sm"
+              <label className="text-sm font-medium mb-1.5 block">Assignee(s)</label>
+              <UserPicker
+                client={client}
+                value={assignees}
+                onChange={setAssignees}
               />
             </div>
             <div>

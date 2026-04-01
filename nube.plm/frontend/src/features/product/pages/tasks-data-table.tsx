@@ -3,7 +3,7 @@
  * Using TanStack Table with shadcn/ui
  */
 
-import { useState, useMemo, Fragment } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import {
   flexRender,
   getCoreRowModel,
@@ -237,11 +237,17 @@ export function TasksDataTable({ tasks, products, client, onEdit, onDelete, view
       },
     },
     {
-      accessorKey: 'settings.assignee',
+      id: 'assignee',
       header: 'Assignee',
       cell: ({ row }) => {
-        const assignee = row.original.settings?.assignee;
-        return assignee || <span className="text-muted-foreground">Unassigned</span>;
+        const task = row.original;
+        const [names, setNames] = useState<string | null>(null);
+        useEffect(() => {
+          client.getAssignedUsers(task.id).then((refs: any[]) => {
+            if (refs?.length) setNames(refs.map((r: any) => r.displayName || 'Unknown').join(', '));
+          }).catch(() => {});
+        }, [task.id]);
+        return names || <span className="text-muted-foreground">Unassigned</span>;
       },
     },
     {

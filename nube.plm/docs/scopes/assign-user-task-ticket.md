@@ -206,21 +206,10 @@ Same pattern as tickets. Replace text input with `UserPicker`, call `replaceAssi
 | `product/pages/tasks-data-table.tsx` | Read from ref |
 | `product/pages/tasks-nested-tickets.tsx` | Read from ref |
 
-### 5. Migration Strategy
+### 5. Migration Strategy (not needed)
 
-**Backward compatible** - no big-bang migration needed:
+**Backward compatible** - no, not needed
 
-1. **Read**: Check `assignedUserRef` first, fall back to `settings.assignee` for old nodes
-2. **Write**: Always write `assignedUserRef`. Keep `settings.assignee` as a display cache
-3. **Over time**: Old string-based assignees get replaced as users edit tasks/tickets
-
-```typescript
-function getAssigneeDisplay(refs: Ref[], settings: any): string {
-  const assignedRef = refs.find(r => r.refName === 'assignedUserRef');
-  if (assignedRef) return assignedRef.displayName || 'Assigned';
-  return settings?.assignee || 'Unassigned';
-}
-```
 
 ### 6. Query Benefits
 

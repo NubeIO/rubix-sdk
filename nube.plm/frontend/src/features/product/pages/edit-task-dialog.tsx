@@ -5,14 +5,17 @@
 import { useState, useEffect } from 'react';
 // @ts-ignore - SDK types
 import { Button } from '@rubix-sdk/frontend/common/ui';
+// @ts-ignore - SDK user picker
+import { UserPicker, type SelectedUser } from '@rubix-sdk/frontend/common/ui/user-picker';
 import type { Product } from '@features/product/types/product.types';
 import type { Task, UpdateTaskInput } from '@features/task/types/task.types';
 
 interface EditTaskDialogProps {
   task: Task;
   products: Product[];
+  client: any;
   onClose: () => void;
-  onUpdate: (taskId: string, input: UpdateTaskInput) => Promise<void>;
+  onUpdate: (taskId: string, input: UpdateTaskInput, assignees: SelectedUser[]) => Promise<void>;
 }
 
 const TASK_STATUSES = [
@@ -29,17 +32,26 @@ const TASK_PRIORITIES = [
   { value: 'critical', label: 'Critical' },
 ];
 
-export function EditTaskDialog({ task, products, onClose, onUpdate }: EditTaskDialogProps) {
+export function EditTaskDialog({ task, products, client, onClose, onUpdate }: EditTaskDialogProps) {
   const [name, setName] = useState(task.name);
   const [description, setDescription] = useState(task.settings?.description || '');
   const [productId, setProductId] = useState(task.parentId || '');
   const [status, setStatus] = useState(task.settings?.status || 'pending');
   const [priority, setPriority] = useState(task.settings?.priority || 'medium');
-  const [assignee, setAssignee] = useState(task.settings?.assignee || '');
+  const [assignees, setAssignees] = useState<SelectedUser[]>([]);
   const [dueDate, setDueDate] = useState(task.settings?.dueDate || '');
   const [progress, setProgress] = useState(task.settings?.progress || 0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Load assignedUserRefs on mount
+  useEffect(() => {
+    client.getAssignedUsers(task.id).then((refs: any[]) => {
+      if (refs?.length) {
+        setAssignees(refs.map((r: any) => ({ userId: r.toNodeId, userName: r.displayName || '' })));
+      }
+    }).catch(() => {});
+  }, [task.id, client]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,11 +71,10 @@ export function EditTaskDialog({ task, products, onClose, onUpdate }: EditTaskDi
           description: description.trim() || undefined,
           status,
           priority,
-          assignee: assignee.trim() || undefined,
           dueDate: dueDate || undefined,
           progress,
         },
-      });
+      }, assignees);
       onClose();
     } catch (err) {
       console.error('[EditTaskDialog] Failed to update task:', err);
@@ -162,13 +173,11 @@ export function EditTaskDialog({ task, products, onClose, onUpdate }: EditTaskDi
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Assignee</label>
-              <input
-                type="text"
-                value={assignee}
-                onChange={(e) => setAssignee(e.target.value)}
-                placeholder="Enter assignee name..."
-                className="w-full px-3 py-2 border rounded-md text-sm"
+              <label className="text-sm font-medium mb-1.5 block">Assignee(s)</label>
+              <UserPicker
+                client={client}
+                value={assignees}
+                onChange={setAssignees}
               />
             </div>
             <div>

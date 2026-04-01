@@ -75,6 +75,19 @@ export function TicketsSectionV2({ task, client, orgId, deviceId, onStatsUpdate,
         filter: `type is "plm.ticket" and p.id is "${task.id}"`,
       });
 
+      // Resolve assignedUserRefs for each ticket
+      const assigneeMap: Record<string, string> = {};
+      console.log('[TicketsSectionV2] Resolving assignees for', (nodes || []).length, 'tickets');
+      await Promise.all(
+        (nodes || []).map(async (node: any) => {
+          try {
+            const refs = await client.getAssignedUsers(node.id);
+            if (refs?.length) assigneeMap[node.id] = refs.map((r: any) => r.displayName || 'Unknown').join(', ');
+          } catch {}
+        })
+      );
+      console.log('[TicketsSectionV2] Assignee map:', assigneeMap);
+
       const ticketList: Ticket[] = (nodes || []).map((node: any) => ({
         id: node.id,
         name: node.name,
@@ -84,7 +97,7 @@ export function TicketsSectionV2({ task, client, orgId, deviceId, onStatsUpdate,
           ticketType: node.settings?.ticketType || 'task',
           status: normalizeTicketStatus(node.settings?.status),
           priority: node.settings?.priority || 'Medium',
-          assignee: node.settings?.assignee || 'Unassigned',
+          assignee: assigneeMap[node.id] || 'Unassigned',
           dueDate: node.settings?.dueDate,
           estimatedHours: node.settings?.estimatedHours || 0,
           actualHours: node.settings?.actualHours || 0,

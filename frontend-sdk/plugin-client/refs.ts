@@ -274,3 +274,92 @@ export async function replaceNodeUsers(
     await assignUserToNode(client, nodeId, user.userId, user.userName);
   }
 }
+
+// ============================================================================
+// Assigned User Helpers (assignedUserRef - task/ticket ownership)
+// Unlike userRef, assignedUserRef does NOT affect visibility/access control.
+// Supports multiple assigned users per node.
+// ============================================================================
+
+/**
+ * Add an assigned user to a node (creates assignedUserRef).
+ */
+export async function setAssignedUser(
+  client: PluginClient,
+  nodeId: string,
+  userId: string,
+  userName?: string
+): Promise<Ref> {
+  return createRef(client, nodeId, {
+    refName: 'assignedUserRef',
+    toNodeId: userId,
+    displayName: userName,
+  });
+}
+
+/**
+ * Remove all assigned users from a node
+ */
+export async function removeAssignedUser(
+  client: PluginClient,
+  nodeId: string
+): Promise<void> {
+  try {
+    await deleteRef(client, nodeId, 'assignedUserRef');
+  } catch {
+    // No existing refs - that's fine
+  }
+}
+
+/**
+ * Get all assigned users for a node
+ */
+export async function getAssignedUsers(
+  client: PluginClient,
+  nodeId: string
+): Promise<Ref[]> {
+  const refs = await listRefs(client, nodeId);
+  return refs.filter((ref) => ref.refName === 'assignedUserRef');
+}
+
+/**
+ * Get the first assigned user for a node (convenience)
+ */
+export async function getAssignedUser(
+  client: PluginClient,
+  nodeId: string
+): Promise<Ref | null> {
+  const refs = await listRefs(client, nodeId);
+  return refs.find((ref) => ref.refName === 'assignedUserRef') || null;
+}
+
+/**
+ * Replace all assigned users on a node.
+ * Pass empty array to unassign all.
+ */
+export async function replaceAssignedUsers(
+  client: PluginClient,
+  nodeId: string,
+  users: Array<{ userId: string; userName?: string }>
+): Promise<void> {
+  console.log('[replaceAssignedUsers] nodeId:', nodeId, 'users:', users);
+
+  // Delete all existing assignedUserRefs
+  try {
+    await deleteRef(client, nodeId, 'assignedUserRef');
+    console.log('[replaceAssignedUsers] Deleted existing refs');
+  } catch (err) {
+    console.log('[replaceAssignedUsers] No existing refs to delete (ok):', err);
+  }
+
+  // Create new refs
+  for (const user of users) {
+    console.log('[replaceAssignedUsers] Creating ref for user:', user.userId, user.userName);
+    await createRef(client, nodeId, {
+      refName: 'assignedUserRef',
+      toNodeId: user.userId,
+      displayName: user.userName,
+    });
+  }
+  console.log('[replaceAssignedUsers] Done, created', users.length, 'refs');
+}

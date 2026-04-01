@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+// @ts-ignore - SDK types
+import { UserPicker, type SelectedUser } from '@rubix-sdk/frontend/common/ui/user-picker';
 import type { TicketSettings } from '../types/ticket.types';
 
 export interface TicketFormValues {
@@ -15,7 +17,7 @@ export interface TicketFormValues {
   ticketType: NonNullable<TicketSettings['ticketType']>;
   status: NonNullable<TicketSettings['status']>;
   priority: NonNullable<TicketSettings['priority']>;
-  assignee: string;
+  assignees: SelectedUser[];
   dueDate: string;
   estimatedHours: string;
 }
@@ -23,6 +25,7 @@ export interface TicketFormValues {
 interface TicketFormProps {
   values: TicketFormValues;
   onChange: (values: TicketFormValues) => void;
+  client: any;
   disabled?: boolean;
 }
 
@@ -30,7 +33,7 @@ const TICKET_TYPES: TicketFormValues['ticketType'][] = ['task', 'bug', 'feature'
 const TICKET_STATUSES: TicketFormValues['status'][] = ['pending', 'in-progress', 'blocked', 'review', 'completed', 'cancelled'];
 const PRIORITIES: TicketFormValues['priority'][] = ['Low', 'Medium', 'High', 'Critical'];
 
-export function TicketForm({ values, onChange, disabled }: TicketFormProps) {
+export function TicketForm({ values, onChange, client, disabled }: TicketFormProps) {
   const update = <K extends keyof TicketFormValues>(key: K, value: TicketFormValues[K]) => {
     onChange({ ...values, [key]: value });
   };
@@ -114,12 +117,11 @@ export function TicketForm({ values, onChange, disabled }: TicketFormProps) {
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="space-y-2 md:col-span-1">
-          <Label htmlFor="ticket-assignee">Assignee</Label>
-          <Input
-            id="ticket-assignee"
-            value={values.assignee}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => update('assignee', e.target.value)}
-            placeholder="Unassigned"
+          <Label>Assignee(s)</Label>
+          <UserPicker
+            client={client}
+            value={values.assignees}
+            onChange={(users: SelectedUser[]) => update('assignees', users)}
             disabled={disabled}
           />
         </div>

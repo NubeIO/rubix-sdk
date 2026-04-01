@@ -2,6 +2,7 @@
  * Task Header - Top bar with task metadata and quick actions
  */
 
+import { useEffect, useState } from 'react';
 import { ClipboardList, Edit, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -12,13 +13,22 @@ import { TaskStatusBadge } from './TaskStatusBadge';
 
 interface TaskHeaderProps {
   task: Task;
+  client: any;
   onEdit: () => void;
   isLoading?: boolean;
 }
 
-export function TaskHeader({ task, onEdit, isLoading }: TaskHeaderProps) {
+export function TaskHeader({ task, client, onEdit, isLoading }: TaskHeaderProps) {
   const priority = task.settings?.priority || 'Medium';
   const category = task.settings?.category || 'Task';
+  const [assigneeDisplay, setAssigneeDisplay] = useState('Unassigned');
+
+  useEffect(() => {
+    client.getAssignedUsers(task.id).then((refs: any[]) => {
+      if (refs?.length) setAssigneeDisplay(refs.map((r: any) => r.displayName || 'Unknown').join(', '));
+      else setAssigneeDisplay('Unassigned');
+    }).catch(() => {});
+  }, [task.id, client]);
 
   return (
     <div className="flex h-20 items-center justify-between border-b bg-card px-8">
@@ -39,9 +49,9 @@ export function TaskHeader({ task, onEdit, isLoading }: TaskHeaderProps) {
             </Badge>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-            <span className="font-mono">TASK: {task.id.slice(0, 16)}...</span>
+            <span className="font-mono">TASK: {task.id?.slice(0, 16)}...</span>
             <span>•</span>
-            <span>Assignee: {task.settings?.assignee || 'Unassigned'}</span>
+            <span>Assignee: {assigneeDisplay}</span>
             <span>•</span>
             <span>Progress: {task.settings?.progress || 0}%</span>
           </div>

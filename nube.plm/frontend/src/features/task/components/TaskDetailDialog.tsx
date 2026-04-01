@@ -2,7 +2,7 @@
  * Task Detail Dialog - View task details with expandable tickets section
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react';
 // @ts-ignore
 import { Button } from '@rubix-sdk/frontend/common/ui';
@@ -38,9 +38,16 @@ export function TaskDetailDialog({
   const [ticketsLoaded, setTicketsLoaded] = useState(false);
 
   // Ticket CRUD dialog states
+  const [assigneeDisplay, setAssigneeDisplay] = useState('Unassigned');
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [deletingTicket, setDeletingTicket] = useState<Ticket | null>(null);
+
+  useEffect(() => {
+    client.getAssignedUsers(task.id).then((refs: any[]) => {
+      if (refs?.length) setAssigneeDisplay(refs.map((r: any) => r.displayName || 'Unknown').join(', '));
+    }).catch(() => {});
+  }, [task.id, client]);
 
   // Fetch tickets when expanded
   const fetchTickets = useCallback(async () => {
@@ -153,7 +160,7 @@ export function TaskDetailDialog({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Assignee</label>
-                <p className="mt-1">{task.settings?.assignee || 'Unassigned'}</p>
+                <p className="mt-1">{assigneeDisplay}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Due Date</label>
