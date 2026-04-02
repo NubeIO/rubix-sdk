@@ -29,6 +29,7 @@ export default defineConfig({
         './ProductDetail': './src/features/product/pages/ProductDetailPageV2Entry.tsx',
         './TaskDetail': './src/features/task/pages/TaskDetailPageEntry.tsx',
         './Reports': './src/features/reporting/ReportingPage.tsx',
+        './MyWork': './src/features/my-work/MyWorkPage.tsx',
       },
       shared: {
         // DON'T share React - let plugin bundle its own

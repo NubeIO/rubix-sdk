@@ -23,6 +23,7 @@ import { TicketsReport } from './sections/TicketsReport';
 import { TimeEntriesReport } from './sections/TimeEntriesReport';
 import { ManufacturingReport } from './sections/ManufacturingReport';
 import type { DateRange } from './components/DateRangeFilter';
+import { generateReportingPDF } from './utils/pdf-report';
 
 interface ReportingPageProps {
   orgId: string;
@@ -66,6 +67,27 @@ function ReportingDashboard({ orgId, deviceId, baseUrl, token }: ReportingPagePr
 
   const hasHardware = data.products.some((p) => p.settings?.productType === 'hardware');
 
+  const handleExportPDF = () => {
+    let label = 'All time';
+    if (dateRange.from) {
+      const fromStr = dateRange.from.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const toStr = dateRange.to
+        ? dateRange.to.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : 'Present';
+      label = `${fromStr} — ${toStr}`;
+    }
+    generateReportingPDF({
+      dateRangeLabel: label,
+      products: data.products,
+      tasks: data.tasks,
+      tickets: data.tickets,
+      timeEntries: data.timeEntries,
+      manufacturingRuns: data.manufacturingRuns,
+      units: data.units,
+      stats: data.stats,
+    });
+  };
+
   if (productsLoading) {
     return (
       <div className="p-8">
@@ -89,7 +111,9 @@ function ReportingDashboard({ orgId, deviceId, baseUrl, token }: ReportingPagePr
           dateRange={dateRange}
           onDateRangeChange={setDateRange}
           onRefresh={data.refresh}
+          onExportPDF={handleExportPDF}
           loading={data.loading}
+          hasData={selector.selectedIds.size > 0 && !data.loading && !data.error}
         />
 
         {/* Product selector */}

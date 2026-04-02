@@ -7,14 +7,18 @@ interface ReportingHeaderProps {
   dateRange: DateRange;
   onDateRangeChange: (range: DateRange) => void;
   onRefresh: () => void;
+  onExportPDF?: () => void;
   loading: boolean;
+  hasData?: boolean;
 }
 
 export function ReportingHeader({
   dateRange,
   onDateRangeChange,
   onRefresh,
+  onExportPDF,
   loading,
+  hasData,
 }: ReportingHeaderProps) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -36,6 +40,13 @@ export function ReportingHeader({
           <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
+        {onExportPDF && (
+          // @ts-ignore
+          <Button variant="outline" size="sm" onClick={onExportPDF} disabled={loading || !hasData}>
+            <svg className="h-3.5 w-3.5 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export PDF
+          </Button>
+        )}
       </div>
     </div>
   );

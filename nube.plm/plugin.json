@@ -308,6 +308,20 @@
       }
     },
     {
+      "pageId": "my-work",
+      "title": "My Work",
+      "icon": "user",
+      "description": "Personal dashboard with timesheet, tasks, and tickets",
+      "nodeTypes": ["plm.service"],
+      "enabled": true,
+      "isDefault": false,
+      "order": 5,
+      "props": {
+        "exposedPath": "./MyWork",
+        "useMountPattern": true
+      }
+    },
+    {
       "pageId": "reports",
       "title": "Reporting Dashboard",
       "icon": "bar-chart-3",
