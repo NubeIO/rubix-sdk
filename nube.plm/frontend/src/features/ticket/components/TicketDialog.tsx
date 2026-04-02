@@ -30,7 +30,7 @@ const DEFAULT_VALUES: TicketFormValues = {
   ticketType: 'task',
   status: 'pending',
   priority: 'Medium',
-  assignee: '',
+  assignees: [],
   dueDate: '',
   estimatedHours: '',
 };
@@ -50,13 +50,21 @@ export function TicketDialog({ client, taskId, ticket, tasks, productId, onClose
       return;
     }
 
+    // Load assignedUserRefs for this ticket
+    client.getAssignedUsers(ticket.id).then((refs: any[]) => {
+      setValues((prev) => ({
+        ...prev,
+        assignees: (refs || []).map((r: any) => ({ userId: r.toNodeId, userName: r.displayName || '' })),
+      }));
+    }).catch(() => {});
+
     setValues({
       name: ticket.name || '',
       description: ticket.settings?.description || '',
       ticketType: ticket.settings?.ticketType || 'task',
       status: normalizeTicketStatus(ticket.settings?.status) as TicketFormValues['status'],
       priority: ticket.settings?.priority || 'Medium',
-      assignee: ticket.settings?.assignee || '',
+      assignees: [],
       dueDate: ticket.settings?.dueDate || '',
       estimatedHours: ticket.settings?.estimatedHours ? String(ticket.settings.estimatedHours) : '',
     });
@@ -92,25 +100,32 @@ export function TicketDialog({ client, taskId, ticket, tasks, productId, onClose
         ticketType: values.ticketType,
         status: normalizeTicketStatus(values.status),
         priority: values.priority,
-        assignee: values.assignee || 'Unassigned',
         dueDate: values.dueDate || undefined,
         estimatedHours: values.estimatedHours ? Number(values.estimatedHours) : 0,
       };
 
+      let nodeId: string;
+
       if (isEditMode && ticket) {
+        nodeId = ticket.id;
         if (values.name.trim() !== ticket.name) {
           await client.updateNode(ticket.id, { name: values.name.trim() });
         }
-
         await client.updateNodeSettings(ticket.id, payload);
       } else {
-        await client.createNode(selectedParentId, {
+        const created = await client.createNode(selectedParentId, {
           type: 'plm.ticket',
           name: values.name.trim(),
           identity,
           settings: payload,
         });
+        nodeId = created.id;
       }
+
+      // Set assignedUserRefs
+      console.log('[TicketDialog] Setting assignees on node:', nodeId, 'assignees:', JSON.stringify(values.assignees));
+      await client.replaceAssignedUsers(nodeId, values.assignees);
+      console.log('[TicketDialog] Assignees set successfully');
 
       await onSuccess();
       onClose();
@@ -158,7 +173,7 @@ export function TicketDialog({ client, taskId, ticket, tasks, productId, onClose
             </div>
           )}
 
-          <TicketForm values={values} onChange={setValues} disabled={isSubmitting} />
+          <TicketForm values={values} onChange={setValues} client={client} disabled={isSubmitting} />
 
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

@@ -8,12 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 // @ts-ignore - SDK button
 import { Button } from '@rubix-sdk/frontend/common/ui/button';
-import { Plus, Calendar, User, Edit2, Trash2, Clock } from 'lucide-react';
+import { Plus, Calendar, User, Edit2, Trash2, Clock, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Task } from '../types/task.types';
 import type { Ticket } from '@features/ticket/types/ticket.types';
 import { TicketDialog } from '@features/ticket/components/TicketDialog';
 import { DeleteTicketDialog } from '@features/ticket/components/DeleteTicketDialog';
+import { TimeEntryDialog } from '@features/time/components/TimeEntryDialog';
 import { normalizeTicketStatus } from '@features/ticket/utils/ticket-helpers';
 import { recalculateTaskProgress } from '../utils/task-helpers';
 
@@ -22,16 +23,46 @@ type TicketStatus = NonNullable<Ticket['settings']>['status'];
 interface TicketsSectionV2Props {
   task: Task;
   client: any;
+  orgId: string;
+  deviceId: string;
   onStatsUpdate: (stats: any) => void;
   onRefresh: () => void;
 }
 
-export function TicketsSectionV2({ task, client, onStatsUpdate, onRefresh }: TicketsSectionV2Props) {
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return {};
+    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(payload)) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+export function TicketsSectionV2({ task, client, orgId, deviceId, onStatsUpdate, onRefresh }: TicketsSectionV2Props) {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [deletingTicket, setDeletingTicket] = useState<Ticket | null>(null);
+  const [loggingTimeTicket, setLoggingTimeTicket] = useState<Ticket | null>(null);
+
+  const [currentUserNodeId, setCurrentUserNodeId] = useState<string | undefined>();
+
+  const config = client.getConfig();
+  const claims = config.token ? decodeJwtPayload(config.token) : {};
+  const currentUserId = (claims.email as string) || (claims.sub as string) || `user_${deviceId.slice(0, 8)}`;
+  const currentUserName = (claims.name as string) || currentUserId;
+
+  useEffect(() => {
+    client.listUsers().then((users: any[]) => {
+      const match = users.find(
+        (u: any) => u.settings?.email === currentUserId || u.name === currentUserId
+      );
+      if (match?.id) setCurrentUserNodeId(match.id);
+    }).catch(() => {});
+  }, [currentUserId]);
 
   useEffect(() => {
     fetchTickets();
@@ -44,6 +75,19 @@ export function TicketsSectionV2({ task, client, onStatsUpdate, onRefresh }: Tic
         filter: `type is "plm.ticket" and p.id is "${task.id}"`,
       });
 
+      // Resolve assignedUserRefs for each ticket
+      const assigneeMap: Record<string, string> = {};
+      console.log('[TicketsSectionV2] Resolving assignees for', (nodes || []).length, 'tickets');
+      await Promise.all(
+        (nodes || []).map(async (node: any) => {
+          try {
+            const refs = await client.getAssignedUsers(node.id);
+            if (refs?.length) assigneeMap[node.id] = refs.map((r: any) => r.displayName || 'Unknown').join(', ');
+          } catch {}
+        })
+      );
+      console.log('[TicketsSectionV2] Assignee map:', assigneeMap);
+
       const ticketList: Ticket[] = (nodes || []).map((node: any) => ({
         id: node.id,
         name: node.name,
@@ -53,7 +97,7 @@ export function TicketsSectionV2({ task, client, onStatsUpdate, onRefresh }: Tic
           ticketType: node.settings?.ticketType || 'task',
           status: normalizeTicketStatus(node.settings?.status),
           priority: node.settings?.priority || 'Medium',
-          assignee: node.settings?.assignee || 'Unassigned',
+          assignee: assigneeMap[node.id] || 'Unassigned',
           dueDate: node.settings?.dueDate,
           estimatedHours: node.settings?.estimatedHours || 0,
           actualHours: node.settings?.actualHours || 0,
@@ -266,6 +310,15 @@ export function TicketsSectionV2({ task, client, onStatsUpdate, onRefresh }: Tic
                           variant="ghost"
                           size="sm"
                           className="h-8 px-2 text-xs"
+                          onClick={() => setLoggingTimeTicket(ticket)}
+                        >
+                          <Timer className="mr-1 h-3.5 w-3.5" />
+                          Log Time
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-xs"
                           onClick={() => setEditingTicket(ticket)}
                         >
                           <Edit2 className="mr-1 h-3.5 w-3.5" />
@@ -317,6 +370,20 @@ export function TicketsSectionV2({ task, client, onStatsUpdate, onRefresh }: Tic
           client={client}
           ticket={deletingTicket}
           onClose={() => setDeletingTicket(null)}
+          onSuccess={handleTicketUpdated}
+        />
+      )}
+
+      {/* Log Time Dialog */}
+      {loggingTimeTicket && (
+        <TimeEntryDialog
+          client={client}
+          ticketId={loggingTimeTicket.id}
+          ticketName={loggingTimeTicket.name}
+          userId={currentUserId}
+          userName={currentUserName}
+          userNodeId={currentUserNodeId}
+          onClose={() => setLoggingTimeTicket(null)}
           onSuccess={handleTicketUpdated}
         />
       )}

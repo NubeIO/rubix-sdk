@@ -22,3 +22,5 @@ export type { TabsProps, Tab } from './tabs';
 export { Collapsible, CollapsibleContent, CollapsibleTrigger } from './collapsible';
 export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption } from './table';
 export { SettingsSection } from './settings-section';
+export { UserPicker } from './user-picker';
+export type { UserPickerProps } from './user-picker';

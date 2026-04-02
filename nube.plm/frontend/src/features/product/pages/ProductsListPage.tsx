@@ -88,7 +88,7 @@ function ProductsPage({
   }, [client]);
 
   // Task CRUD operations - use SDK directly!
-  const updateTask = useCallback(async (taskId: string, input: UpdateTaskInput) => {
+  const updateTask = useCallback(async (taskId: string, input: UpdateTaskInput, assignees?: Array<{ userId: string; userName: string }>) => {
     // Update name if provided
     if (input.name) {
       await client.updateNode(taskId, { name: input.name });
@@ -96,6 +96,10 @@ function ProductsPage({
     // Update settings if provided (uses PATCH endpoint for deep merge)
     if (input.settings) {
       await client.updateNodeSettings(taskId, input.settings);
+    }
+    // Set assignedUserRefs if provided
+    if (assignees) {
+      await client.replaceAssignedUsers(taskId, assignees);
     }
   }, [client]);
 
@@ -221,7 +225,7 @@ function ProductsPage({
   }, []);
 
   // Create task - use SDK directly!
-  const createTask = useCallback(async (input: CreateTaskInput) => {
+  const createTask = useCallback(async (input: CreateTaskInput, assignees?: Array<{ userId: string; userName: string }>) => {
     console.log('[ProductsPage] Creating task:', input);
     const task = await client.createNode(input.parentId, {
       type: 'plm.task',
@@ -230,6 +234,10 @@ function ProductsPage({
     });
     // Create the bound comments node immediately
     await createCommentsNode(client, task.id);
+    // Set assignedUserRefs if provided
+    if (assignees?.length) {
+      await client.replaceAssignedUsers(task.id, assignees);
+    }
     setTaskRefreshKey((prev) => prev + 1); // Force refresh tasks tab
   }, [client]);
 
@@ -360,9 +368,10 @@ function ProductsPage({
       {createTaskDialogOpen && (
         <CreateTaskDialog
           products={allProducts}
+          client={client}
           onClose={closeCreateTaskDialog}
-          onCreate={async (input) => {
-            await createTask(input);
+          onCreate={async (input, assignees) => {
+            await createTask(input, assignees);
             closeCreateTaskDialog();
           }}
         />
@@ -373,9 +382,10 @@ function ProductsPage({
         <EditTaskDialog
           task={editingTask}
           products={allProducts}
+          client={client}
           onClose={closeEditTaskDialog}
-          onUpdate={async (taskId, input) => {
-            await updateTask(taskId, input);
+          onUpdate={async (taskId, input, assignees) => {
+            await updateTask(taskId, input, assignees);
             closeEditTaskDialog();
             setTaskRefreshKey((prev) => prev + 1); // Force refresh
           }}

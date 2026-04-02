@@ -107,6 +107,11 @@ import {
   isNodePublic as isNodePublicHelper,
   replaceNodeTeams as replaceNodeTeamsHelper,
   replaceNodeUsers as replaceNodeUsersHelper,
+  setAssignedUser as setAssignedUserHelper,
+  removeAssignedUser as removeAssignedUserHelper,
+  getAssignedUsers as getAssignedUsersHelper,
+  getAssignedUser as getAssignedUserHelper,
+  replaceAssignedUsers as replaceAssignedUsersHelper,
   type Ref,
   type CreateRefInput,
 } from './refs';
@@ -1384,6 +1389,85 @@ export class PluginClient {
     } catch (err: any) {
       throw new PluginClientError(
         err?.details?.message || err?.message || `Failed to replace users for node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  // ========================================================================
+  // Assigned User (assignedUserRef - task/ticket ownership, no auth impact)
+  // ========================================================================
+
+  /**
+   * Set the assigned user on a node (creates assignedUserRef)
+   */
+  async setAssignedUser(nodeId: string, userId: string, userName?: string): Promise<Ref> {
+    try {
+      return await setAssignedUserHelper(this, nodeId, userId, userName);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to set assigned user on node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Remove the assigned user from a node
+   */
+  async removeAssignedUser(nodeId: string): Promise<void> {
+    try {
+      await removeAssignedUserHelper(this, nodeId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to remove assigned user from node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Get all assigned users for a node
+   */
+  async getAssignedUsers(nodeId: string): Promise<Ref[]> {
+    try {
+      return await getAssignedUsersHelper(this, nodeId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to get assigned users for node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Get the first assigned user for a node (convenience)
+   */
+  async getAssignedUser(nodeId: string): Promise<Ref | null> {
+    try {
+      return await getAssignedUserHelper(this, nodeId);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to get assigned user for node ${nodeId}`,
+        err?.status,
+        err?.details
+      );
+    }
+  }
+
+  /**
+   * Replace all assigned users on a node. Pass empty array to unassign all.
+   */
+  async replaceAssignedUsers(nodeId: string, users: Array<{ userId: string; userName?: string }>): Promise<void> {
+    try {
+      await replaceAssignedUsersHelper(this, nodeId, users);
+    } catch (err: any) {
+      throw new PluginClientError(
+        err?.details?.message || err?.message || `Failed to replace assigned users on node ${nodeId}`,
         err?.status,
         err?.details
       );

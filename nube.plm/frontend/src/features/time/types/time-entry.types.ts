@@ -30,6 +30,7 @@ export interface CreateTimeEntryInput {
   userName?: string;
   description?: string;
   category?: string;
+  userNodeId?: string; // Actual node ID for createdByRef
 }
 
 export interface UpdateTimeEntryInput {

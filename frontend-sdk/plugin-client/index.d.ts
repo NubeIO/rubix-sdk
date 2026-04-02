@@ -666,6 +666,29 @@ export declare class PluginClient {
         userName?: string;
     }>): Promise<void>;
     /**
+     * Set the assigned user on a node (creates assignedUserRef)
+     */
+    setAssignedUser(nodeId: string, userId: string, userName?: string): Promise<Ref>;
+    /**
+     * Remove the assigned user from a node
+     */
+    removeAssignedUser(nodeId: string): Promise<void>;
+    /**
+     * Get all assigned users for a node
+     */
+    getAssignedUsers(nodeId: string): Promise<Ref[]>;
+    /**
+     * Get the first assigned user for a node (convenience)
+     */
+    getAssignedUser(nodeId: string): Promise<Ref | null>;
+    /**
+     * Replace all assigned users on a node. Pass empty array to unassign all.
+     */
+    replaceAssignedUsers(nodeId: string, users: Array<{
+        userId: string;
+        userName?: string;
+    }>): Promise<void>;
+    /**
      * Make a custom API request
      *
      * @example

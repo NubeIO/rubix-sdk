@@ -157,6 +157,7 @@ export function TaskDetailPage({
       {/* Header - Fixed at top */}
       <TaskHeader
         task={task}
+        client={client}
         onEdit={() => {/* TODO: Open edit dialog */}}
         isLoading={isLoading}
       />

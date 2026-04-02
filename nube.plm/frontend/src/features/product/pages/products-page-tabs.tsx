@@ -7,7 +7,7 @@
  * - Hardware: Filters to settings.productType is "hardware"
  */
 
-import { Package, Cpu, HardDrive } from 'lucide-react';
+import { Package, Cpu, HardDrive, FolderKanban } from 'lucide-react';
 // @ts-ignore - SDK types are resolved at build time
 import { FilteredTableWithTabs, type FilteredTab } from '@rubix-sdk/frontend/components';
 import type { PluginClient } from '@rubix-sdk/frontend/plugin-client';
@@ -33,6 +33,12 @@ const TABS: FilteredTab[] = [
     label: 'Hardware',
     icon: HardDrive,
     filter: 'settings.productType is "hardware"',
+  },
+  {
+    value: 'project',
+    label: 'Projects',
+    icon: FolderKanban,
+    filter: 'settings.productType is "project"',
   },
 ];
 

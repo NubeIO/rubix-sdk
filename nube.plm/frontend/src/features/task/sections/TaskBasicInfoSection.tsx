@@ -11,17 +11,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 // @ts-ignore - SDK button
 import { Button } from '@rubix-sdk/frontend/common/ui/button';
+// @ts-ignore - SDK user picker
+import { UserPicker, type SelectedUser } from '@rubix-sdk/frontend/common/ui/user-picker';
 import type { Task } from '../types/task.types';
 import { TASK_STATUS_VALUES, type TaskStatusValue } from '../utils/task-status';
 
 interface TaskBasicInfoSectionProps {
   task: Task;
+  client: any;
   onTaskUpdate: (updates: { name?: string; settings?: Record<string, unknown> }) => Promise<void>;
 }
 
 const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Critical'] as const;
 
-export function TaskBasicInfoSection({ task, onTaskUpdate }: TaskBasicInfoSectionProps) {
+export function TaskBasicInfoSection({ task, client, onTaskUpdate }: TaskBasicInfoSectionProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -29,7 +32,7 @@ export function TaskBasicInfoSection({ task, onTaskUpdate }: TaskBasicInfoSectio
     description: task.settings?.description || '',
     status: (task.settings?.status as TaskStatusValue) || 'pending',
     priority: task.settings?.priority || 'Medium',
-    assignee: task.settings?.assignee || '',
+    assignees: [] as SelectedUser[],
     reporter: task.settings?.reporter || '',
     category: task.settings?.category || '',
     dueDate: task.settings?.dueDate || '',
@@ -38,37 +41,56 @@ export function TaskBasicInfoSection({ task, onTaskUpdate }: TaskBasicInfoSectio
     notes: task.settings?.notes || '',
   });
 
+  // Load assignedUserRefs on mount
   useEffect(() => {
-    setFormData({
+    client.getAssignedUsers(task.id).then((refs: any[]) => {
+      if (refs?.length) {
+        setFormData((prev) => ({
+          ...prev,
+          assignees: refs.map((r: any) => ({ userId: r.toNodeId, userName: r.displayName || '' })),
+        }));
+      }
+    }).catch(() => {});
+  }, [task.id, client]);
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
       name: task.name,
       description: task.settings?.description || '',
       status: (task.settings?.status as TaskStatusValue) || 'pending',
       priority: task.settings?.priority || 'Medium',
-      assignee: task.settings?.assignee || '',
       reporter: task.settings?.reporter || '',
       category: task.settings?.category || '',
       dueDate: task.settings?.dueDate || '',
       estimatedHours: String(task.settings?.estimatedHours || ''),
       storyPoints: String(task.settings?.storyPoints || ''),
       notes: task.settings?.notes || '',
-    });
+    }));
   }, [task]);
 
   const handleCancel = () => {
     setIsEditing(false);
-    setFormData({
+    // Reload assignee refs
+    client.getAssignedUsers(task.id).then((refs: any[]) => {
+      setFormData((prev) => ({
+        ...prev,
+        assignees: (refs || []).map((r: any) => ({ userId: r.toNodeId, userName: r.displayName || '' })),
+      }));
+    }).catch(() => {});
+    setFormData((prev) => ({
+      ...prev,
       name: task.name,
       description: task.settings?.description || '',
       status: (task.settings?.status as TaskStatusValue) || 'pending',
       priority: task.settings?.priority || 'Medium',
-      assignee: task.settings?.assignee || '',
       reporter: task.settings?.reporter || '',
       category: task.settings?.category || '',
       dueDate: task.settings?.dueDate || '',
       estimatedHours: String(task.settings?.estimatedHours || ''),
       storyPoints: String(task.settings?.storyPoints || ''),
       notes: task.settings?.notes || '',
-    });
+    }));
   };
 
   const handleSave = async () => {
@@ -81,7 +103,6 @@ export function TaskBasicInfoSection({ task, onTaskUpdate }: TaskBasicInfoSectio
           description: formData.description,
           status: formData.status,
           priority: formData.priority,
-          assignee: formData.assignee || 'Unassigned',
           reporter: formData.reporter || undefined,
           category: formData.category || undefined,
           dueDate: formData.dueDate || undefined,
@@ -90,6 +111,8 @@ export function TaskBasicInfoSection({ task, onTaskUpdate }: TaskBasicInfoSectio
           notes: formData.notes || undefined,
         },
       });
+      // Set assignedUserRefs
+      await client.replaceAssignedUsers(task.id, formData.assignees);
       setIsEditing(false);
     } catch (error) {
       console.error('[TaskBasicInfoSection] Failed to update task:', error);
@@ -196,16 +219,17 @@ export function TaskBasicInfoSection({ task, onTaskUpdate }: TaskBasicInfoSectio
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="task-assignee">Assignee</Label>
+              <Label>Assignee(s)</Label>
               {isEditing ? (
-                <Input
-                  id="task-assignee"
-                  value={formData.assignee}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData((prev) => ({ ...prev, assignee: e.target.value }))}
-                  placeholder="Who owns this task?"
+                <UserPicker
+                  client={client}
+                  value={formData.assignees}
+                  onChange={(users: SelectedUser[]) =>
+                    setFormData((prev) => ({ ...prev, assignees: users }))
+                  }
                 />
               ) : (
-                <div>{task.settings?.assignee || 'Unassigned'}</div>
+                <div>{formData.assignees.length > 0 ? formData.assignees.map(a => a.userName).join(', ') : 'Unassigned'}</div>
               )}
             </div>
 

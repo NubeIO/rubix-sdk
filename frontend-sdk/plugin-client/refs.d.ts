@@ -143,3 +143,27 @@ export declare function replaceNodeUsers(client: PluginClient, nodeId: string, u
     userId: string;
     userName?: string;
 }>): Promise<void>;
+/**
+ * Add an assigned user to a node (creates assignedUserRef).
+ */
+export declare function setAssignedUser(client: PluginClient, nodeId: string, userId: string, userName?: string): Promise<Ref>;
+/**
+ * Remove all assigned users from a node
+ */
+export declare function removeAssignedUser(client: PluginClient, nodeId: string): Promise<void>;
+/**
+ * Get all assigned users for a node
+ */
+export declare function getAssignedUsers(client: PluginClient, nodeId: string): Promise<Ref[]>;
+/**
+ * Get the first assigned user for a node (convenience)
+ */
+export declare function getAssignedUser(client: PluginClient, nodeId: string): Promise<Ref | null>;
+/**
+ * Replace all assigned users on a node.
+ * Pass empty array to unassign all.
+ */
+export declare function replaceAssignedUsers(client: PluginClient, nodeId: string, users: Array<{
+    userId: string;
+    userName?: string;
+}>): Promise<void>;

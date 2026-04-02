@@ -148,8 +148,8 @@ export function ProductTable({
                     borderRadius: '4px',
                     fontSize: '11px',
                     fontWeight: 500,
-                    background: product.settings?.productType === 'software' ? '#e0f2fe' : '#f0fdf4',
-                    color: product.settings?.productType === 'software' ? '#0369a1' : '#166534',
+                    background: product.settings?.productType === 'software' ? '#e0f2fe' : product.settings?.productType === 'project' ? '#f3e8ff' : '#f0fdf4',
+                    color: product.settings?.productType === 'software' ? '#0369a1' : product.settings?.productType === 'project' ? '#7c3aed' : '#166534',
                   }}>
                     {product.settings?.productType ?
                       product.settings.productType.charAt(0).toUpperCase() + product.settings.productType.slice(1)

@@ -12,12 +12,13 @@ import type { Task } from '../types/task.types';
 interface TaskCardProps {
   task: Task;
   ticketCount?: number;
+  assigneeName?: string;
   onClick?: () => void;
   onEdit?: (task: Task) => void;
   onViewTickets?: (task: Task) => void;
 }
 
-export function TaskCard({ task, ticketCount = 0, onClick, onEdit, onViewTickets }: TaskCardProps) {
+export function TaskCard({ task, ticketCount = 0, assigneeName, onClick, onEdit, onViewTickets }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -40,7 +41,7 @@ export function TaskCard({ task, ticketCount = 0, onClick, onEdit, onViewTickets
   };
 
   const dueDate = task.settings?.dueDate;
-  const assignee = task.settings?.assignee;
+  const assignee = assigneeName || task.settings?.assignee;
   const priority = task.settings?.priority;
 
   return (
