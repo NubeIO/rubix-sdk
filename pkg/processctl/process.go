@@ -230,6 +230,9 @@ func (p *Process) statusLocked(tail int) Status {
 	}
 	if tail > 0 {
 		s.Logs = p.logs.tail(tail)
+	} else if tail < 0 {
+		// tail < 0 means return all buffered logs.
+		s.Logs = p.logs.all()
 	}
 	return s
 }
