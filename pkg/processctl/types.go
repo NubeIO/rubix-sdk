@@ -28,6 +28,7 @@ type Status struct {
 	Name       string   `json:"name"`
 	State      State    `json:"state"`
 	PID        int      `json:"pid"`
+	ExitCode   int      `json:"exitCode,omitempty"`
 	StartedAt  string   `json:"startedAt,omitempty"`
 	Uptime     string   `json:"uptime,omitempty"`
 	ExitReason string   `json:"exitReason,omitempty"`

@@ -89,10 +89,12 @@ func (p *Process) Start() error {
 
 	if err := cmd.Start(); err != nil {
 		cancel()
-		p.setState(StateCrashed)
+		msg := fmt.Sprintf("start failed: %v", err)
+		p.logs.add(msg)
 		p.mu.Lock()
-		p.exitMsg = fmt.Sprintf("start failed: %v", err)
+		p.exitMsg = msg
 		p.mu.Unlock()
+		p.setState(StateCrashed)
 		return err
 	}
 
@@ -214,6 +216,7 @@ func (p *Process) statusLocked(tail int) Status {
 	s := Status{
 		Name:       p.cfg.Name,
 		State:      p.state,
+		ExitCode:   p.exitCode,
 		ExitReason: p.exitMsg,
 	}
 	if p.cmd != nil && p.cmd.Process != nil {
@@ -241,11 +244,21 @@ func (p *Process) capture(r io.Reader) {
 func (p *Process) waitLoop(ctx context.Context) {
 	err := p.cmd.Wait()
 
+	// Extract exit code if available.
+	exitCode := 0
+	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			exitCode = exitErr.ExitCode()
+		}
+	}
+
 	p.mu.Lock()
 	cancel := p.cancel
 	stopping := p.stopping
 	p.cmd = nil
 	p.cancel = nil
+	p.exitCode = exitCode
 	done := p.done
 	p.mu.Unlock()
 
@@ -256,7 +269,9 @@ func (p *Process) waitLoop(ctx context.Context) {
 		close(done)
 	}
 
-	if stopping || ctx.Err() != nil {
+	// Only treat as intentional stop if Stop()/Kill() was explicitly called.
+	// Context cancellation alone (e.g. parent cancelled) is still a crash.
+	if stopping {
 		p.mu.Lock()
 		p.exitMsg = "stopped"
 		p.mu.Unlock()
@@ -264,12 +279,15 @@ func (p *Process) waitLoop(ctx context.Context) {
 		return
 	}
 
-	p.mu.Lock()
+	var msg string
 	if err != nil {
-		p.exitMsg = fmt.Sprintf("crashed: %v", err)
+		msg = fmt.Sprintf("crashed: %v (exit code %d)", err, exitCode)
 	} else {
-		p.exitMsg = "exited"
+		msg = "exited unexpectedly (exit code 0)"
 	}
+	p.logs.add(msg)
+	p.mu.Lock()
+	p.exitMsg = msg
 	p.mu.Unlock()
 	p.setState(StateCrashed)
 }
