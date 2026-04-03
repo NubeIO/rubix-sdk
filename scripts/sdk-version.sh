@@ -30,20 +30,26 @@ read_yaml_path() {
 SDK_PATH=$(read_yaml_path "sdk_path" "/home/user/code/go/nube/rubix-sdk")
 PROTO_PATH=$(read_yaml_path "proto_path" "/home/user/code/go/nube/rubix-proto")
 RUBIX_PATH=$(read_yaml_path "rubix_path" "/home/user/code/go/nube/rubix")
+BIOS_PATH=$(read_yaml_path "bios_path" "/home/user/code/go/nube/bios")
 
 # Expand tilde in paths
 SDK_PATH="${SDK_PATH/#\~/$HOME}"
 PROTO_PATH="${PROTO_PATH/#\~/$HOME}"
 RUBIX_PATH="${RUBIX_PATH/#\~/$HOME}"
+BIOS_PATH="${BIOS_PATH/#\~/$HOME}"
 
 SDK_STATE_FILE="$SDK_PATH/.sdk-state"
 PROTO_STATE_FILE="$PROTO_PATH/.proto-state"
 RUBIX_GO_MOD="$RUBIX_PATH/go.mod"
+BIOS_GO_MOD="$BIOS_PATH/go.mod"
 SDK_CHANGELOG="$SDK_PATH/CHANGELOG.md"
 PROTO_CHANGELOG="$PROTO_PATH/CHANGELOG.md"
 
 # Repository selection (default: sdk)
 REPO_TARGET="${REPO_TARGET:-sdk}"
+
+# Target application (which go.mod to modify, default: rubix)
+APP_TARGET="${APP_TARGET:-rubix}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -68,6 +74,35 @@ warn() {
 error() {
     echo -e "${RED}✗${NC} $1"
     exit 1
+}
+
+# Get target app go.mod and path based on APP_TARGET
+get_target_go_mod() {
+    case "$APP_TARGET" in
+        rubix)
+            echo "$RUBIX_GO_MOD"
+            ;;
+        bios)
+            echo "$BIOS_GO_MOD"
+            ;;
+        *)
+            error "Invalid target app: $APP_TARGET (use rubix or bios)"
+            ;;
+    esac
+}
+
+get_target_path() {
+    case "$APP_TARGET" in
+        rubix)
+            echo "$RUBIX_PATH"
+            ;;
+        bios)
+            echo "$BIOS_PATH"
+            ;;
+        *)
+            error "Invalid target app: $APP_TARGET (use rubix or bios)"
+            ;;
+    esac
 }
 
 # Get repository path based on target
@@ -142,18 +177,20 @@ get_current_version() {
     git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0"
 }
 
-# Get latest version from rubix go.mod
+# Get latest version from target go.mod
 get_rubix_version() {
     local target="${1:-$REPO_TARGET}"
     local repo_name=$(get_repo_name "$target")
-    grep "github.com/NubeIO/$repo_name" "$RUBIX_GO_MOD" | grep -v replace | awk '{print $2}' || echo ""
+    local go_mod=$(get_target_go_mod)
+    grep "github.com/NubeIO/$repo_name" "$go_mod" | grep -v replace | awk '{print $2}' || echo ""
 }
 
 # Check if using local replace
 is_using_local() {
     local target="${1:-$REPO_TARGET}"
     local repo_name=$(get_repo_name "$target")
-    grep -q "^replace github.com/NubeIO/$repo_name =>" "$RUBIX_GO_MOD"
+    local go_mod=$(get_target_go_mod)
+    grep -q "^replace github.com/NubeIO/$repo_name =>" "$go_mod"
 }
 
 # Save current state
@@ -182,8 +219,10 @@ switch_to_local() {
     local repo_name=$(get_repo_name "$target")
     local repo_path=$(get_repo_path "$target")
     local display_name=$(echo "$repo_name" | sed 's/rubix-//')
+    local target_path=$(get_target_path)
+    local target_go_mod=$(get_target_go_mod)
 
-    info "Switching rubix to use local $display_name..."
+    info "Switching $APP_TARGET to use local $display_name..."
 
     if is_using_local "$target"; then
         warn "Already using local $display_name"
@@ -195,7 +234,7 @@ switch_to_local() {
     save_state "$current_version" "$target"
 
     # Add replace directive
-    cd "$RUBIX_PATH"
+    cd "$target_path"
     if ! grep -q "^replace github.com/NubeIO/$repo_name" go.mod; then
         echo "" >> go.mod
         echo "replace github.com/NubeIO/$repo_name => $repo_path" >> go.mod
@@ -212,8 +251,9 @@ switch_to_release() {
     local repo_name=$(get_repo_name "$target")
     local state_file=$(get_state_file "$target")
     local display_name=$(echo "$repo_name" | sed 's/rubix-//')
+    local target_path=$(get_target_path)
 
-    info "Switching rubix to use released $display_name..."
+    info "Switching $APP_TARGET to use released $display_name..."
 
     if ! is_using_local "$target"; then
         warn "Already using released $display_name"
@@ -230,7 +270,7 @@ switch_to_release() {
     fi
 
     # Update version in go.mod
-    cd "$RUBIX_PATH"
+    cd "$target_path"
     sed -i "s|github.com/NubeIO/$repo_name.*|github.com/NubeIO/$repo_name $saved_version|g" go.mod
 
     # Remove replace directive and trailing empty lines
@@ -380,10 +420,11 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 
     success "GitHub release created: https://github.com/NubeIO/$repo_name/releases/tag/$new_version"
 
-    # Update rubix go.mod if not using local
+    # Update target app go.mod if not using local
+    local target_path=$(get_target_path)
     if ! is_using_local "$target"; then
-        info "Updating rubix go.mod to use $new_version..."
-        cd "$RUBIX_PATH"
+        info "Updating $APP_TARGET go.mod to use $new_version..."
+        cd "$target_path"
 
         # Check if repo is already in go.mod
         if grep -q "github.com/NubeIO/$repo_name" go.mod; then
@@ -405,9 +446,9 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 
         export GOPRIVATE=github.com/NubeIO/*
         go mod tidy
-        success "Updated rubix to use $new_version"
+        success "Updated $APP_TARGET to use $new_version"
     else
-        warn "Rubix is using local $display_name, skipping go.mod update"
+        warn "$APP_TARGET is using local $display_name, skipping go.mod update"
         info "Run 'make sdk-unswitch --repo=$target' to use the released version"
     fi
 
@@ -425,12 +466,14 @@ show_repo_status() {
     local current_tag=$(get_current_version "$target")
     echo "$display_name Latest Tag:     $current_tag"
 
-    cd "$RUBIX_PATH"
+    local target_path=$(get_target_path)
+    cd "$target_path"
     local rubix_version=$(get_rubix_version "$target")
+    local app_label=$(echo "$APP_TARGET" | sed 's/./\U&/' )
     if [ -n "$rubix_version" ]; then
-        echo "Rubix $display_name Version:  $rubix_version"
+        echo "$app_label $display_name Version:  $rubix_version"
     else
-        echo -e "Rubix $display_name Version:  ${YELLOW}Not in go.mod${NC}"
+        echo -e "$app_label $display_name Version:  ${YELLOW}Not in go.mod${NC}"
     fi
 
     if is_using_local "$target"; then
@@ -480,6 +523,14 @@ parse_args() {
 
     while [[ $# -gt 0 ]]; do
         case $1 in
+            --target=*|-t=*)
+                APP_TARGET="${1#*=}"
+                shift
+                ;;
+            --target|-t)
+                APP_TARGET="$2"
+                shift 2
+                ;;
             --repo=*|-r=*)
                 REPO_TARGET="${1#*=}"
                 shift
@@ -521,6 +572,11 @@ parse_args() {
     if [ "$REPO_TARGET" != "sdk" ] && [ "$REPO_TARGET" != "proto" ] && [ "$REPO_TARGET" != "all" ]; then
         error "Invalid --repo value: $REPO_TARGET (use sdk, proto, or all)"
     fi
+
+    # Validate app target
+    if [ "$APP_TARGET" != "rubix" ] && [ "$APP_TARGET" != "bios" ]; then
+        error "Invalid --target value: $APP_TARGET (use rubix or bios)"
+    fi
 }
 
 # Show configured paths
@@ -540,6 +596,7 @@ show_paths() {
     echo "SDK Path:       $SDK_PATH"
     echo "Proto Path:     $PROTO_PATH"
     echo "Rubix Path:     $RUBIX_PATH"
+    echo "Bios Path:      $BIOS_PATH"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
@@ -560,18 +617,22 @@ show_help() {
     echo "  paths               Show configured repository paths"
     echo ""
     echo "Options:"
-    echo "  --repo, -r <repo>   Target repository: sdk, proto, or all (default: sdk)"
+    echo "  --repo, -r <repo>       Target repository: sdk, proto, or all (default: sdk)"
+    echo "  --target, -t <app>      Target application go.mod: rubix or bios (default: rubix)"
     echo ""
     echo "Examples:"
-    echo "  $0 switch --repo=sdk           # Switch to local SDK"
-    echo "  $0 switch --repo=proto         # Switch to local Proto"
-    echo "  $0 unswitch --repo=sdk         # Return to released SDK"
-    echo "  $0 release patch --repo=sdk    # Release SDK v0.0.2 from v0.0.1"
-    echo "  $0 release minor --repo=proto  # Release Proto v0.1.0 from v0.0.1"
-    echo "  $0 status                      # Show status for all repos"
-    echo "  $0 status --repo=sdk           # Show status for SDK only"
-    echo "  $0 init-changelog --repo=proto # Create CHANGELOG.md for proto"
-    echo "  $0 paths                       # Show configured paths"
+    echo "  $0 switch --repo=sdk                    # Switch rubix to local SDK"
+    echo "  $0 switch --repo=proto                  # Switch rubix to local Proto"
+    echo "  $0 switch --repo=sdk --target=bios      # Switch bios to local SDK"
+    echo "  $0 unswitch --repo=sdk                  # Return rubix to released SDK"
+    echo "  $0 unswitch --repo=sdk --target=bios    # Return bios to released SDK"
+    echo "  $0 release patch --repo=sdk             # Release SDK v0.0.2 from v0.0.1"
+    echo "  $0 release minor --repo=proto           # Release Proto v0.1.0 from v0.0.1"
+    echo "  $0 status                               # Show status for all repos"
+    echo "  $0 status --repo=sdk                    # Show status for SDK only"
+    echo "  $0 status --target=bios                 # Show status in bios go.mod"
+    echo "  $0 init-changelog --repo=proto          # Create CHANGELOG.md for proto"
+    echo "  $0 paths                                # Show configured paths"
     echo ""
     echo "Path Configuration:"
     echo "  Copy scripts/path-example.yaml to scripts/path.yaml and customize"
