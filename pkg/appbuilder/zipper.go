@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Build creates a zip at {outputDir}/{name}-{version}-{arch}.zip and returns the path.
@@ -51,6 +52,38 @@ func Build(spec BuildSpec, outputDir string) (string, error) {
 	}
 
 	return zipPath, nil
+}
+
+// ParseZipName extracts the name, version, and arch from a zip filename
+// like "bacnet-server-2.1.0-amd64.zip".
+func ParseZipName(filename string) (name, version, arch string, err error) {
+	base := strings.TrimSuffix(filepath.Base(filename), ".zip")
+
+	// Try each known arch suffix (longest first to match "amd64-win" before "amd64").
+	archList := []string{"amd64-win", "amd64", "arm64", "armv7"}
+	for _, a := range archList {
+		suffix := "-" + a
+		if strings.HasSuffix(base, suffix) {
+			rest := strings.TrimSuffix(base, suffix)
+			// Version is the last dash-separated segment of rest.
+			idx := strings.LastIndex(rest, "-")
+			if idx < 0 {
+				return "", "", "", fmt.Errorf("invalid zip name %q: cannot find version", filename)
+			}
+			name = rest[:idx]
+			version = rest[idx+1:]
+			arch = a
+			if err := ValidateName(name); err != nil {
+				return "", "", "", fmt.Errorf("invalid zip name %q: %w", filename, err)
+			}
+			if err := ValidateVersion(version); err != nil {
+				return "", "", "", fmt.Errorf("invalid zip name %q: %w", filename, err)
+			}
+			return name, version, arch, nil
+		}
+	}
+
+	return "", "", "", fmt.Errorf("invalid zip name %q: unrecognised arch suffix", filename)
 }
 
 func addToZip(w *zip.Writer, entry FileEntry) error {

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/NubeIO/rubix-sdk/cmd/builder/apps"
+	"github.com/NubeIO/rubix-sdk/cmd/builder/plugin"
 )
 
 func main() {
@@ -31,8 +32,21 @@ func main() {
 				apps.RunInteractive()
 			}
 		case "":
-			// No subcommand — show interactive picker.
 			apps.RunInteractive()
+		default:
+			printUsage()
+			os.Exit(1)
+		}
+	case "plugin":
+		switch cmd {
+		case "package":
+			if len(args) > 0 {
+				plugin.RunPackage(args)
+			} else {
+				plugin.RunInteractive()
+			}
+		case "":
+			plugin.RunInteractive()
 		default:
 			printUsage()
 			os.Exit(1)
@@ -48,15 +62,19 @@ func printUsage() {
 
 Types:
   app       Bios-managed apps
+  plugin    Rubix plugins
 
 Commands:
-  package   Zip an existing built app for deployment
+  package   Zip an existing built app/plugin for deployment
 
 Interactive (TUI):
-  builder app              Launch interactive app packager
-  builder app package      Launch interactive app packager
+  builder app                Launch interactive app packager
+  builder plugin             Launch interactive plugin packager
 
 CLI (for AI / scripts):
   builder app package --name bacnet-server --version 2.1.0 --arch amd64 \
-    --binary ./bacnet-server --file config.json --output ./dist/`)
+    --binary ./bacnet-server --file config.json --output ./dist/
+
+  builder plugin package --name nube.github --version 0.1.0 --arch amd64 \
+    --binary ./github-plugin --plugin-json ./plugin.json --output ./dist/`)
 }
