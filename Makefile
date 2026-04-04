@@ -1,4 +1,4 @@
-.PHONY: demo-gen demo-build sdk-switch sdk-unswitch sdk-release-patch sdk-release-minor sdk-release-major sdk-status proto-switch proto-unswitch proto-release-patch proto-release-minor proto-release-major proto-status proto-init paths generate-proto test verify new-branch help
+.PHONY: codegen codegen-clean demo-gen demo-build sdk-switch sdk-unswitch sdk-release-patch sdk-release-minor sdk-release-major sdk-status proto-switch proto-unswitch proto-release-patch proto-release-minor proto-release-major proto-status proto-init bios-sdk-switch bios-sdk-unswitch bios-sdk-status bios-proto-switch bios-proto-unswitch bios-proto-status paths generate-proto test verify new-branch help
 .DEFAULT_GOAL := help
 
 help: ## Show this help message
@@ -24,6 +24,10 @@ help: ## Show this help message
 	@echo "  make proto-release-major Release major version (v0.0.1 → v1.0.0)"
 	@echo "  make proto-init          Initialize Proto CHANGELOG.md"
 	@echo ""
+	@echo "Client Codegen:"
+	@echo "  make codegen             Generate Go client from rubix RAS spec → pkg/client/"
+	@echo "  make codegen-clean       Remove generated client code"
+	@echo ""
 	@echo "Demo/Development:"
 	@echo "  make demo-gen            Run fake plugin generator demo"
 	@echo "  make demo-build          Build fake plugin generator"
@@ -37,6 +41,14 @@ help: ## Show this help message
 	@echo "  make new-branch BRANCH=feature-name RUBIX=yes    Create branch in SDK + Rubix"
 	@echo "  make new-branch BRANCH=name PROTO=yes RUBIX=yes  Create branch in all repos"
 	@echo ""
+	@echo "Bios Version Management:"
+	@echo "  make bios-sdk-switch     Switch bios to use local SDK (development)"
+	@echo "  make bios-sdk-unswitch   Switch bios back to released SDK version"
+	@echo "  make bios-sdk-status     Check SDK version in bios go.mod"
+	@echo "  make bios-proto-switch   Switch bios to use local Proto (development)"
+	@echo "  make bios-proto-unswitch Switch bios back to released Proto version"
+	@echo "  make bios-proto-status   Check Proto version in bios go.mod"
+	@echo ""
 	@echo "Proto/Testing:"
 	@echo "  make generate-proto      Regenerate proto code from rubix-proto"
 	@echo "  make test               Run all tests"
@@ -46,6 +58,23 @@ help: ## Show this help message
 	@echo ""
 	@echo "See SDK_VERSION_MANAGEMENT.md for detailed workflow"
 	@echo ""
+
+# Client Codegen
+# ================
+
+# Get rubix path from path.yaml config
+RUBIX_PATH := $(shell grep '^rubix_path:' scripts/path.yaml 2>/dev/null | sed 's/^rubix_path:[[:space:]]*//')
+RUBIX_PATH := $(if $(RUBIX_PATH),$(RUBIX_PATH),/home/user/code/go/nube/rubix)
+RAS_PATH := $(RUBIX_PATH)/configs/ras
+
+codegen: ## Generate Go client from rubix RAS spec → pkg/rubixclient/client/
+	@echo "Generating client from RAS at $(RAS_PATH)..."
+	@go run ./cmd/codegen/client --ras-path=$(RAS_PATH) --output=pkg/rubixclient/client
+
+codegen-clean: ## Remove generated client code
+	@echo "Cleaning generated client..."
+	@rm -rf pkg/rubixclient/client
+	@echo "Done"
 
 demo-gen: ## Run fake plugin generator demo
 	go run ./cmd/fake-plugin-generator
@@ -98,6 +127,27 @@ proto-release-major: ## Create Proto major release (v0.0.1 → v1.0.0)
 proto-init: ## Initialize Proto CHANGELOG.md
 	@./scripts/sdk-version.sh init-changelog --repo=proto
 
+# Bios Version Management (SDK in bios)
+# =======================================
+
+bios-sdk-status: ## Show SDK version in bios go.mod
+	@./scripts/sdk-version.sh status --target=bios
+
+bios-sdk-switch: ## Switch bios to use local SDK for development
+	@./scripts/sdk-version.sh switch --target=bios
+
+bios-sdk-unswitch: ## Switch bios back to released SDK version
+	@./scripts/sdk-version.sh unswitch --target=bios
+
+bios-proto-status: ## Show Proto version in bios go.mod
+	@./scripts/sdk-version.sh status --repo=proto --target=bios
+
+bios-proto-switch: ## Switch bios to use local Proto for development
+	@./scripts/sdk-version.sh switch --repo=proto --target=bios
+
+bios-proto-unswitch: ## Switch bios back to released Proto version
+	@./scripts/sdk-version.sh unswitch --repo=proto --target=bios
+
 # Configuration
 # ==============
 
@@ -110,6 +160,7 @@ paths: ## Show configured repository paths
 BRANCH ?=
 PROTO ?= no
 RUBIX ?= no
+BIOS ?= no
 
 new-branch: ## Create new branch across repositories (BRANCH=name PROTO=yes RUBIX=yes)
 	@if [ -z "$(BRANCH)" ]; then \
@@ -161,6 +212,18 @@ new-branch: ## Create new branch across repositories (BRANCH=name PROTO=yes RUBI
 		fi; \
 		echo ""; \
 	fi
+	@if [ "$(BIOS)" = "yes" ]; then \
+		echo "📦 Bios Repository..."; \
+		cd $$(./scripts/sdk-version.sh paths | grep "Bios Path:" | awk '{print $$3}') && \
+		if git show-ref --verify --quiet refs/heads/$(BRANCH); then \
+			echo "  ⚠️  Branch '$(BRANCH)' already exists in Bios"; \
+			git checkout $(BRANCH); \
+		else \
+			git checkout -b $(BRANCH); \
+			echo "  ✅ Created and checked out branch '$(BRANCH)' in Bios"; \
+		fi; \
+		echo ""; \
+	fi
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "  ✅ Branch Creation Complete!"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -169,6 +232,7 @@ new-branch: ## Create new branch across repositories (BRANCH=name PROTO=yes RUBI
 	@echo "  SDK:   $(BRANCH) ✅"
 	@if [ "$(PROTO)" = "yes" ]; then echo "  Proto: $(BRANCH) ✅"; fi
 	@if [ "$(RUBIX)" = "yes" ]; then echo "  Rubix: $(BRANCH) ✅"; fi
+	@if [ "$(BIOS)" = "yes" ]; then echo "  Bios:  $(BRANCH) ✅"; fi
 	@echo ""
 
 # Proto Generation & Testing

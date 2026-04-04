@@ -24,3 +24,7 @@ proto_path: /home/user/code/go/nube/rubix-proto
 # Main Rubix application path
 # Default: /home/user/code/go/nube/rubix
 rubix_path: /home/user/code/go/nube/rubix
+
+# Bios application path
+# Default: /home/user/code/go/nube/bios
+bios_path: /home/user/code/go/nube/bios
