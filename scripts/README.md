@@ -40,6 +40,25 @@ Example configuration file showing the default paths and documentation. Copy thi
 
 ## Quick Commands
 
+**IMPORTANT: Always use `make` commands to manage versions and dependencies. Never manually edit `go.mod` files in rubix, bios, or any dependent repo. The Makefile targets handle replace directives, `go mod tidy`, and version updates correctly.**
+
+### Release Workflow
+
+When bumping the SDK version and updating dependent repos:
+
+```bash
+# 1. Create the release (bumps version, tags, pushes)
+make sdk-release-patch   # or sdk-release-minor / sdk-release-major
+
+# 2. Switch rubix to use the new released version (removes replace directive, updates go.mod)
+make sdk-unswitch
+
+# 3. Switch bios to use the new released version
+make bios-sdk-unswitch
+```
+
+### All Commands
+
 ```bash
 # Show configured paths
 make paths
@@ -50,8 +69,16 @@ make proto-status        # Proto only
 ./scripts/sdk-version.sh status  # Both
 
 # Switch to local development
-make sdk-switch
-make proto-switch
+make sdk-switch          # rubix uses local SDK
+make proto-switch        # rubix uses local Proto
+make bios-sdk-switch     # bios uses local SDK
+make bios-proto-switch   # bios uses local Proto
+
+# Switch back to released version
+make sdk-unswitch        # rubix uses released SDK
+make proto-unswitch      # rubix uses released Proto
+make bios-sdk-unswitch   # bios uses released SDK
+make bios-proto-unswitch # bios uses released Proto
 
 # Create releases
 make sdk-release-patch
