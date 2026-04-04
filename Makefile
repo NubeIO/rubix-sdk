@@ -1,4 +1,4 @@
-.PHONY: demo-gen demo-build sdk-switch sdk-unswitch sdk-release-patch sdk-release-minor sdk-release-major sdk-status proto-switch proto-unswitch proto-release-patch proto-release-minor proto-release-major proto-status proto-init bios-sdk-switch bios-sdk-unswitch bios-sdk-status bios-proto-switch bios-proto-unswitch bios-proto-status paths generate-proto test verify new-branch help
+.PHONY: codegen codegen-clean demo-gen demo-build sdk-switch sdk-unswitch sdk-release-patch sdk-release-minor sdk-release-major sdk-status proto-switch proto-unswitch proto-release-patch proto-release-minor proto-release-major proto-status proto-init bios-sdk-switch bios-sdk-unswitch bios-sdk-status bios-proto-switch bios-proto-unswitch bios-proto-status paths generate-proto test verify new-branch help
 .DEFAULT_GOAL := help
 
 help: ## Show this help message
@@ -23,6 +23,10 @@ help: ## Show this help message
 	@echo "  make proto-release-minor Release minor version (v0.0.1 → v0.1.0)"
 	@echo "  make proto-release-major Release major version (v0.0.1 → v1.0.0)"
 	@echo "  make proto-init          Initialize Proto CHANGELOG.md"
+	@echo ""
+	@echo "Client Codegen:"
+	@echo "  make codegen             Generate Go client from rubix RAS spec → pkg/client/"
+	@echo "  make codegen-clean       Remove generated client code"
 	@echo ""
 	@echo "Demo/Development:"
 	@echo "  make demo-gen            Run fake plugin generator demo"
@@ -54,6 +58,23 @@ help: ## Show this help message
 	@echo ""
 	@echo "See SDK_VERSION_MANAGEMENT.md for detailed workflow"
 	@echo ""
+
+# Client Codegen
+# ================
+
+# Get rubix path from path.yaml config
+RUBIX_PATH := $(shell grep '^rubix_path:' scripts/path.yaml 2>/dev/null | sed 's/^rubix_path:[[:space:]]*//')
+RUBIX_PATH := $(if $(RUBIX_PATH),$(RUBIX_PATH),/home/user/code/go/nube/rubix)
+RAS_PATH := $(RUBIX_PATH)/configs/ras
+
+codegen: ## Generate Go client from rubix RAS spec → pkg/rubixclient/client/
+	@echo "Generating client from RAS at $(RAS_PATH)..."
+	@go run ./cmd/codegen/client --ras-path=$(RAS_PATH) --output=pkg/rubixclient/client
+
+codegen-clean: ## Remove generated client code
+	@echo "Cleaning generated client..."
+	@rm -rf pkg/rubixclient/client
+	@echo "Done"
 
 demo-gen: ## Run fake plugin generator demo
 	go run ./cmd/fake-plugin-generator
