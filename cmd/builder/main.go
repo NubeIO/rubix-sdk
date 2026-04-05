@@ -6,6 +6,7 @@ import (
 
 	"github.com/NubeIO/rubix-sdk/cmd/builder/apps"
 	"github.com/NubeIO/rubix-sdk/cmd/builder/plugin"
+	"github.com/NubeIO/rubix-sdk/cmd/builder/release"
 )
 
 func main() {
@@ -51,6 +52,8 @@ func main() {
 			printUsage()
 			os.Exit(1)
 		}
+	case "release":
+		release.RunRelease(os.Args[2:])
 	default:
 		printUsage()
 		os.Exit(1)
@@ -63,6 +66,7 @@ func printUsage() {
 Types:
   app       Bios-managed apps
   plugin    Rubix plugins
+  release   Assemble a full release folder from a manifest
 
 Commands:
   package   Zip an existing built app/plugin for deployment
@@ -70,6 +74,10 @@ Commands:
 Interactive (TUI):
   builder app                Launch interactive app packager
   builder plugin             Launch interactive plugin packager
+
+Release (assemble runnable folder):
+  builder release --manifest release.yaml --os linux --output dist/linux
+  builder release --manifest release.yaml --os windows --output dist/windows
 
 CLI (for AI / scripts):
   builder app package --name bacnet-server --version 2.1.0 --arch amd64 \

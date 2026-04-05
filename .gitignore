@@ -52,3 +52,4 @@ nubeio-example/example
 # Plugin binaries
 nube.plm/rubix-plm-plugin
 scripts/path.yaml
+.sdk-state

@@ -2,9 +2,9 @@ package natslib
 
 import "context"
 
-// Ping sends a simple request and checks for response
+// PingServer sends a simple request and checks for response
 // Returns nil if server responds, error otherwise
-func (c *Client) Ping(ctx context.Context, subject string) error {
+func (c *Client) PingServer(ctx context.Context, subject string) error {
 	status, err := c.CheckServerReady(ctx, subject)
 	if err != nil {
 		return err

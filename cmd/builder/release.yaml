@@ -1,0 +1,118 @@
+# release.yaml — Single source of truth for building + assembling rubix releases.
+#
+# The builder reads this file, builds each component, caches the artifacts,
+# and assembles a runnable output folder. Every component can be excluded
+# (--exclude) or reused from cache (--reuse component:YYMMDD-HHmmss).
+#
+# Usage:
+#   builder release --target linux                                    # full build
+#   builder release --target linux --exclude frontend,bacnet          # minimal
+#   builder release --target linux --reuse frontend:250405-131215     # reuse cached
+#   builder release --target linux --zip                              # build + zip
+#
+# Targets: linux (x86_64), windows (x86_64), pi (arm64), pi32 (armv7)
+#
+# All paths are relative to --root (the rubix project root).
+
+# ── Bios (process manager) ────────────────────────────────────────────
+# Binary + config placed at the output root.
+bios:
+  build:
+    linux:   "make -C ../bios build"
+    windows: "make -C ../bios build-windows"
+    pi:      "make -C ../bios build-pi"
+    pi32:    "make -C ../bios build-pi32"
+  binary:
+    linux:   "../bios/bin/rubix-bios"
+    windows: "../bios/bin/rubix-bios.exe"
+    pi:      "../bios/bin/rubix-bios-arm64"
+    pi32:    "../bios/bin/rubix-bios-armv7"
+  config: desktop/scripts/bios.yaml
+
+# ── Apps ──────────────────────────────────────────────────────────────
+# Each app gets its own directory under apps/{name}/ in the output.
+apps:
+  rubix:
+    build:
+      linux:   "go build ${GO_TAGS} -o bin/rubix ./cmd/rubix"
+      windows: >-
+        CGO_ENABLED=1 GOOS=windows GOARCH=amd64
+        CC="zig cc -target x86_64-windows-gnu"
+        CXX="zig c++ -target x86_64-windows-gnu"
+        go build ${GO_TAGS} -o bin/rubix.exe ./cmd/rubix
+      pi: >-
+        CGO_ENABLED=1 GOOS=linux GOARCH=arm64
+        CC="zig cc -target aarch64-linux-gnu"
+        CXX="zig c++ -target aarch64-linux-gnu"
+        go build ${GO_TAGS} -o bin/rubix-arm64 ./cmd/rubix
+      pi32: >-
+        CGO_ENABLED=1 GOOS=linux GOARCH=arm GOARM=7
+        CC="zig cc -target arm-linux-gnueabihf"
+        CXX="zig c++ -target arm-linux-gnueabihf"
+        go build ${GO_TAGS} -o bin/rubix-armv7 ./cmd/rubix
+    binary:
+      linux:   "bin/rubix"
+      windows: "bin/rubix.exe"
+      pi:      "bin/rubix-arm64"
+      pi32:    "bin/rubix-armv7"
+    manifest: desktop/scripts/rubix-app.yaml
+    config:
+      - config/server.yaml
+    dirs: [db, logs]
+    shared: [configs, frontend]
+    required: true
+
+  bacnet:
+    build:
+      linux: "cd bacnet-server && go build -o bacnet-server"
+      windows: "cd bacnet-server && GOOS=windows GOARCH=amd64 go build -o bacnet-server.exe"
+    binary:
+      linux:   "bacnet-server/bacnet-server"
+      windows: "bacnet-server/bacnet-server.exe"
+    manifest: desktop/scripts/bacnet-app.yaml
+    config:
+      - bacnet-server/config.json
+    required: false
+
+# ── Shared resources ──────────────────────────────────────────────────
+# Placed at output root. Apps symlink to them (Linux) or get copies (Windows).
+shared:
+  - name: frontend
+    build: "cd frontend && pnpm install --frozen-lockfile && pnpm run build"
+    src: frontend/dist/client
+
+  - name: configs
+    src: configs/ras            # no build — just copy
+
+# ── Desktop (Tauri binary) ───────────────────────────────────────────
+# Optional. Placed at output root as rubix-desktop. Exclude with --exclude desktop.
+# NOTE: desktop build depends on rubix + frontend being built first.
+desktop:
+  build:
+    linux: >-
+      mkdir -p desktop/src-tauri/binaries desktop/src-tauri/resources/frontend/dist/client &&
+      cp bin/rubix desktop/src-tauri/binaries/rubix-x86_64-unknown-linux-gnu &&
+      cp config/server.yaml desktop/src-tauri/resources/server.yaml &&
+      cp desktop/scripts/bios.yaml desktop/src-tauri/resources/bios.yaml &&
+      cp desktop/scripts/rubix-app.yaml desktop/src-tauri/resources/rubix-app.yaml &&
+      rm -rf desktop/src-tauri/resources/configs && mkdir -p desktop/src-tauri/resources/configs &&
+      cp -r configs/ras desktop/src-tauri/resources/configs/ras &&
+      cp -r frontend/dist/client/* desktop/src-tauri/resources/frontend/dist/client/ &&
+      mkdir -p desktop/src-tauri/binaries &&
+      cp ../bios/bin/rubix-bios desktop/src-tauri/binaries/rubix-bios-x86_64-unknown-linux-gnu &&
+      cd desktop && PATH=$HOME/.cargo/bin:$PATH npx tauri build
+    windows: >-
+      mkdir -p desktop/src-tauri/binaries desktop/src-tauri/resources/frontend/dist/client &&
+      cp bin/rubix.exe desktop/src-tauri/binaries/rubix-x86_64-pc-windows-msvc.exe &&
+      cp ../bios/bin/rubix-bios.exe desktop/src-tauri/binaries/rubix-bios-x86_64-pc-windows-msvc.exe &&
+      cp config/server.yaml desktop/src-tauri/resources/server.yaml &&
+      rm -rf desktop/src-tauri/resources/configs && mkdir -p desktop/src-tauri/resources/configs &&
+      cp -r configs/ras desktop/src-tauri/resources/configs/ras &&
+      cp -r frontend/dist/client/* desktop/src-tauri/resources/frontend/dist/client/ &&
+      cd desktop && npx tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc
+  binary:
+    linux:   "desktop/src-tauri/target/release/rubix-desktop"
+    windows: "desktop/src-tauri/target/x86_64-pc-windows-msvc/release/rubix-desktop.exe"
+
+# ── Start script ──────────────────────────────────────────────────────
+start_script: true
