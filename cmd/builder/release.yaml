@@ -64,14 +64,24 @@ apps:
 
   bacnet:
     build:
-      linux:   "make -C ../rubix-bacnet/bacnet-server build"
-      windows: "make -C ../rubix-bacnet/bacnet-server build-windows"
+      linux: >-
+        cd bacnet-server &&
+        pnpm install --frozen-lockfile &&
+        pnpm run build && pnpm run bundle && pnpm run sea:blob &&
+        cp "$(which node)" bacnet-server &&
+        pnpm run sea:inject:linux
+      windows: >-
+        cd bacnet-server &&
+        pnpm install --frozen-lockfile &&
+        pnpm run build && pnpm run bundle && pnpm run sea:blob &&
+        cp node-win/node.exe bacnet-server.exe &&
+        pnpm run sea:inject:windows
     binary:
-      linux:   "../rubix-bacnet/bacnet-server/bacnet-server"
-      windows: "../rubix-bacnet/bacnet-server/bacnet-server.exe"
+      linux:   "bacnet-server/bacnet-server"
+      windows: "bacnet-server/bacnet-server.exe"
     manifest: desktop/scripts/bacnet-app.yaml
     config:
-      - ../rubix-bacnet/bacnet-server/config.json
+      - bacnet-server/config.json
     required: false
 
 # ── Shared resources ──────────────────────────────────────────────────

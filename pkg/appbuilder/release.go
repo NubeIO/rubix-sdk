@@ -529,23 +529,23 @@ func AssembleRelease(opts ReleaseOptions) error {
 			continue
 		}
 
-		// Build app.
-		if buildCmd, ok := app.Build[target]; ok {
+		// No build command for this target — skip (not an error).
+		buildCmd, hasBuild := app.Build[target]
+		appBinPath, hasBinary := app.Binary[target]
+		if !hasBuild && !hasBinary {
+			fmt.Printf("  skip: app %s (no target %s)\n", name, target)
+			continue
+		}
+
+		// Build app — build failures are always errors (required or not).
+		if hasBuild {
 			if err := runBuild(root, buildCmd); err != nil {
-				if app.Required {
-					return fmt.Errorf("build app %s: %w", name, err)
-				}
-				fmt.Fprintf(os.Stderr, "warning: build app %s failed: %v, skipping\n", name, err)
-				continue
+				return fmt.Errorf("build app %s: %w", name, err)
 			}
 		}
 
-		appBinPath, ok := app.Binary[target]
-		if !ok {
-			if app.Required {
-				return fmt.Errorf("app %s: no binary path for target %q", name, target)
-			}
-			fmt.Printf("  skip: app %s (no binary for target %s)\n", name, target)
+		if !hasBinary {
+			fmt.Printf("  skip: app %s (no binary path for target %s)\n", name, target)
 			continue
 		}
 		appBin := resolvePath(root, appBinPath)

@@ -82,7 +82,8 @@ help:
 	@echo ""
 	@echo "  Cache:"
 	@echo "    make cache-list                 Show cached builds"
-	@echo "    make cache-clean                Delete all cached builds"
+	@echo "    make cache-prune                Delete old caches, keep latest per component"
+	@echo "    make cache-clean                Delete ALL cached builds"
 	@echo ""
 	@echo "  See EXAMPLE.md for copy-paste recipes."
 
@@ -172,5 +173,23 @@ cache-clean:
 	@echo "Cleaning cache..."
 	@rm -rf $(DIST_DIR)/cache
 	@echo "✅ Cache cleared"
+
+# cache-prune: remove all cached builds except the latest per component
+cache-prune:
+	@echo "Pruning cache (keeping latest per component)..."
+	@if [ ! -d "$(DIST_DIR)/cache" ]; then echo "  (no cache)"; exit 0; fi
+	@for target_dir in $(DIST_DIR)/cache/*/; do \
+		[ -d "$$target_dir" ] || continue; \
+		for comp in $$(ls "$$target_dir" | sed 's/-[0-9]*-[0-9]*$$//' | sort -u); do \
+			latest=$$(ls -d "$$target_dir$$comp"-* 2>/dev/null | sort | tail -1); \
+			for dir in $$(ls -d "$$target_dir$$comp"-* 2>/dev/null | sort); do \
+				if [ "$$dir" != "$$latest" ]; then \
+					echo "  rm: $$(basename $$dir)"; \
+					rm -rf "$$dir"; \
+				fi; \
+			done; \
+		done; \
+	done
+	@echo "✅ Cache pruned (latest kept)"
 
 .DEFAULT_GOAL := help
