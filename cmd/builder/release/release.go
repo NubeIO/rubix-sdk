@@ -17,9 +17,10 @@ func RunRelease(args []string) {
 	outputDir := fs.String("output", "dist", "Output directory")
 	rootDir := fs.String("root", ".", "Project root (build commands run here, paths are relative to this)")
 	exclude := fs.String("exclude", "", "Comma-separated components to skip (e.g. frontend,bacnet,desktop)")
-	reuse := fs.String("reuse", "", "Reuse cached builds: component:YYMMDD-HHmmss,... (e.g. frontend:250405-131215)")
+	reuse := fs.String("reuse", "", "Reuse cached builds: component:YYMMDD-HHmmss or component:latest (e.g. frontend:latest)")
 	zipFlag := fs.Bool("zip", false, "Create archive after assembly (.tar.gz for linux, .zip for windows)")
 	cacheDir := fs.String("cache-dir", "", "Cache directory (default: {output}/../cache)")
+	keep := fs.String("keep", "", "Preserve across rebuilds: db, config, all")
 
 	// Legacy compat
 	targetOS := fs.String("os", "", "Target OS (legacy — use --target instead)")
@@ -49,14 +50,17 @@ Examples:
   # Minimal build (bios + rubix only, no frontend/bacnet/desktop)
   builder release --target linux --exclude frontend,bacnet,desktop
 
-  # Reuse cached frontend from a previous build
+  # Reuse latest cached frontend
+  builder release --target linux --reuse frontend:latest
+
+  # Reuse specific cached build
   builder release --target linux --reuse frontend:250405-131215
 
   # Windows build + auto-zip
   builder release --target windows --zip
 
-  # Reuse frontend + desktop, exclude bacnet, zip it
-  builder release --target linux --reuse "frontend:250405-131215,desktop:250405-131215" --exclude bacnet --zip
+  # Reuse frontend + desktop (latest), exclude bacnet, zip it
+  builder release --target linux --reuse "frontend:latest,desktop:latest" --exclude bacnet --zip
 `)
 	}
 
@@ -73,6 +77,7 @@ Examples:
 		Reuse:        *reuse,
 		Zip:          *zipFlag,
 		CacheDir:     *cacheDir,
+		Keep:         *keep,
 		OS:           *targetOS,
 		Arch:         *arch,
 	}

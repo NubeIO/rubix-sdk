@@ -64,14 +64,14 @@ apps:
 
   bacnet:
     build:
-      linux: "cd bacnet-server && go build -o bacnet-server"
-      windows: "cd bacnet-server && GOOS=windows GOARCH=amd64 go build -o bacnet-server.exe"
+      linux:   "make -C ../rubix-bacnet/bacnet-server build"
+      windows: "make -C ../rubix-bacnet/bacnet-server build-windows"
     binary:
-      linux:   "bacnet-server/bacnet-server"
-      windows: "bacnet-server/bacnet-server.exe"
+      linux:   "../rubix-bacnet/bacnet-server/bacnet-server"
+      windows: "../rubix-bacnet/bacnet-server/bacnet-server.exe"
     manifest: desktop/scripts/bacnet-app.yaml
     config:
-      - bacnet-server/config.json
+      - ../rubix-bacnet/bacnet-server/config.json
     required: false
 
 # ── Shared resources ──────────────────────────────────────────────────
@@ -80,6 +80,7 @@ shared:
   - name: frontend
     build: "cd frontend && pnpm install --frozen-lockfile && pnpm run build"
     src: frontend/dist/client
+    output: frontend/dist/client    # rubix expects this path structure
 
   - name: configs
     src: configs/ras            # no build — just copy
@@ -97,8 +98,7 @@ desktop:
       cp desktop/scripts/rubix-app.yaml desktop/src-tauri/resources/rubix-app.yaml &&
       rm -rf desktop/src-tauri/resources/configs && mkdir -p desktop/src-tauri/resources/configs &&
       cp -r configs/ras desktop/src-tauri/resources/configs/ras &&
-      cp -r frontend/dist/client/* desktop/src-tauri/resources/frontend/dist/client/ &&
-      mkdir -p desktop/src-tauri/binaries &&
+      ([ -d frontend/dist/client ] && cp -r frontend/dist/client/* desktop/src-tauri/resources/frontend/dist/client/ || echo "warning: frontend not built, desktop will have no UI") &&
       cp ../bios/bin/rubix-bios desktop/src-tauri/binaries/rubix-bios-x86_64-unknown-linux-gnu &&
       cd desktop && PATH=$HOME/.cargo/bin:$PATH npx tauri build
     windows: >-
@@ -108,7 +108,7 @@ desktop:
       cp config/server.yaml desktop/src-tauri/resources/server.yaml &&
       rm -rf desktop/src-tauri/resources/configs && mkdir -p desktop/src-tauri/resources/configs &&
       cp -r configs/ras desktop/src-tauri/resources/configs/ras &&
-      cp -r frontend/dist/client/* desktop/src-tauri/resources/frontend/dist/client/ &&
+      ([ -d frontend/dist/client ] && cp -r frontend/dist/client/* desktop/src-tauri/resources/frontend/dist/client/ || echo "warning: frontend not built, desktop will have no UI") &&
       cd desktop && npx tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc
   binary:
     linux:   "desktop/src-tauri/target/release/rubix-desktop"

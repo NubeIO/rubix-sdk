@@ -48,9 +48,18 @@ type ReleaseApp struct {
 
 // ReleaseShared maps a shared resource (may have a build step).
 type ReleaseShared struct {
-	Name  string `yaml:"name"`
-	Build string `yaml:"build,omitempty"` // shell command (optional)
-	Src   string `yaml:"src"`            // path to artifact directory
+	Name   string `yaml:"name"`
+	Build  string `yaml:"build,omitempty"`  // shell command (optional)
+	Src    string `yaml:"src"`             // path to artifact directory
+	Output string `yaml:"output,omitempty"` // output path (default: name)
+}
+
+// outputPath returns the output directory name (defaults to Name).
+func (s ReleaseShared) outputPath() string {
+	if s.Output != "" {
+		return s.Output
+	}
+	return s.Name
 }
 
 // ReleaseDesktop describes the optional Tauri desktop binary.
@@ -71,9 +80,114 @@ type ReleaseOptions struct {
 	Reuse        string // comma-separated component:timestamp pairs
 	Zip          bool   // create archive after assembly
 	CacheDir     string // cache root (default: dist/cache)
+	Keep         string // comma-separated: db, config, all
 	// Legacy compat (used if Target is empty)
 	OS   string
 	Arch string
+}
+
+// keepPaths returns the list of relative paths to preserve across rebuilds.
+// Paths are relative to the output dir.
+var keepPresets = map[string][]string{
+	"db":     {"apps/rubix/db"},
+	"config": {"apps/rubix/app.yaml", "apps/rubix/server.yaml"},
+}
+
+func parseKeep(keep string) []string {
+	if keep == "" {
+		return nil
+	}
+	var paths []string
+	seen := make(map[string]bool)
+	for _, token := range strings.Split(keep, ",") {
+		token = strings.TrimSpace(token)
+		if token == "all" {
+			for _, preset := range keepPresets {
+				for _, p := range preset {
+					if !seen[p] {
+						paths = append(paths, p)
+						seen[p] = true
+					}
+				}
+			}
+		} else if preset, ok := keepPresets[token]; ok {
+			for _, p := range preset {
+				if !seen[p] {
+					paths = append(paths, p)
+					seen[p] = true
+				}
+			}
+		}
+	}
+	return paths
+}
+
+// backupKeepPaths saves kept paths to a temp dir before the output is wiped.
+func backupKeepPaths(outDir string, keepPaths []string) (string, error) {
+	if len(keepPaths) == 0 {
+		return "", nil
+	}
+	tmpDir, err := os.MkdirTemp("", "builder-keep-")
+	if err != nil {
+		return "", err
+	}
+	for _, rel := range keepPaths {
+		src := filepath.Join(outDir, rel)
+		info, err := os.Lstat(src)
+		if err != nil {
+			continue // doesn't exist yet, nothing to keep
+		}
+		dst := filepath.Join(tmpDir, rel)
+		if info.IsDir() {
+			if err := copyDir(src, dst); err != nil {
+				fmt.Fprintf(os.Stderr, "warning: backup %s: %v\n", rel, err)
+			} else {
+				fmt.Printf("  keep: %s (backed up)\n", rel)
+			}
+		} else {
+			if err := os.MkdirAll(filepath.Dir(dst), 0o755); err == nil {
+				if err := copyFilePreserveMode(src, dst); err != nil {
+					fmt.Fprintf(os.Stderr, "warning: backup %s: %v\n", rel, err)
+				} else {
+					fmt.Printf("  keep: %s (backed up)\n", rel)
+				}
+			}
+		}
+	}
+	return tmpDir, nil
+}
+
+// restoreKeepPaths restores kept paths from the temp dir back into the output.
+func restoreKeepPaths(outDir, tmpDir string, keepPaths []string) {
+	if tmpDir == "" {
+		return
+	}
+	defer os.RemoveAll(tmpDir)
+	for _, rel := range keepPaths {
+		src := filepath.Join(tmpDir, rel)
+		info, err := os.Lstat(src)
+		if err != nil {
+			continue // wasn't backed up
+		}
+		dst := filepath.Join(outDir, rel)
+		if info.IsDir() {
+			// Remove the empty dir created by assembly, restore the backed up one
+			os.RemoveAll(dst)
+			if err := copyDir(src, dst); err != nil {
+				fmt.Fprintf(os.Stderr, "warning: restore %s: %v\n", rel, err)
+			} else {
+				fmt.Printf("  keep: %s (restored)\n", rel)
+			}
+		} else {
+			if err := os.MkdirAll(filepath.Dir(dst), 0o755); err == nil {
+				if err := copyFilePreserveMode(src, dst); err != nil {
+					fmt.Fprintf(os.Stderr, "warning: restore %s: %v\n", rel, err)
+				} else {
+					fmt.Printf("  keep: %s (restored)\n", rel)
+				}
+			}
+		}
+	}
 }
 
 // resolvedTarget returns the target string, falling back to OS+Arch mapping.
@@ -135,6 +249,8 @@ type reuseEntry struct {
 	Timestamp string
 }
 
+// parseReuse parses "frontend:250405-131215,bacnet:LATEST" into entries.
+// The special timestamp "LATEST" (case-insensitive) is resolved later against the cache.
 func parseReuse(reuse string) ([]reuseEntry, error) {
 	if reuse == "" {
 		return nil, nil
@@ -147,7 +263,7 @@ func parseReuse(reuse string) ([]reuseEntry, error) {
 		}
 		idx := strings.Index(part, ":")
 		if idx < 0 {
-			return nil, fmt.Errorf("invalid --reuse format %q: expected component:YYMMDD-HHmmss", part)
+			return nil, fmt.Errorf("invalid --reuse format %q: expected component:YYMMDD-HHmmss or component:latest", part)
 		}
 		entries = append(entries, reuseEntry{
 			Component: part[:idx],
@@ -155,6 +271,25 @@ func parseReuse(reuse string) ([]reuseEntry, error) {
 		})
 	}
 	return entries, nil
+}
+
+// resolveReuseMap builds the component→timestamp map, resolving "latest" to
+// the most recent cached timestamp for each component.
+func resolveReuseMap(entries []reuseEntry, cacheDir string) (map[string]string, error) {
+	m := make(map[string]string, len(entries))
+	for _, e := range entries {
+		ts := e.Timestamp
+		if strings.EqualFold(ts, "latest") {
+			timestamps := listCachedTimestamps(cacheDir, e.Component)
+			if len(timestamps) == 0 {
+				return nil, fmt.Errorf("--reuse %s:latest — no cached builds found in %s", e.Component, cacheDir)
+			}
+			ts = timestamps[0] // newest first
+			fmt.Printf("  resolve: %s:latest → %s\n", e.Component, ts)
+		}
+		m[e.Component] = ts
+	}
+	return m, nil
 }
 
 func cacheComponentDir(cacheDir, component, timestamp string) string {
@@ -244,15 +379,24 @@ func AssembleRelease(opts ReleaseOptions) error {
 	if err != nil {
 		return err
 	}
-	reuseMap := make(map[string]string)
-	for _, e := range reuseEntries {
-		reuseMap[e.Component] = e.Timestamp
-	}
 
 	cacheDir := parseCacheDir(opts)
 	ts := cacheTimestamp()
 
+	reuseMap, err := resolveReuseMap(reuseEntries, cacheDir)
+	if err != nil {
+		return err
+	}
+
+	keepPaths := parseKeep(opts.Keep)
+
 	fmt.Printf("target: %s | cache: %s | timestamp: %s\n", target, cacheDir, ts)
+
+	// Back up kept paths before wiping output.
+	keepTmp, err := backupKeepPaths(out, keepPaths)
+	if err != nil {
+		return fmt.Errorf("backup kept paths: %w", err)
+	}
 
 	// Clean and create output dir.
 	if err := os.RemoveAll(out); err != nil {
@@ -272,7 +416,7 @@ func AssembleRelease(opts ReleaseOptions) error {
 			continue
 		}
 
-		dst := filepath.Join(out, s.Name)
+		dst := filepath.Join(out, s.outputPath())
 
 		if reuseTS, ok := reuseMap[s.Name]; ok {
 			cached, err := findCachedComponent(cacheDir, s.Name, reuseTS)
@@ -458,8 +602,13 @@ func AssembleRelease(opts ReleaseOptions) error {
 			if excludeSet[sharedName] {
 				continue
 			}
-			rootSrc := filepath.Join(out, sharedName)
-			appDst := filepath.Join(appDir, sharedName)
+			// Resolve the output path (may differ from name, e.g. frontend → frontend/dist/client)
+			sharedOutPath := sharedName
+			if s, ok := sharedMap[sharedName]; ok {
+				sharedOutPath = s.outputPath()
+			}
+			rootSrc := filepath.Join(out, sharedOutPath)
+			appDst := filepath.Join(appDir, sharedOutPath)
 
 			if _, err := os.Stat(rootSrc); err != nil {
 				// Fallback: copy from source path if defined in shared map.
@@ -476,12 +625,17 @@ func AssembleRelease(opts ReleaseOptions) error {
 				continue
 			}
 
+			// Create parent dirs for nested output paths (e.g. frontend/dist/client)
+			if err := os.MkdirAll(filepath.Dir(appDst), 0o755); err != nil {
+				return fmt.Errorf("create parent dir for %s shared %s: %w", name, sharedName, err)
+			}
+
 			if isWindows {
 				if err := copyDir(rootSrc, appDst); err != nil {
 					return fmt.Errorf("copy %s shared %s: %w", name, sharedName, err)
 				}
 			} else {
-				rel, err := filepath.Rel(appDir, rootSrc)
+				rel, err := filepath.Rel(filepath.Dir(appDst), rootSrc)
 				if err != nil {
 					return fmt.Errorf("relative path for %s shared %s: %w", name, sharedName, err)
 				}
@@ -501,7 +655,9 @@ func AssembleRelease(opts ReleaseOptions) error {
 	if isWindows {
 		for _, s := range manifest.Shared {
 			if !excludeSet[s.Name] {
-				os.RemoveAll(filepath.Join(out, s.Name))
+				// Remove the top-level directory of the output path
+				topDir := strings.SplitN(s.outputPath(), "/", 2)[0]
+				os.RemoveAll(filepath.Join(out, topDir))
 			}
 		}
 	}
@@ -567,25 +723,15 @@ func AssembleRelease(opts ReleaseOptions) error {
 		}
 	}
 
+	// Restore kept paths.
+	restoreKeepPaths(out, keepTmp, keepPaths)
+
 	fmt.Printf("\nrelease assembled → %s\n", out)
 
 	// ── Zip / archive ────────────────────────────────────────────────
 	if opts.Zip {
 		if err := archiveRelease(out, opts.targetOS()); err != nil {
 			return fmt.Errorf("archive: %w", err)
-		}
-	}
-
-	// ── Build snapshot ───────────────────────────────────────────────
-	buildDir := filepath.Join(filepath.Dir(out), "build")
-	buildName := fmt.Sprintf("%s-%s", target, ts)
-	buildDst := filepath.Join(buildDir, buildName)
-	if err := os.MkdirAll(buildDir, 0o755); err == nil {
-		os.RemoveAll(buildDst)
-		if err := copyDir(out, buildDst); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: build snapshot: %v\n", err)
-		} else {
-			fmt.Printf("build snapshot → %s\n", buildDst)
 		}
 	}
 
