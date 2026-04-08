@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/NubeIO/rubix-sdk/cmd/builder/apps"
+	"github.com/NubeIO/rubix-sdk/cmd/builder/bios"
 	"github.com/NubeIO/rubix-sdk/cmd/builder/plugin"
 	"github.com/NubeIO/rubix-sdk/cmd/builder/release"
 )
@@ -52,6 +53,8 @@ func main() {
 			printUsage()
 			os.Exit(1)
 		}
+	case "bios":
+		bios.Run(os.Args[2:])
 	case "release":
 		release.RunRelease(os.Args[2:])
 	default:
@@ -66,6 +69,7 @@ func printUsage() {
 Types:
   app       Bios-managed apps
   plugin    Rubix plugins
+  bios      Manage remote BIOS hosts (ping, list)
   release   Assemble a full release folder from a manifest
 
 Commands:
