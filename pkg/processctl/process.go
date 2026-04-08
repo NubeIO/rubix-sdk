@@ -84,6 +84,8 @@ func (p *Process) Start() error {
 		cmd.Env = append(cmd.Env, k+"="+v)
 	}
 
+	setProcAttr(cmd)
+
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 
@@ -136,7 +138,7 @@ func (p *Process) Stop() error {
 	case <-time.After(p.cfg.gracePeriod()):
 	}
 
-	_ = cmd.Process.Kill()
+	forceKillTree(cmd.Process)
 	select {
 	case <-doneCh:
 	case <-time.After(1 * time.Second):
@@ -152,7 +154,7 @@ func (p *Process) Restart() error {
 	return p.Start()
 }
 
-// Kill forcefully kills the process immediately.
+// Kill forcefully kills the process and all its children immediately.
 func (p *Process) Kill() error {
 	p.mu.Lock()
 	cmd := p.cmd
@@ -163,7 +165,8 @@ func (p *Process) Kill() error {
 	p.stopping = true
 	p.mu.Unlock()
 
-	return cmd.Process.Kill()
+	forceKillTree(cmd.Process)
+	return nil
 }
 
 // IsRunning returns true if the process is alive.
@@ -240,7 +243,12 @@ func (p *Process) statusLocked(tail int) Status {
 func (p *Process) capture(r io.Reader) {
 	sc := bufio.NewScanner(r)
 	for sc.Scan() {
-		p.logs.add(sc.Text())
+		line := sc.Text()
+		p.logs.add(line)
+		if p.cfg.LogWriter != nil {
+			// Write timestamped line to disk; ignore errors (best-effort).
+			_, _ = fmt.Fprintf(p.cfg.LogWriter, "%s  %s\n", time.Now().Format(time.RFC3339), line)
+		}
 	}
 }
 

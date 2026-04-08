@@ -573,8 +573,14 @@ func AssembleRelease(opts ReleaseOptions) error {
 			if err := requireFile(manifestSrc); err != nil {
 				return fmt.Errorf("app %s manifest: %w", name, err)
 			}
-			if err := copyFile(manifestSrc, filepath.Join(appDir, "app.yaml")); err != nil {
-				return fmt.Errorf("copy %s manifest: %w", name, err)
+			if isWindows {
+				if err := copyManifestForWindows(manifestSrc, filepath.Join(appDir, "app.yaml")); err != nil {
+					return fmt.Errorf("copy %s manifest: %w", name, err)
+				}
+			} else {
+				if err := copyFile(manifestSrc, filepath.Join(appDir, "app.yaml")); err != nil {
+					return fmt.Errorf("copy %s manifest: %w", name, err)
+				}
 			}
 		}
 
@@ -651,16 +657,8 @@ func AssembleRelease(opts ReleaseOptions) error {
 		}
 	}
 
-	// ── Windows: remove root-level shared (already copied into apps) ─
-	if isWindows {
-		for _, s := range manifest.Shared {
-			if !excludeSet[s.Name] {
-				// Remove the top-level directory of the output path
-				topDir := strings.SplitN(s.outputPath(), "/", 2)[0]
-				os.RemoveAll(filepath.Join(out, topDir))
-			}
-		}
-	}
+	// Windows: keep top-level shared dirs (frontend/, configs/) — the desktop
+	// app in portable mode expects them at the work_dir root.
 
 	// ── Desktop (Tauri binary) — optional ────────────────────────────
 	if manifest.Desktop != nil && !excludeSet["desktop"] {
@@ -711,7 +709,10 @@ func AssembleRelease(opts ReleaseOptions) error {
 	// ── Start script ─────────────────────────────────────────────────
 	if manifest.StartScript {
 		if isWindows {
-			script := "@echo off\r\n\"%~dp0rubix-bios.exe\" %*\r\n"
+			script := "@echo off\r\n" +
+					"REM Unblock executables that Windows marks as downloaded from the internet\r\n" +
+					"powershell -NoProfile -Command \"Get-ChildItem -Path '%~dp0' -Recurse -Include *.exe | Unblock-File\" 2>nul\r\n" +
+					"\"%~dp0rubix-bios.exe\" %*\r\n"
 			if err := os.WriteFile(filepath.Join(out, "start.bat"), []byte(script), 0o644); err != nil {
 				return fmt.Errorf("write start.bat: %w", err)
 			}
@@ -835,7 +836,7 @@ func createZip(srcDir, archivePath, archiveRoot string) error {
 		if err != nil {
 			return err
 		}
-		if info.IsDir() || strings.HasSuffix(info.Name(), ".map") {
+		if strings.HasSuffix(info.Name(), ".map") {
 			return nil
 		}
 
@@ -843,6 +844,13 @@ func createZip(srcDir, archivePath, archiveRoot string) error {
 		if err != nil {
 			return err
 		}
+
+		// Include empty directories so they survive zip extraction
+		if info.IsDir() {
+			_, err := zw.Create(filepath.Join(archiveRoot, rel) + "/")
+			return err
+		}
+
 		w, err := zw.Create(filepath.Join(archiveRoot, rel))
 		if err != nil {
 			return err
@@ -876,6 +884,32 @@ func requireFile(path string) error {
 		return fmt.Errorf("not found: %s", path)
 	}
 	return nil
+}
+
+// copyManifestForWindows copies an app.yaml manifest, rewriting the exec field
+// to include .exe so bios can find the binary on Windows.
+func copyManifestForWindows(src, dst string) error {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	var manifest map[string]interface{}
+	if err := yaml.Unmarshal(data, &manifest); err != nil {
+		return copyFile(src, dst) // fallback to plain copy
+	}
+	if execVal, ok := manifest["exec"].(string); ok {
+		if !strings.HasSuffix(execVal, ".exe") {
+			manifest["exec"] = execVal + ".exe"
+		}
+	}
+	out, err := yaml.Marshal(manifest)
+	if err != nil {
+		return copyFile(src, dst)
+	}
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(dst, out, 0o644)
 }
 
 func copyFile(src, dst string) error {

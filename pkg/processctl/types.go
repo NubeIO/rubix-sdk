@@ -1,6 +1,9 @@
 package processctl
 
-import "time"
+import (
+	"io"
+	"time"
+)
 
 // State represents the lifecycle state of a managed process
 type State string
@@ -21,6 +24,7 @@ type Config struct {
 	Env         map[string]string // extra env vars (merged with parent env)
 	GracePeriod time.Duration    // SIGTERM→SIGKILL timeout (default 5s)
 	MaxLogLines int              // stdout/stderr ring buffer size (default 200)
+	LogWriter   io.Writer        // optional writer that receives every captured line (e.g. disk file)
 }
 
 // Status is a point-in-time snapshot of a managed process

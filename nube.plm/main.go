@@ -13,7 +13,6 @@ import (
 	"github.com/NubeIO/rubix-plm-plugin/internal/hooks"
 	"github.com/NubeIO/rubix-plm-plugin/internal/nodes"
 	"github.com/NubeIO/rubix-sdk/bootstrap"
-	"github.com/NubeIO/rubix-sdk/natslib"
 	"github.com/NubeIO/rubix-sdk/natssubject"
 	"github.com/NubeIO/rubix-sdk/nodehooks"
 	"github.com/NubeIO/rubix-sdk/pluginnode"
@@ -22,13 +21,16 @@ import (
 
 func main() {
 	// Parse command-line flags
-	natsURL := flag.String("nats", "nats://localhost:4222", "NATS server URL")
-	orgID := flag.String("org", "org1", "Organization ID")
-	deviceID := flag.String("device", "device0", "Device ID")
-	prefix := flag.String("prefix", "rubix.v1.local", "NATS subject prefix")
-	vendor := flag.String("vendor", "nube", "Plugin vendor")
-	pluginName := flag.String("name", "plm", "Plugin name")
+	configPath := flag.String("config", "nats-config.json", "Path to nats-config.json (written by rubix server)")
 	logLevel := flag.String("log", "info", "Log level (debug/info/warn/error)")
+	// Legacy flags — used as fallback when nats-config.json doesn't exist
+	legacyNatsURL := flag.String("nats", "", "NATS server URL (legacy, prefer nats-config.json)")
+	legacyOrg := flag.String("org", "", "Organization ID (legacy)")
+	legacyDevice := flag.String("device", "", "Device ID (legacy)")
+	legacyPrefix := flag.String("prefix", "", "NATS subject prefix (legacy)")
+	legacyVendor := flag.String("vendor", "", "Plugin vendor (legacy)")
+	legacyName := flag.String("name", "", "Plugin name (legacy)")
+	_ = flag.String("nats-creds", "", "ignored (legacy NKey flag)")
 	flag.Parse()
 
 	// Setup logger
@@ -38,24 +40,45 @@ func main() {
 	}
 	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.Kitchen}).
 		Level(level).
-		With().Timestamp().Str("plugin", *pluginName).Logger()
+		With().Timestamp().Str("plugin", "plm").Logger()
+
+	// Log working directory and config path for debugging
+	cwd, _ := os.Getwd()
+	logger.Info().Str("cwd", cwd).Str("configPath", *configPath).Msg("plugin process started")
+
+	// Load config: prefer nats-config.json, fall back to CLI flags
+	cfg, err := pluginnode.LoadConfig(*configPath)
+	if err != nil {
+		logger.Warn().Err(err).Str("cwd", cwd).Str("configPath", *configPath).Msg("nats-config.json not found, falling back to CLI flags")
+		cfg = &pluginnode.PluginNATSConfig{
+			NatsURL:    withDefault(*legacyNatsURL, "nats://localhost:4222"),
+			OrgID:      withDefault(*legacyOrg, "org1"),
+			DeviceID:   withDefault(*legacyDevice, "device0"),
+			Prefix:     withDefault(*legacyPrefix, "rubix.v1.local"),
+			Vendor:     withDefault(*legacyVendor, "nube"),
+			PluginName: withDefault(*legacyName, "plm"),
+		}
+	} else {
+		logger.Info().Str("natsURL", cfg.NatsURL).Str("user", cfg.Username).Bool("hasPassword", cfg.Password != "").Msg("loaded nats-config.json")
+	}
 
 	logger.Info().
-		Str("nats", *natsURL).
-		Str("org", *orgID).
-		Str("device", *deviceID).
-		Msg("starting PLM plugin")
+		Str("nats", cfg.NatsURL).
+		Str("org", cfg.OrgID).
+		Str("device", cfg.DeviceID).
+		Str("user", cfg.Username).
+		Bool("hasPassword", cfg.Password != "").
+		Msg("connecting to NATS")
 
-	// Connect to NATS
-	nc, err := natslib.Connect(*natsURL)
+	nc, err := cfg.Connect()
 	if err != nil {
-		logger.Fatal().Err(err).Msg("failed to connect to NATS")
+		logger.Fatal().Err(err).Str("nats", cfg.NatsURL).Str("user", cfg.Username).Msg("failed to connect to NATS")
 	}
 	defer nc.Close()
 	logger.Info().Msg("connected to NATS")
 
 	// Shared bootstrap client for hierarchy setup and hook lookups
-	sb := natssubject.NewBuilder(*prefix, *orgID, *deviceID, "*")
+	sb := natssubject.NewBuilder(cfg.Prefix, cfg.OrgID, cfg.DeviceID, "*")
 	bootstrapClient := &bootstrap.Client{
 		NC:      nc,
 		Subject: sb,
@@ -65,7 +88,7 @@ func main() {
 	// This is required because bootstrap creates nodes, which triggers hooks
 	logger.Info().Msg("registering node hooks...")
 	plmHooks := hooks.NewPLMNodeHooks(bootstrapClient)
-	hookSubjects := nodehooks.NewSubjectBuilder(*prefix, *orgID, *deviceID, *vendor, *pluginName)
+	hookSubjects := nodehooks.NewSubjectBuilder(cfg.Prefix, cfg.OrgID, cfg.DeviceID, cfg.Vendor, cfg.PluginName)
 	hookHandler := nodehooks.NewNATSHandler(plmHooks, nc, hookSubjects)
 	if err := hookHandler.RegisterAll(); err != nil {
 		logger.Fatal().Err(err).Msg("failed to register node hooks")
@@ -88,18 +111,7 @@ func main() {
 
 	// Start the plugin server BEFORE bootstrap
 	// This ensures RPC handlers are ready when bootstrap creates nodes (which may trigger hooks/RPC)
-	server, err := pluginnode.NewPluginServer(pluginnode.PluginServerConfig{
-		NATSClient:     nc,
-		Prefix:         *prefix,
-		OrgID:          *orgID,
-		DeviceID:       *deviceID,
-		Vendor:         *vendor,
-		PluginName:     *pluginName,
-		Version:        "1.0.0",
-		Factory:        factory,
-		Logger:         logger,
-		AutoStartNodes: true,
-	})
+	server, err := pluginnode.NewPluginServer(cfg.ToServerConfig(nc, factory, logger))
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to create plugin server")
 	}
@@ -125,7 +137,7 @@ func main() {
 
 	// Construct plugin node ID (pattern: plugin_{vendor}.{name})
 	// This is the auto-created node that represents this plugin in the tree
-	pluginNodeID := fmt.Sprintf("plugin_%s.%s", *vendor, *pluginName)
+	pluginNodeID := fmt.Sprintf("plugin_%s.%s", cfg.Vendor, cfg.PluginName)
 	logger.Info().Str("pluginNodeId", pluginNodeID).Msg("plugin node ID")
 
 	logger.Info().Msg("bootstrapping PLM hierarchy...")
@@ -139,7 +151,7 @@ func main() {
 		logger.Info().
 			Str("serviceId", hierarchyIDs["service"]).
 			Str("productsId", hierarchyIDs["products"]).
-			Msg("✅ PLM hierarchy ready")
+			Msg("PLM hierarchy ready")
 	}
 
 	logger.Info().Msg("PLM plugin started — product nodes ready + CRUD hooks active")
@@ -149,4 +161,11 @@ func main() {
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	<-sigCh
 	logger.Info().Msg("shutdown signal received")
+}
+
+func withDefault(val, fallback string) string {
+	if val != "" {
+		return val
+	}
+	return fallback
 }
