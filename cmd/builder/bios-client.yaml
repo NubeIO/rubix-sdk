@@ -1,0 +1,13 @@
+# BIOS client hosts configuration.
+# Each entry defines a BIOS instance the CLI can connect to.
+# Use --host <name> to select which host to target.
+
+hosts:
+  - name: local
+    ip: 127.0.0.1
+    port: 1660
+    token: ""
+  - name: edge-1
+    ip: 192.168.15.10
+    port: 1660
+    token: secret-token-here
