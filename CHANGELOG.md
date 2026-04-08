@@ -1,6 +1,20 @@
 # rubix-plugin Changelog
 
 
+## v0.0.12 - 2026-04-08
+
+### Added
+- 
+
+### Changed
+- 
+
+### Fixed
+- 
+
+---
+
+
 ## v0.0.11 - 2026-04-08
 
 ### Added
