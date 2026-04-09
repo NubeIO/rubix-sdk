@@ -7,6 +7,7 @@ import (
 	"os"
 )
 
+
 // AppsClient provides BIOS app lifecycle and install operations.
 type AppsClient struct {
 	c *Client
@@ -44,6 +45,44 @@ func (a *AppsClient) UploadReader(body io.Reader) (*InstallResponse, error) {
 	var out InstallResponse
 	if err := json.Unmarshal(resp.Body(), &out); err != nil {
 		return nil, fmt.Errorf("decode install response: %w", err)
+	}
+	return &out, nil
+}
+
+// Upgrade uploads an app zip to BIOS and starts the async upgrade flow.
+// keep is a comma-separated list of items to preserve (e.g. "db,config").
+func (a *AppsClient) Upgrade(name, path, keep string) (*InstallResponse, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("open upload file: %w", err)
+	}
+	defer file.Close()
+
+	return a.UpgradeReader(name, file, keep)
+}
+
+// UpgradeReader uploads a zip stream to BIOS and starts the async upgrade flow.
+func (a *AppsClient) UpgradeReader(name string, body io.Reader, keep string) (*InstallResponse, error) {
+	if keep == "" {
+		keep = "db,config"
+	}
+
+	resp, err := a.c.newRequest().
+		SetHeader("Content-Type", "application/zip").
+		SetBody(body).
+		SetPathParam("name", name).
+		SetQueryParam("keep", keep).
+		Post(a.c.Prefix + "/apps/{name}/upgrade")
+	if err != nil {
+		return nil, err
+	}
+	if resp.IsError() {
+		return nil, newAPIError(resp)
+	}
+
+	var out InstallResponse
+	if err := json.Unmarshal(resp.Body(), &out); err != nil {
+		return nil, fmt.Errorf("decode upgrade response: %w", err)
 	}
 	return &out, nil
 }
