@@ -50,6 +50,7 @@ endif
 .PHONY: help build clean test \
         browser-linux browser-windows browser-pi browser-pi32 browser-all \
         desktop-linux desktop-windows desktop-pi desktop-pi32 desktop-all \
+        rubix-package plm-package \
         cache-list cache-clean
 
 help:
@@ -79,6 +80,13 @@ help:
 	@echo "    KEEP=config                     Preserve app.yaml + server.yaml"
 	@echo "    KEEP=all                        Preserve db + config"
 	@echo "    RUBIX_ROOT=/path/to/rubix       Override rubix project path"
+	@echo ""
+	@echo "  Upgrade zip (upload to bios):"
+	@echo "    make rubix-package VERSION=1.3.0  Build + package rubix upgrade zip"
+	@echo ""
+	@echo "  Plugin zips (upload to rubix):"
+	@echo "    make plm-package                  Build + package PLM plugin zip"
+	@echo "    make plm-package PLM_VERSION=1.1.0  With custom version"
 	@echo ""
 	@echo "  Cache:"
 	@echo "    make cache-list                 Show cached builds"
@@ -150,6 +158,47 @@ desktop-all: build
 	@$(MAKE) desktop-pi32
 	@echo ""
 	@echo "  ✅ All desktop builds ready in $(DIST_DIR)/"
+
+# ── Package rubix upgrade zip (for bios upload) ─────────────────────
+
+VERSION ?=
+ARCH    ?= amd64
+
+rubix-package: build browser-linux
+	@if [ -z "$(VERSION)" ]; then echo "ERROR: VERSION is required. Usage: make rubix-package VERSION=1.3.0"; exit 1; fi
+	@$(BIN) app package \
+		--name rubix \
+		--version $(VERSION) \
+		--arch $(ARCH) \
+		--binary $(DIST_DIR)/browser-linux/apps/rubix/rubix \
+		--dir $(DIST_DIR)/browser-linux/frontend \
+		--file $(DIST_DIR)/browser-linux/apps/rubix/server.yaml \
+		--port 9000 \
+		--health "http://localhost:9000/healthz" \
+		--args "--addr,:9000,--server-config,server.yaml" \
+		--output $(DIST_DIR)
+	@echo ""
+	@echo "  ✅ Upload $(DIST_DIR)/rubix-$(VERSION)-$(ARCH).zip to bios"
+
+# ── Package plugin zips (for rubix upload) ───────────────────────────
+
+PLM_ROOT ?= $(CURDIR)/../../nube.plm
+PLM_VERSION ?= 1.0.0
+
+plm-package: build
+	@echo "Building PLM plugin..."
+	@cd $(PLM_ROOT) && go build -o nube.plm .
+	@$(BIN) plugin package \
+		--name nube.plm \
+		--version $(PLM_VERSION) \
+		--arch $(ARCH) \
+		--binary $(PLM_ROOT)/nube.plm \
+		--plugin-json $(PLM_ROOT)/plugin.json \
+		--dir $(PLM_ROOT)/dist-frontend \
+		--dir $(PLM_ROOT)/config \
+		--output $(DIST_DIR)
+	@echo ""
+	@echo "  ✅ Upload $(DIST_DIR)/nube.plm-$(PLM_VERSION)-$(ARCH).zip to rubix"
 
 # ── Cache management ──────────────────────────────────────────────────
 
