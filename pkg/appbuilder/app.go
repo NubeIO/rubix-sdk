@@ -10,7 +10,9 @@ type AppOptions struct {
 	Name      string   // required: app name
 	Version   string   // required: semver
 	Arch      string   // required: target arch
-	Binary    string   // required: path to binary on disk
+	Binary    string   // required: path to binary on disk (empty for static apps)
+	Static    bool     // if true, creates a static file-serving app (no binary)
+	StaticDir string   // subdirectory name in the zip to serve (e.g. "web")
 	Files     []string // optional: extra files to include
 	Dirs      []string // optional: extra directories to include
 	Port      int      // optional: app port
@@ -30,26 +32,32 @@ func PackageApp(opts AppOptions) (string, error) {
 	manifest := AppManifest{
 		Name:      opts.Name,
 		Version:   opts.Version,
-		Exec:      "./" + filepath.Base(opts.Binary),
 		Args:      opts.Args,
 		Port:      opts.Port,
 		HealthURL: opts.HealthURL,
 	}
 
+	var entries []FileEntry
+
+	if opts.Static {
+		manifest.Exec = "static"
+		manifest.StaticDir = opts.StaticDir
+		if manifest.HealthURL == "" && opts.Port > 0 {
+			manifest.HealthURL = fmt.Sprintf("http://localhost:%d/", opts.Port)
+		}
+	} else {
+		manifest.Exec = "./" + filepath.Base(opts.Binary)
+
+		binaryAbs, err := filepath.Abs(opts.Binary)
+		if err != nil {
+			return "", fmt.Errorf("resolve binary path: %w", err)
+		}
+		entries = append(entries, FileEntry{DiskPath: binaryAbs, ZipPath: filepath.Base(opts.Binary), Executable: true})
+	}
+
 	manifestBytes, err := WriteAppYAML(manifest)
 	if err != nil {
 		return "", fmt.Errorf("render manifest: %w", err)
-	}
-
-	// Resolve binary.
-	binaryAbs, err := filepath.Abs(opts.Binary)
-	if err != nil {
-		return "", fmt.Errorf("resolve binary path: %w", err)
-	}
-
-	// Collect files.
-	entries := []FileEntry{
-		{DiskPath: binaryAbs, ZipPath: filepath.Base(opts.Binary), Executable: true},
 	}
 
 	for _, f := range opts.Files {

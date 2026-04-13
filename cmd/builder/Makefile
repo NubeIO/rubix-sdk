@@ -50,7 +50,7 @@ endif
 .PHONY: help build clean test \
         browser-linux browser-windows browser-pi browser-pi32 browser-all \
         desktop-linux desktop-windows desktop-pi desktop-pi32 desktop-all \
-        rubix-package plm-package \
+        rubix-package flutter-web plm-package \
         cache-list cache-clean
 
 help:
@@ -83,6 +83,10 @@ help:
 	@echo ""
 	@echo "  Upgrade zip (upload to bios):"
 	@echo "    make rubix-package VERSION=1.3.0  Build + package rubix upgrade zip"
+	@echo ""
+	@echo "  Flutter web app (static, upload to bios):"
+	@echo "    make flutter-web VERSION=1.0.0    Build Flutter web + package as static app"
+	@echo "    FLUTTER_ROOT=/path/to/rubix-app   Override Flutter project path"
 	@echo ""
 	@echo "  Plugin zips (upload to rubix):"
 	@echo "    make plm-package                  Build + package PLM plugin zip"
@@ -179,6 +183,28 @@ rubix-package: build browser-linux
 		--output $(DIST_DIR)
 	@echo ""
 	@echo "  ✅ Upload $(DIST_DIR)/rubix-$(VERSION)-$(ARCH).zip to bios"
+
+# ── Package Flutter web app (static, for bios upload) ────────────────
+
+FLUTTER_ROOT ?= $(shell cd $(HOME)/code/flutter/rubix-app && pwd 2>/dev/null || echo "$(HOME)/code/flutter/rubix-app")
+FLUTTER_VERSION ?= $(VERSION)
+
+flutter-web: build
+	@if [ -z "$(FLUTTER_VERSION)" ]; then echo "ERROR: VERSION is required. Usage: make flutter-web VERSION=1.0.0"; exit 1; fi
+	@echo "Building Flutter web (RUNTIME_MODE=none)..."
+	@cd $(FLUTTER_ROOT) && flutter build web --release --dart-define=RUNTIME_MODE=none
+	@echo "Packaging as static bios app..."
+	@$(BIN) app package \
+		--name rubix-app \
+		--version $(FLUTTER_VERSION) \
+		--arch amd64 \
+		--static \
+		--static-dir web \
+		--dir $(FLUTTER_ROOT)/build/web \
+		--port 8080 \
+		--output $(DIST_DIR)
+	@echo ""
+	@echo "  ✅ Upload $(DIST_DIR)/rubix-app-$(FLUTTER_VERSION)-amd64.zip to bios"
 
 # ── Package plugin zips (for rubix upload) ───────────────────────────
 

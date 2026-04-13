@@ -16,7 +16,9 @@ func RunPackage(args []string) {
 	name := fs.String("name", "", "App name (required)")
 	version := fs.String("version", "", "Semver version (required)")
 	arch := fs.String("arch", "", "Target arch: amd64, amd64-win, arm64, armv7 (required)")
-	binary := fs.String("binary", "", "Path to binary (required)")
+	binary := fs.String("binary", "", "Path to binary (required for process apps, omit for static)")
+	static := fs.Bool("static", false, "Package as a static file-serving app (no binary)")
+	staticDir := fs.String("static-dir", "", "Subdirectory name to serve (e.g. 'web')")
 	port := fs.Int("port", 0, "App port")
 	health := fs.String("health", "", "Health check URL")
 	argsFlag := fs.String("args", "", "App arguments, comma-separated")
@@ -40,8 +42,8 @@ func RunPackage(args []string) {
 	if *arch == "" {
 		missing = append(missing, "--arch")
 	}
-	if *binary == "" {
-		missing = append(missing, "--binary")
+	if !*static && *binary == "" {
+		missing = append(missing, "--binary (or use --static)")
 	}
 	if len(missing) > 0 {
 		fmt.Fprintf(os.Stderr, "missing required flags: %s\n", strings.Join(missing, ", "))
@@ -59,6 +61,8 @@ func RunPackage(args []string) {
 		Version:   *version,
 		Arch:      *arch,
 		Binary:    *binary,
+		Static:    *static,
+		StaticDir: *staticDir,
 		Files:     files,
 		Dirs:      dirs,
 		Port:      *port,

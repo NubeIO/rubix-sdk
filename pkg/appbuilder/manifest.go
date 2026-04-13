@@ -6,7 +6,8 @@ import "gopkg.in/yaml.v3"
 type AppManifest struct {
 	Name      string   `yaml:"name"`
 	Version   string   `yaml:"version"`
-	Exec      string   `yaml:"exec"`
+	Exec      string   `yaml:"exec"`                 // "static" for static file serving
+	StaticDir string   `yaml:"static_dir,omitempty"` // subdirectory to serve (e.g. "web")
 	Args      []string `yaml:"args,omitempty"`
 	Port      int      `yaml:"port,omitempty"`
 	HealthURL string   `yaml:"health_url,omitempty"`
