@@ -1,17 +1,20 @@
-# Cloud Deployment (nginx + bios)
+# Cloud Deployment
 
-Bios manages rubix (same as browser/edge). Nginx sits in front — serves the frontend statically and proxies API calls to rubix.
+Bios manages rubix as a child process. There are two deployment modes:
+
+- **Fly.io** — bios runs in a container, serves rubix at the root via reverse proxy. See [bios/FLY-README.md](../../../bios/FLY-README.md).
+- **Bare metal / VM (nginx)** — nginx serves the frontend, proxies API calls to rubix. Bios manages the process.
 
 For browser/desktop/Pi builds, see [EXAMPLE.md](EXAMPLE.md).
 
 ---
 
-## 1. Build
+## 1. Build Rubix
 
 ```bash
 cd rubix-sdk/cmd/builder
 make build                                # one-time: build the builder tool
-make browser-linux EXCLUDE=bacnet,desktop  # bios + rubix + frontend + configs
+make browser-linux EXCLUDE=bacnet         # rubix + frontend + configs
 ```
 
 Output in `dist/browser-linux/`:
@@ -30,9 +33,39 @@ dist/browser-linux/
     └── logs/                       # app logs
 ```
 
+## 2. Package Rubix Zip (for bios upload)
+
+This creates a single zip file that can be uploaded to bios via the install or upgrade API:
+
+```bash
+make rubix-package VERSION=1.0.0 ARCH=amd64
+# produces dist/rubix-1.0.0-amd64.zip
+```
+
+The zip contains:
+```
+rubix               # binary
+app.yaml            # manifest (name, version, port, health URL)
+server.yaml         # rubix config
+frontend/           # React frontend files
+```
+
+Upload to bios (Fly.io or local):
+```bash
+# First install
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -F "file=@dist/rubix-1.0.0-amd64.zip" \
+  https://your-bios-host/api/bios/apps/install
+
+# Upgrade (keeps db, config, orgs — replaces binary only)
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -F "file=@dist/rubix-1.1.0-amd64.zip" \
+  "https://your-bios-host/api/bios/apps/rubix/upgrade?backup=true"
+```
+
 ---
 
-## 2. Deploy
+## 3. Deploy (nginx mode)
 
 ```bash
 # Copy the whole dist to the server
@@ -44,7 +77,7 @@ scp -r dist/browser-linux/frontend/dist/client/* user@server:/var/www/rubix-clie
 
 ---
 
-## 3. Nginx config
+## 4. Nginx config
 
 ```nginx
 server {
@@ -77,7 +110,7 @@ Bios UI is at `http://server/bios/`, rubix API at `http://server/api/`.
 
 ---
 
-## 4. Run
+## 5. Run
 
 ```bash
 cd /opt/rubix
@@ -94,7 +127,7 @@ Or run bios directly:
 
 ---
 
-## 5. Configure frontend auto-deploy
+## 6. Configure frontend auto-deploy
 
 Set the nginx frontend path in bios so upgrades automatically copy the new frontend files.
 
@@ -129,7 +162,7 @@ curl -X POST http://server:8999/api/bios/config/deploy-frontend \
 
 ---
 
-## 6. Upgrade
+## 7. Upgrade
 
 Package a new version:
 
@@ -170,7 +203,7 @@ The upgrade wizard stages: stopping → staging → configuring → starting →
 
 ---
 
-## 7. Update via CI/CD (alternative)
+## 8. Update via CI/CD (alternative)
 
 If you prefer CI/CD over the bios wizard:
 

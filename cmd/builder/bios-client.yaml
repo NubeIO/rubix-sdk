@@ -1,13 +1,10 @@
-# BIOS client hosts configuration.
-# Each entry defines a BIOS instance the CLI can connect to.
-# Use --host <name> to select which host to target.
-
 hosts:
-  - name: local
+  - name: docker
     ip: 127.0.0.1
-    port: 1660
-    token: ""
-  - name: edge-1
-    ip: 192.168.15.10
-    port: 1660
-    token: secret-token-here
+    port: 8999
+    token: "1d6f71b18bf3081cac5110f24f6bb61cd4c6a9ecdc3cc6312e18c18a4c1373ca"
+  - name: cloud
+    ip: rubix-bios.fly.dev
+    port: 443
+    token: "e8e10ad2910a5c879010f8e38c1632a920ab4b847a6a25d600bf720b42bfeb5f"
+    tls: true
