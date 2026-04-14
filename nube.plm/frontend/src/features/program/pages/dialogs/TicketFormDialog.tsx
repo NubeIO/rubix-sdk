@@ -15,22 +15,24 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function TicketFormDialog({ taskName, saving, onSave, onClose }: {
+export function TicketFormDialog({ taskName, editTicket, saving, onSave, onClose }: {
   taskName: string;
+  editTicket?: any;
   saving: boolean;
   onSave: (data: { name: string; settings: Record<string, any> }) => void;
   onClose: () => void;
 }) {
-  const [name, setName] = useState('');
-  const [ticketType, setTicketType] = useState('task');
-  const [status, setStatus] = useState('pending');
-  const [priority, setPriority] = useState('Medium');
+  const isEdit = !!editTicket;
+  const [name, setName] = useState(editTicket?.name || '');
+  const [ticketType, setTicketType] = useState(editTicket?.settings?.ticketType || 'task');
+  const [status, setStatus] = useState(editTicket?.settings?.status || 'pending');
+  const [priority, setPriority] = useState(editTicket?.settings?.priority || 'Medium');
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-[420px]">
         <DialogHeader>
-          <DialogTitle>New Ticket</DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit Ticket' : 'New Ticket'}</DialogTitle>
           <p className="text-xs text-muted-foreground mt-1">Under: {taskName}</p>
         </DialogHeader>
         <div className="space-y-4 pt-2">
@@ -64,7 +66,7 @@ export function TicketFormDialog({ taskName, saving, onSave, onClose }: {
               onClick={() => { if (!name.trim()) return; onSave({ name: name.trim(), settings: { ticketType, status, priority } }); }}
               disabled={!name.trim() || saving}
             >
-              {saving ? 'Saving...' : 'Create Ticket'}
+              {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Ticket'}
             </Button>
           </div>
         </div>

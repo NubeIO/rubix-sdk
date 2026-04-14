@@ -13,3 +13,4 @@ export const STATUS_STYLE: Record<string, { dot: string; bg: string; text: strin
 
 export const PRODUCT_CATEGORIES = ['hardware', 'software', 'hybrid', 'firmware', 'bundle'] as const;
 export const PRODUCT_STATUSES = ['Design', 'Prototype', 'Production', 'Discontinued'] as const;
+
