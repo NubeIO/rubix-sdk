@@ -26,7 +26,7 @@ export function useDashboardState({ orgId, deviceId, baseUrl, token }: Dashboard
   const [filters, setFilters] = useState<TaskFilters>({ ...EMPTY_FILTERS });
   const [showTaskDialog, setShowTaskDialog] = useState<{ productId: string; gate?: GateId; task?: any } | null>(null);
   const [showTicketDialog, setShowTicketDialog] = useState<{ taskId: string; taskName: string; ticket?: any } | null>(null);
-  const [showProjectDialog, setShowProjectDialog] = useState(false);
+  const [showProjectDialog, setShowProjectDialog] = useState<{ editProject?: any } | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [serviceNodeId, setServiceNodeId] = useState<string | null>(null);
@@ -310,9 +310,32 @@ export function useDashboardState({ orgId, deviceId, baseUrl, token }: Dashboard
 
   const saveProject = useCallback(async (name: string, settings: Record<string, any>) => {
     setSaving(true);
-    try { await createProject(name, settings); setShowProjectDialog(false); }
+    try {
+      if (showProjectDialog?.editProject) {
+        const id = showProjectDialog.editProject.id;
+        await client.updateNode(id, { name });
+        await client.updateNodeSettings(id, settings);
+      } else {
+        await createProject(name, settings);
+      }
+      setShowProjectDialog(null);
+      refetch();
+    } catch (err) { console.error('Failed to save project:', err); }
     finally { setSaving(false); }
-  }, [createProject]);
+  }, [showProjectDialog, client, createProject, refetch]);
+
+  const deleteProject = useCallback(async (productId: string) => {
+    if (!confirm('Delete this project and all its tasks?')) return;
+    try {
+      await client.deleteNode(productId);
+      setSelectedProjectIds(prev => {
+        const next = new Set(prev);
+        next.delete(productId);
+        return next;
+      });
+      refetch();
+    } catch (err) { console.error('Failed to delete project:', err); }
+  }, [client, refetch]);
 
   const saveTicket = useCallback(async (data: { name: string; settings: Record<string, any> }) => {
     if (!showTicketDialog) return;
@@ -350,7 +373,7 @@ export function useDashboardState({ orgId, deviceId, baseUrl, token }: Dashboard
     selectedTaskIds, setSelectedTaskIds, toggleTaskSelection,
     bulkUpdateStatus, bulkUpdateGate, bulkDelete,
     // Project CRUD
-    renameProject, changeProjectIcon, changeProjectColor, projectColorMap,
+    renameProject, changeProjectIcon, changeProjectColor, deleteProject, projectColorMap,
     // View
     viewMode, setViewMode,
     // Stats

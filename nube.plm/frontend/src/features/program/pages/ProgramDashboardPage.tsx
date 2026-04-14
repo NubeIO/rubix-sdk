@@ -6,13 +6,13 @@
  */
 
 import { createRoot, type Root } from 'react-dom/client';
+import { useState } from 'react';
 import '@rubix-sdk/frontend/globals.css';
 
-import { GATES } from '@shared/constants/gates';
 import { useDashboardState } from '../hooks/use-dashboard-state';
 
-import { GateTab } from './components/GateTab';
 import { DashboardHeader } from './components/DashboardHeader';
+import { GatePipeline } from './components/GatePipeline';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { TaskListView } from './components/TaskListView';
 import { TimelineView } from './components/TimelineView';
@@ -33,6 +33,7 @@ interface Props {
 
 function ProgramDashboard({ orgId, deviceId, baseUrl, token }: Props) {
   const d = useDashboardState({ orgId, deviceId, baseUrl, token });
+  const [showGates, setShowGates] = useState(false);
 
   if (d.error) {
     return (
@@ -52,10 +53,16 @@ function ProgramDashboard({ orgId, deviceId, baseUrl, token }: Props) {
         isLoading={d.isLoading}
         viewMode={d.viewMode}
         canAddTask={d.selectedProjects.length > 0}
+        hasProjects={d.productData.length > 0}
+        showGates={showGates}
+        onToggleGates={() => setShowGates(prev => !prev)}
         onRefetch={d.refetch}
         onFiltersChange={d.setFilters}
         onViewModeChange={d.setViewMode}
         onNewTask={() => d.setShowTaskDialog({ productId: d.selectedProjects[0].product.id, gate: d.activeGate !== 'all' ? d.activeGate : undefined })}
+        onNewProjectAndTask={async (name, category) => {
+          await d.saveProject(name, { category });
+        }}
       />
 
       {/* Two-panel body */}
@@ -67,10 +74,12 @@ function ProgramDashboard({ orgId, deviceId, baseUrl, token }: Props) {
           onToggle={d.toggleProject}
           onSelectAll={d.selectAllProjects}
           onSelectNone={d.selectNoneProjects}
-          onNewProject={() => d.setShowProjectDialog(true)}
+          onNewProject={() => d.setShowProjectDialog({})}
           onRename={d.renameProject}
           onChangeIcon={d.changeProjectIcon}
           onChangeColor={d.changeProjectColor}
+          onEditProject={(product) => d.setShowProjectDialog({ editProject: product })}
+          onDeleteProject={d.deleteProject}
         />
 
         {/* Right panel: workspace */}
@@ -81,29 +90,14 @@ function ProgramDashboard({ orgId, deviceId, baseUrl, token }: Props) {
             </div>
           ) : (
             <>
-              {/* Gate tabs */}
-              <div className="shrink-0 px-4 pt-3 pb-0 border-b border-border flex items-center gap-1 overflow-x-auto">
-                <GateTab
-                  label="All"
-                  count={d.visibleTasks.length}
-                  isActive={d.activeGate === 'all'}
-                  onClick={() => d.setActiveGate('all')}
+              {/* Gate pipeline — collapsible */}
+              {showGates && (
+                <GatePipeline
+                  gateProgress={d.combinedGateProgress}
+                  activeGate={d.activeGate}
+                  onSelectGate={d.setActiveGate}
                 />
-                {GATES.map(g => {
-                  const gp = d.combinedGateProgress.find(gp => gp.gateId === g.id);
-                  const count = gp?.totalTasks || 0;
-                  return (
-                    <GateTab
-                      key={g.id}
-                      label={`${g.id.toUpperCase()} ${g.name}`}
-                      count={count}
-                      status={gp?.status}
-                      isActive={d.activeGate === g.id}
-                      onClick={() => d.setActiveGate(g.id)}
-                    />
-                  );
-                })}
-              </div>
+              )}
 
               {d.viewMode === 'list' ? (
                 <TaskListView
@@ -125,6 +119,7 @@ function ProgramDashboard({ orgId, deviceId, baseUrl, token }: Props) {
                   onUpdateStatus={(id, s) => d.updateTaskField(id, 'status', s)}
                   onUpdateGate={d.updateTaskGate}
                   onUpdateCategory={(id, c) => d.updateTaskField(id, 'category', c)}
+                  onUpdateDueDate={(id, date) => d.updateTaskField(id, 'dueDate', date)}
                   onEditTask={(task) => d.setShowTaskDialog({ productId: task.parentId, task })}
                   onDeleteTask={d.deleteTask}
                   onAddTicket={(task) => d.setShowTicketDialog({ taskId: task.id, taskName: task.name })}
@@ -163,9 +158,10 @@ function ProgramDashboard({ orgId, deviceId, baseUrl, token }: Props) {
       )}
       {d.showProjectDialog && (
         <ProjectFormDialog
+          editProject={d.showProjectDialog.editProject}
           saving={d.saving}
           onSave={d.saveProject}
-          onClose={() => d.setShowProjectDialog(false)}
+          onClose={() => d.setShowProjectDialog(null)}
         />
       )}
       {d.showTicketDialog && (

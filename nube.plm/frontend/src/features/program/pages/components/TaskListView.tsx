@@ -23,6 +23,7 @@ interface TaskListViewProps {
   onUpdateStatus: (id: string, status: string) => void;
   onUpdateGate: (task: any, gateId: GateId) => void;
   onUpdateCategory: (id: string, category: string) => void;
+  onUpdateDueDate: (id: string, date: string) => void;
   onEditTask: (task: any) => void;
   onDeleteTask: (id: string) => void;
   onAddTicket: (task: any) => void;
@@ -43,7 +44,7 @@ export function TaskListView({
   expandedTasks, taskTickets, selectedTaskIds, projectColorMap, client,
   getTaskProgress, onToggleTask, onSelectTask,
   onClearSelection, onBulkStatus, onBulkGate, onBulkDelete,
-  onUpdateStatus, onUpdateGate, onUpdateCategory,
+  onUpdateStatus, onUpdateGate, onUpdateCategory, onUpdateDueDate,
   onEditTask, onDeleteTask, onAddTicket, onEditTicket, onDeleteTicket,
   onCreateFirst,
 }: TaskListViewProps) {
@@ -88,6 +89,7 @@ export function TaskListView({
         onUpdateStatus={(s) => onUpdateStatus(task.id, s)}
         onUpdateGate={(g) => onUpdateGate(task, g)}
         onUpdateCategory={(c) => onUpdateCategory(task.id, c)}
+        onUpdateDueDate={(date) => onUpdateDueDate(task.id, date)}
         onEdit={() => onEditTask(task)}
         onDelete={() => onDeleteTask(task.id)}
         onAddTicket={() => onAddTicket(task)}
@@ -109,16 +111,16 @@ export function TaskListView({
 
       <div className="flex-1 overflow-y-auto">
         {/* Column headers */}
-        <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-1.5 bg-muted/80 backdrop-blur border-b border-border/50 text-[10px] text-muted-foreground uppercase tracking-wider">
+        <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2 bg-muted/80 backdrop-blur border-b border-border/50 text-[11px] text-muted-foreground uppercase tracking-wider font-medium">
           <span className="w-4" />
           <span className="w-5" />
-          <span className="flex-1">Task</span>
-          <span className="w-[90px]">Category</span>
-          {activeGate === 'all' && <span className="w-[110px]">Gate</span>}
-          <span className="w-[100px]">Status</span>
-          <span className="w-[80px] text-center">Due</span>
-          <span className="w-[55px] text-center">Progress</span>
-          <span className="w-[70px] text-center">Assignee</span>
+          <span className="w-[280px]">Task</span>
+          <span className="w-[100px]">Category</span>
+          {activeGate === 'all' && <span className="w-[150px]">Gate</span>}
+          <span className="w-[110px]">Status</span>
+          <span className="w-[110px] text-center">Due</span>
+          <span className="w-[65px] text-center">Progress</span>
+          <span className="w-[80px] text-center">Assignee</span>
           <span className="w-[100px]" />
         </div>
 
@@ -136,12 +138,12 @@ export function TaskListView({
           groupedTasks.map(group => (
             <div key={group.projectId}>
               <div
-                className="flex items-center gap-2 px-4 py-1.5 bg-muted/60 border-b border-border/40"
+                className="flex items-center gap-2 px-4 py-2 bg-muted/60 border-b border-border/40"
                 style={{ borderLeft: `3px solid ${group.projectColor}` }}
               >
                 <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: group.projectColor }} />
-                <span className="text-xs font-semibold text-foreground">{group.projectName}</span>
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-sm font-semibold text-foreground">{group.projectName}</span>
+                <span className="text-xs text-muted-foreground">
                   {group.tasks.length} task{group.tasks.length !== 1 ? 's' : ''}
                 </span>
               </div>

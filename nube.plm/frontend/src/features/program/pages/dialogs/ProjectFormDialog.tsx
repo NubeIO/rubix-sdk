@@ -20,15 +20,17 @@ function autoCode(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30);
 }
 
-export function ProjectFormDialog({ saving, onSave, onClose }: {
+export function ProjectFormDialog({ editProject, saving, onSave, onClose }: {
+  editProject?: any;
   saving: boolean;
   onSave: (name: string, settings: Record<string, any>) => void;
   onClose: () => void;
 }) {
-  const [name, setName] = useState('');
-  const [productCode, setProductCode] = useState('');
-  const [category, setCategory] = useState('hardware');
-  const [status, setStatus] = useState('Design');
+  const isEdit = !!editProject;
+  const [name, setName] = useState(editProject?.name || '');
+  const [productCode, setProductCode] = useState(editProject?.settings?.productCode || '');
+  const [category, setCategory] = useState(editProject?.settings?.category || 'hardware');
+  const [status, setStatus] = useState(editProject?.settings?.status || 'Design');
 
   const canSubmit = name.trim().length > 0 && productCode.trim().length >= 3;
 
@@ -39,7 +41,7 @@ export function ProjectFormDialog({ saving, onSave, onClose }: {
 
   const handleNameChange = (val: string) => {
     setName(val);
-    if (!productCode || productCode === autoCode(name)) {
+    if (!isEdit && (!productCode || productCode === autoCode(name))) {
       setProductCode(autoCode(val));
     }
   };
@@ -47,7 +49,7 @@ export function ProjectFormDialog({ saving, onSave, onClose }: {
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-[420px]">
-        <DialogHeader><DialogTitle>New Project</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{isEdit ? 'Edit Project' : 'New Project'}</DialogTitle></DialogHeader>
         <div className="space-y-4 pt-2">
           <Field label="Project Name *">
             <Input
@@ -85,7 +87,7 @@ export function ProjectFormDialog({ saving, onSave, onClose }: {
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
             <Button size="sm" onClick={handleSubmit} disabled={!canSubmit || saving}>
-              {saving ? 'Creating...' : 'Create Project'}
+              {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Project'}
             </Button>
           </div>
         </div>

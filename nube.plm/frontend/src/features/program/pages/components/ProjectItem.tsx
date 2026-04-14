@@ -14,9 +14,11 @@ interface ProjectItemProps {
   onRename: (name: string) => void;
   onChangeIcon: (icon: string) => void;
   onChangeColor: (color: string) => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }
 
-export function ProjectItem({ product, isChecked, overallProgress, currentGate, taskCount, onToggle, onRename, onChangeIcon, onChangeColor }: ProjectItemProps) {
+export function ProjectItem({ product, isChecked, overallProgress, currentGate, taskCount, onToggle, onRename, onChangeIcon, onChangeColor, onEdit, onDelete }: ProjectItemProps) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(product.name || '');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -36,7 +38,7 @@ export function ProjectItem({ product, isChecked, overallProgress, currentGate, 
 
   return (
     <div
-      className={`w-full text-left px-3 py-2 transition
+      className={`w-full text-left px-3 py-2 transition group/project relative
         ${isChecked ? 'bg-primary/8 border-l-3' : 'border-l-3 border-transparent hover:bg-muted/50 opacity-60'}`}
       style={isChecked ? { borderLeftColor: iconColor } : undefined}
     >
@@ -83,8 +85,24 @@ export function ProjectItem({ product, isChecked, overallProgress, currentGate, 
         <Progress value={overallProgress} className="flex-1 h-1" />
         <span className="text-[10px] text-muted-foreground">{overallProgress}%</span>
       </div>
-      <div className="text-[10px] text-muted-foreground mt-0.5 ml-5">
-        {curGate ? curGate.id.toUpperCase() : 'No gate'} &middot; {taskCount} task{taskCount !== 1 ? 's' : ''}
+      <div className="flex items-center justify-between mt-0.5 ml-5">
+        <span className="text-[10px] text-muted-foreground">
+          {curGate ? curGate.id.toUpperCase() : 'No gate'} &middot; {taskCount} task{taskCount !== 1 ? 's' : ''}
+        </span>
+        <div className="flex items-center gap-0.5 opacity-0 group-hover/project:opacity-100 transition">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="text-[9px] text-muted-foreground hover:text-foreground px-1 py-0.5 rounded hover:bg-muted transition cursor-pointer"
+          >
+            edit
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="text-[9px] text-muted-foreground hover:text-destructive px-1 py-0.5 rounded hover:bg-muted transition cursor-pointer"
+          >
+            del
+          </button>
+        </div>
       </div>
     </div>
   );

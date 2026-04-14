@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 
 function getDueStatus(dueDate?: string): { label: string; className: string } | null {
@@ -29,19 +30,71 @@ function formatShortDate(dateStr: string): string {
   return new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short' }).format(d);
 }
 
-export function DueDate({ date }: { date?: string }) {
+export function DueDate({ date, onChange }: { date?: string; onChange?: (date: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.showPicker?.();
+      inputRef.current.focus();
+    }
+  }, [editing]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val && onChange) {
+      onChange(val);
+    }
+    setEditing(false);
+  };
+
+  if (editing && onChange) {
+    return (
+      <input
+        ref={inputRef}
+        type="date"
+        defaultValue={date || ''}
+        onChange={handleChange}
+        onBlur={() => setEditing(false)}
+        className="h-7 text-xs bg-transparent border border-input rounded px-1.5 w-full text-foreground"
+      />
+    );
+  }
+
   if (!date) {
-    return <span className="text-[10px] text-muted-foreground/40">{'\u2014'}</span>;
+    return (
+      <button
+        onClick={() => onChange && setEditing(true)}
+        className={`text-xs text-muted-foreground/50 hover:text-muted-foreground transition ${onChange ? 'cursor-pointer' : ''}`}
+        title={onChange ? 'Click to set date' : undefined}
+      >
+        {'\u2014'}
+      </button>
+    );
   }
 
   const status = getDueStatus(date);
   if (!status) {
-    return <span className="text-[10px] text-muted-foreground">{date}</span>;
+    return (
+      <button
+        onClick={() => onChange && setEditing(true)}
+        className={`text-xs text-muted-foreground ${onChange ? 'cursor-pointer hover:text-foreground transition' : ''}`}
+      >
+        {date}
+      </button>
+    );
   }
 
   return (
-    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 font-normal ${status.className}`}>
-      {formatShortDate(date)} · {status.label}
-    </Badge>
+    <button
+      onClick={() => onChange && setEditing(true)}
+      className={onChange ? 'cursor-pointer' : ''}
+      title={onChange ? 'Click to change date' : undefined}
+    >
+      <Badge variant="outline" className={`text-[11px] px-1.5 py-0.5 font-normal whitespace-nowrap ${status.className}`}>
+        {formatShortDate(date)} · {status.label}
+      </Badge>
+    </button>
   );
 }

@@ -10,7 +10,7 @@ import { Dropdown } from './Dropdown';
 import { DueDate } from './DueDate';
 import { ActivityFeed } from './ActivityFeed';
 
-export function TaskRow({ task, showProject, showGate, isExpanded, tickets, isSelected, projectColor, onSelect, client, onToggle, onUpdateStatus, onUpdateGate, onUpdateCategory, onEdit, onDelete, onAddTicket, onEditTicket, onDeleteTicket }: {
+export function TaskRow({ task, showProject, showGate, isExpanded, tickets, isSelected, projectColor, onSelect, client, onToggle, onUpdateStatus, onUpdateGate, onUpdateCategory, onEdit, onDelete, onAddTicket, onEditTicket, onDeleteTicket, onUpdateDueDate }: {
   task: any;
   showProject?: boolean;
   showGate: boolean;
@@ -29,6 +29,7 @@ export function TaskRow({ task, showProject, showGate, isExpanded, tickets, isSe
   onAddTicket: () => void;
   onEditTicket: (ticket: any) => void;
   onDeleteTicket: (id: string) => void;
+  onUpdateDueDate?: (date: string) => void;
 }) {
   const status = task.settings?.status || 'pending';
   const category = task.settings?.category || '';
@@ -40,7 +41,7 @@ export function TaskRow({ task, showProject, showGate, isExpanded, tickets, isSe
   return (
     <>
       <div
-        className={`flex items-center gap-2 px-4 py-2 hover:bg-muted/50 transition group border-b border-border/20
+        className={`flex items-center gap-2 px-4 py-2.5 hover:bg-muted/50 transition group border-b border-border/20
         ${isSelected ? 'bg-primary/5' : ''}`}
         style={projectColor ? { borderLeft: `3px solid ${projectColor}` } : undefined}
       >
@@ -58,23 +59,23 @@ export function TaskRow({ task, showProject, showGate, isExpanded, tickets, isSe
         )}
 
         {/* Expand toggle */}
-        <button onClick={onToggle} className="w-5 text-center text-[10px] text-muted-foreground hover:text-foreground cursor-pointer shrink-0">
+        <button onClick={onToggle} className="w-5 text-center text-xs text-muted-foreground hover:text-foreground cursor-pointer shrink-0">
           {isExpanded ? '\u25BC' : '\u25B6'}
         </button>
 
-        {/* Status dot + name */}
-        <div className="flex-1 flex items-center gap-2 min-w-0">
-          <div className={`w-2 h-2 rounded-full shrink-0 ${style.dot}`} />
-          <button onClick={onEdit} className="text-xs text-foreground truncate hover:text-primary transition cursor-pointer text-left">
+        {/* Status dot + name — constrained width so it doesn't push everything */}
+        <div className="w-[280px] flex items-center gap-2 min-w-0 shrink-0">
+          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${style.dot}`} />
+          <button onClick={onEdit} className="text-sm text-foreground truncate hover:text-primary transition cursor-pointer text-left">
             {task.name}
           </button>
         </div>
 
         {/* Project name (multi-project view) */}
         {showProject && (
-          <div className="w-[90px] flex items-center gap-1 shrink-0" title={task._productName}>
-            {projectColor && <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: projectColor }} />}
-            <span className="text-[10px] text-muted-foreground truncate">
+          <div className="w-[100px] flex items-center gap-1.5 shrink-0" title={task._productName}>
+            {projectColor && <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: projectColor }} />}
+            <span className="text-xs text-muted-foreground truncate">
               {task._productName || '\u2014'}
             </span>
           </div>
@@ -86,17 +87,17 @@ export function TaskRow({ task, showProject, showGate, isExpanded, tickets, isSe
           placeholder="Category"
           options={CATEGORIES.map(c => ({ value: c.id, label: c.name }))}
           onChange={onUpdateCategory}
-          width="w-[90px]"
+          width="w-[100px]"
         />
 
-        {/* Gate (only in "All" tab) */}
+        {/* Gate (only in "All" tab) — wider to fit text like "G4 Client Acceptance" */}
         {showGate && (
           <Dropdown
             value={gate || ''}
             placeholder="Gate"
             options={GATES.map(g => ({ value: g.id, label: `${g.id.toUpperCase()} ${g.name}` }))}
             onChange={(v) => onUpdateGate(v as GateId)}
-            width="w-[110px]"
+            width="w-[150px]"
           />
         )}
 
@@ -106,30 +107,30 @@ export function TaskRow({ task, showProject, showGate, isExpanded, tickets, isSe
           placeholder="Status"
           options={STATUSES.map(s => ({ value: s, label: s.replace('-', ' ') }))}
           onChange={onUpdateStatus}
-          width="w-[100px]"
+          width="w-[110px]"
         />
 
-        {/* Due date */}
-        <div className="w-[80px] shrink-0 flex items-center justify-center">
-          <DueDate date={dueDate} />
+        {/* Due date — clickable to edit */}
+        <div className="w-[110px] shrink-0 flex items-center justify-center">
+          <DueDate date={dueDate} onChange={onUpdateDueDate} />
         </div>
 
         {/* Progress */}
-        <div className="w-[55px] flex items-center gap-1 shrink-0">
-          <Progress value={progress} className="flex-1 h-1" />
-          <span className="text-[10px] text-muted-foreground w-6 text-right">{progress}%</span>
+        <div className="w-[65px] flex items-center gap-1 shrink-0">
+          <Progress value={progress} className="flex-1 h-1.5" />
+          <span className="text-xs text-muted-foreground w-7 text-right">{progress}%</span>
         </div>
 
         {/* Assignee */}
-        <span className="w-[70px] text-[11px] text-muted-foreground truncate text-center">
+        <span className="w-[80px] text-xs text-muted-foreground truncate text-center">
           {task.settings?.assignee || '\u2014'}
         </span>
 
         {/* Actions */}
         <div className="w-[100px] flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition shrink-0">
-          <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground" onClick={onAddTicket}>+ticket</Button>
-          <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground" onClick={onEdit}>edit</Button>
-          <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-destructive" onClick={onDelete}>del</Button>
+          <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[11px] text-muted-foreground" onClick={onAddTicket}>+ticket</Button>
+          <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[11px] text-muted-foreground" onClick={onEdit}>edit</Button>
+          <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[11px] text-muted-foreground hover:text-destructive" onClick={onDelete}>del</Button>
         </div>
       </div>
 
@@ -138,11 +139,11 @@ export function TaskRow({ task, showProject, showGate, isExpanded, tickets, isSe
         <div className="bg-muted/30 border-b border-border/30">
           {/* Tickets */}
           {!tickets ? (
-            <div className="px-12 py-2 text-[11px] text-muted-foreground">Loading tickets...</div>
+            <div className="px-12 py-2 text-xs text-muted-foreground">Loading tickets...</div>
           ) : tickets.length === 0 ? (
             <div className="px-12 py-2 flex items-center gap-3">
-              <span className="text-[11px] text-muted-foreground italic">No tickets</span>
-              <Button variant="link" size="sm" className="h-auto p-0 text-[10px]" onClick={onAddTicket}>+ Add ticket</Button>
+              <span className="text-xs text-muted-foreground italic">No tickets</span>
+              <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={onAddTicket}>+ Add ticket</Button>
             </div>
           ) : (
             <>
@@ -150,24 +151,24 @@ export function TaskRow({ task, showProject, showGate, isExpanded, tickets, isSe
                 const ts = ticket.settings?.status || 'pending';
                 const tsStyle = STATUS_STYLE[ts] || STATUS_STYLE.pending;
                 return (
-                  <div key={ticket.id} className="flex items-center gap-2 px-4 py-1 pl-12 hover:bg-muted/50 transition group/ticket">
-                    <span className="text-[10px] text-muted-foreground">{'\u251C'}</span>
-                    <div className={`w-1.5 h-1.5 rounded-full ${tsStyle.dot}`} />
+                  <div key={ticket.id} className="flex items-center gap-2 px-4 py-1.5 pl-14 hover:bg-muted/50 transition group/ticket">
+                    <span className="text-xs text-muted-foreground">{'\u251C'}</span>
+                    <div className={`w-2 h-2 rounded-full ${tsStyle.dot}`} />
                     <button
                       onClick={() => onEditTicket(ticket)}
-                      className="text-[11px] text-muted-foreground flex-1 truncate text-left hover:text-primary transition cursor-pointer"
+                      className="text-sm text-foreground/80 flex-1 truncate text-left hover:text-primary transition cursor-pointer"
                     >
                       {ticket.name}
                     </button>
-                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${tsStyle.bg} ${tsStyle.text} capitalize`}>
+                    <Badge variant="outline" className={`text-[11px] px-2 py-0.5 ${tsStyle.bg} ${tsStyle.text} capitalize`}>
                       {ts.replace('-', ' ')}
                     </Badge>
-                    <span className="text-[10px] text-muted-foreground capitalize">{ticket.settings?.priority || ''}</span>
+                    <span className="text-xs text-muted-foreground capitalize">{ticket.settings?.priority || ''}</span>
                     <div className="flex items-center gap-0.5 opacity-0 group-hover/ticket:opacity-100 transition">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-auto p-0 px-1 text-[10px] text-muted-foreground hover:text-foreground"
+                        className="h-auto p-0 px-1.5 text-[11px] text-muted-foreground hover:text-foreground"
                         onClick={() => onEditTicket(ticket)}
                       >
                         edit
@@ -175,7 +176,7 @@ export function TaskRow({ task, showProject, showGate, isExpanded, tickets, isSe
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-auto p-0 px-1 text-[10px] text-muted-foreground hover:text-destructive"
+                        className="h-auto p-0 px-1.5 text-[11px] text-muted-foreground hover:text-destructive"
                         onClick={() => onDeleteTicket(ticket.id)}
                       >
                         del
@@ -184,8 +185,8 @@ export function TaskRow({ task, showProject, showGate, isExpanded, tickets, isSe
                   </div>
                 );
               })}
-              <div className="px-12 py-1">
-                <Button variant="link" size="sm" className="h-auto p-0 text-[10px] text-primary/70" onClick={onAddTicket}>+ Add ticket</Button>
+              <div className="px-14 py-1.5">
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs text-primary/70" onClick={onAddTicket}>+ Add ticket</Button>
               </div>
             </>
           )}
@@ -193,7 +194,7 @@ export function TaskRow({ task, showProject, showGate, isExpanded, tickets, isSe
           {/* Activity feed */}
           {client && (
             <>
-              <Separator className="mx-12" />
+              <Separator className="mx-14" />
               <ActivityFeed taskId={task.id} client={client} />
             </>
           )}

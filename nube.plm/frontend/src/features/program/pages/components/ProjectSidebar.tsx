@@ -14,12 +14,14 @@ interface ProjectSidebarProps {
   onRename: (id: string, name: string) => void;
   onChangeIcon: (id: string, icon: string) => void;
   onChangeColor: (id: string, color: string) => void;
+  onEditProject: (product: any) => void;
+  onDeleteProject: (id: string) => void;
 }
 
 export function ProjectSidebar({
   productData, selectedProjectIds, isLoading,
   onToggle, onSelectAll, onSelectNone, onNewProject,
-  onRename, onChangeIcon, onChangeColor,
+  onRename, onChangeIcon, onChangeColor, onEditProject, onDeleteProject,
 }: ProjectSidebarProps) {
   return (
     <div className="w-[220px] shrink-0 border-r border-border overflow-y-auto">
@@ -57,6 +59,8 @@ export function ProjectSidebar({
               onRename={(name) => onRename(p.product.id, name)}
               onChangeIcon={(icon) => onChangeIcon(p.product.id, icon)}
               onChangeColor={(color) => onChangeColor(p.product.id, color)}
+              onEdit={() => onEditProject(p.product)}
+              onDelete={() => onDeleteProject(p.product.id)}
             />
           ))}
         </>

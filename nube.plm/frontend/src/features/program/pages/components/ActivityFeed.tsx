@@ -81,23 +81,23 @@ export function ActivityFeed({ taskId, client }: ActivityFeedProps) {
   };
 
   return (
-    <div className="px-12 py-2 space-y-2">
+    <div className="px-14 py-2.5 space-y-2">
       <div className="flex items-center gap-2">
-        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Activity</span>
-        <Badge variant="secondary" className="text-[9px] h-4 px-1 rounded-sm">{entries.length}</Badge>
+        <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Activity</span>
+        <Badge variant="secondary" className="text-[10px] h-4 px-1.5 rounded-sm">{entries.length}</Badge>
       </div>
 
       {loading ? (
-        <div className="text-[11px] text-muted-foreground">Loading...</div>
+        <div className="text-xs text-muted-foreground">Loading...</div>
       ) : (
         <>
           {entries.length > 0 && (
-            <div className="space-y-1 max-h-[150px] overflow-y-auto">
+            <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
               {entries.map(entry => (
-                <div key={entry.id} className="flex items-start gap-2 text-[11px]">
-                  <div className="w-1 h-1 rounded-full bg-muted-foreground/40 mt-1.5 shrink-0" />
+                <div key={entry.id} className="flex items-start gap-2 text-xs">
+                  <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 mt-1.5 shrink-0" />
                   <span className="text-foreground/80 flex-1">{entry.settings?.text || entry.name}</span>
-                  <span className="text-muted-foreground/50 text-[10px] shrink-0">{timeAgo(entry.createdAt)}</span>
+                  <span className="text-muted-foreground/50 text-[11px] shrink-0">{timeAgo(entry.createdAt)}</span>
                 </div>
               ))}
             </div>
@@ -109,12 +109,12 @@ export function ActivityFeed({ taskId, client }: ActivityFeedProps) {
               onChange={(e: any) => setNewNote(e.target.value)}
               onKeyDown={(e: any) => e.key === 'Enter' && addNote()}
               placeholder="Add a note..."
-              className="h-6 text-[11px] flex-1"
+              className="h-7 text-xs flex-1"
             />
             <Button
               variant="secondary"
               size="sm"
-              className="h-6 text-[10px] px-2"
+              className="h-7 text-xs px-3"
               disabled={!newNote.trim() || saving}
               onClick={addNote}
             >

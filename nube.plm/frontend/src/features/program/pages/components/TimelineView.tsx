@@ -1,10 +1,11 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Gantt, ViewMode, type Task as GanttTask } from 'gantt-task-react';
 import 'gantt-task-react/dist/index.css';
 import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CalendarDays } from 'lucide-react';
 import { getTaskGate } from '@shared/utils/gate-helpers';
 
-// ── Darken a hex color for the progress fill ──
+// ── Color helpers ──
 
 function darken(hex: string, amount = 0.25): string {
   const c = hex.replace('#', '');
@@ -33,50 +34,35 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
-// ── Range presets ──
+// ── Date helpers ──
 
-type RangeKey = '1m' | '3m' | '6m' | '1y' | '2y';
-
-const RANGE_LABELS: { key: RangeKey; label: string; months: number }[] = [
-  { key: '1m', label: '1 Month', months: 1 },
-  { key: '3m', label: '3 Months', months: 3 },
-  { key: '6m', label: '6 Months', months: 6 },
-  { key: '1y', label: '1 Year', months: 12 },
-  { key: '2y', label: '2 Years', months: 24 },
-];
-
-function rangeToViewMode(key: RangeKey): ViewMode {
-  switch (key) {
-    case '1m': return ViewMode.Week;
-    case '3m': return ViewMode.Week;
-    case '6m': return ViewMode.Month;
-    case '1y': return ViewMode.Month;
-    case '2y': return ViewMode.Year;
-  }
+function startOfWeek(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+  d.setDate(diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
 
-function rangeToColumnWidth(key: RangeKey): number {
-  switch (key) {
-    case '1m': return 80;
-    case '3m': return 50;
-    case '6m': return 100;
-    case '1y': return 60;
-    case '2y': return 80;
-  }
+function addWeeks(date: Date, weeks: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + weeks * 7);
+  return d;
 }
 
-function shiftMonths(date: Date, months: number): Date {
+function addMonths(date: Date, months: number): Date {
   const d = new Date(date);
   d.setMonth(d.getMonth() + months);
   return d;
 }
 
-function startOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
 function formatDate(d: Date): string {
   return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function formatMonthYear(d: Date): string {
+  return d.toLocaleDateString('en-AU', { month: 'short', year: 'numeric' });
 }
 
 // ── Custom tooltip ──
@@ -99,6 +85,90 @@ function CustomTooltip({ task, fontFamily }: { task: GanttTask; fontSize: string
   );
 }
 
+// ── Constants ──
+
+const COL_WIDTH = 65;
+const PAD_WEEKS = 52; // ~1 year padding for free scrolling
+const HEADER_HEIGHT = 52;
+
+// ── Today overlay — computes position of "today" and renders a line + past shade ──
+
+function TodayOverlay({
+  chartStartDate,
+  scrollLeft,
+  containerWidth,
+  containerHeight,
+}: {
+  chartStartDate: Date;
+  scrollLeft: number;
+  containerWidth: number;
+  containerHeight: number;
+}) {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  // Milliseconds from chart start to today
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const daysFromStart = (now.getTime() - chartStartDate.getTime()) / msPerDay;
+  // Each column = 7 days
+  const todayX = (daysFromStart / 7) * COL_WIDTH;
+
+  // Position relative to the visible viewport (account for scroll)
+  const visibleX = todayX - scrollLeft;
+
+  // Don't render if today line is way off screen
+  if (visibleX < -50 || visibleX > containerWidth + 50) return null;
+
+  return (
+    <>
+      {/* Past shade — everything left of today */}
+      {visibleX > 0 && (
+        <div
+          className="absolute top-0 left-0 pointer-events-none"
+          style={{
+            width: Math.min(visibleX, containerWidth),
+            height: containerHeight,
+            background: 'rgba(0, 0, 0, 0.04)',
+          }}
+        />
+      )}
+      {/* Today vertical line */}
+      <div
+        className="absolute top-0 pointer-events-none"
+        style={{
+          left: visibleX,
+          width: 2,
+          height: containerHeight,
+          background: 'rgba(59, 130, 246, 0.5)',
+        }}
+      />
+      {/* Today label */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          left: visibleX - 18,
+          top: 4,
+          fontSize: '9px',
+          fontWeight: 600,
+          color: 'rgba(59, 130, 246, 0.8)',
+          background: 'rgba(59, 130, 246, 0.1)',
+          padding: '1px 4px',
+          borderRadius: '3px',
+          letterSpacing: '0.03em',
+        }}
+      >
+        TODAY
+      </div>
+    </>
+  );
+}
+
+// ── Quick-jump quarter helpers ──
+
+function getQuarterStart(year: number, quarter: number): Date {
+  return new Date(year, (quarter - 1) * 3, 1);
+}
+
 // ── Props ──
 
 interface TimelineViewProps {
@@ -109,22 +179,74 @@ interface TimelineViewProps {
 }
 
 export function TimelineView({ tasks, tickets, projectColorMap, onEditTask }: TimelineViewProps) {
-  const [range, setRange] = useState<RangeKey>('3m');
-  const [viewDate, setViewDate] = useState(() => startOfMonth(new Date()));
+  const [viewDate, setViewDate] = useState(() => startOfWeek(new Date()));
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [containerSize, setContainerSize] = useState({ w: 800, h: 400 });
 
-  const rangeInfo = RANGE_LABELS.find(r => r.key === range)!;
+  // Track scroll position for the today overlay
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
 
-  const goBack = useCallback(() => {
-    setViewDate(prev => shiftMonths(prev, -rangeInfo.months));
-  }, [rangeInfo.months]);
+    const onScroll = () => setScrollLeft(el.scrollLeft);
+    el.addEventListener('scroll', onScroll, { passive: true });
 
-  const goForward = useCallback(() => {
-    setViewDate(prev => shiftMonths(prev, rangeInfo.months));
-  }, [rangeInfo.months]);
+    const obs = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setContainerSize({ w: entry.contentRect.width, h: entry.contentRect.height });
+      }
+    });
+    obs.observe(el);
 
-  const goToday = useCallback(() => {
-    setViewDate(startOfMonth(new Date()));
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      obs.disconnect();
+    };
   }, []);
+
+  // Compute the chart's absolute start date (earliest task minus padding)
+  const chartStartDate = useMemo(() => {
+    if (tasks.length === 0) return startOfWeek(new Date());
+
+    let earliest = new Date();
+    for (const task of tasks) {
+      if (task.settings?.startDate) {
+        const d = new Date(`${task.settings.startDate}T00:00:00`);
+        if (d < earliest) earliest = d;
+      }
+      if (task.settings?.dueDate) {
+        const d = new Date(`${task.settings.dueDate}T00:00:00`);
+        if (d < earliest) earliest = d;
+      }
+    }
+    // The library pads by preStepsCount weeks before the earliest date
+    return addWeeks(startOfWeek(earliest), -PAD_WEEKS);
+  }, [tasks]);
+
+  // Range label
+  const rangeLabel = useMemo(() => {
+    const end = addWeeks(viewDate, 12);
+    const from = formatMonthYear(viewDate);
+    const to = formatMonthYear(end);
+    return from === to ? from : `${from} — ${to}`;
+  }, [viewDate]);
+
+  const isAtToday = useMemo(() => {
+    const today = startOfWeek(new Date());
+    return Math.abs(viewDate.getTime() - today.getTime()) < 7 * 24 * 60 * 60 * 1000;
+  }, [viewDate]);
+
+  // Current year for quarter buttons
+  const currentYear = new Date().getFullYear();
+
+  // Navigation
+  const goBack = useCallback(() => setViewDate(prev => addWeeks(prev, -4)), []);
+  const goBackFar = useCallback(() => setViewDate(prev => addMonths(prev, -3)), []);
+  const goForward = useCallback(() => setViewDate(prev => addWeeks(prev, 4)), []);
+  const goForwardFar = useCallback(() => setViewDate(prev => addMonths(prev, 3)), []);
+  const goToday = useCallback(() => setViewDate(startOfWeek(new Date())), []);
+  const goToQuarter = useCallback((q: number) => setViewDate(startOfWeek(getQuarterStart(currentYear, q))), [currentYear]);
 
   const taskLookup = useMemo(() => {
     const map = new Map<string, any>();
@@ -132,7 +254,7 @@ export function TimelineView({ tasks, tickets, projectColorMap, onEditTask }: Ti
     return map;
   }, [tasks]);
 
-  // Convert tasks + tickets into gantt-task-react format using project colors
+  // Convert tasks + tickets into gantt-task-react format
   const ganttTasks = useMemo((): GanttTask[] => {
     const result: GanttTask[] = [];
     const now = new Date();
@@ -147,12 +269,9 @@ export function TimelineView({ tasks, tickets, projectColorMap, onEditTask }: Ti
       const start = hasStart ? new Date(`${task.settings.startDate}T00:00:00`) : defaultStart;
       const end = hasEnd ? new Date(`${task.settings.dueDate}T23:59:59`) : (hasStart ? new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000) : defaultEnd);
 
-      // Use project color for bar
       const projectColor = projectColorMap[task.parentId] || '#3b82f6';
-
       const taskTickets = tickets[task.id] || [];
       const isProject = taskTickets.length > 0;
-
       const status = task.settings?.status || 'pending';
       const statusLabel = STATUS_LABELS[status] || status;
 
@@ -173,7 +292,6 @@ export function TimelineView({ tasks, tickets, projectColorMap, onEditTask }: Ti
         },
       });
 
-      // Tickets as child bars — lighter shade of project color
       const ticketColor = lighten(projectColor, 0.3);
       for (const ticket of taskTickets) {
         const ts = ticket.settings?.status || 'pending';
@@ -207,9 +325,16 @@ export function TimelineView({ tasks, tickets, projectColorMap, onEditTask }: Ti
     if (task) onEditTask(task);
   }, [taskLookup, onEditTask]);
 
-  const handleExpanderClick = useCallback((_task: GanttTask) => {
-    // Handled internally by the library
-  }, []);
+  const handleExpanderClick = useCallback((_task: GanttTask) => {}, []);
+
+  // Figure out which quarter we're viewing for the button highlight
+  const activeQuarter = useMemo(() => {
+    for (let q = 1; q <= 4; q++) {
+      const qs = getQuarterStart(currentYear, q);
+      if (Math.abs(viewDate.getTime() - startOfWeek(qs).getTime()) < 7 * 24 * 60 * 60 * 1000) return q;
+    }
+    return null;
+  }, [viewDate, currentYear]);
 
   if (ganttTasks.length === 0) {
     return (
@@ -222,52 +347,105 @@ export function TimelineView({ tasks, tickets, projectColorMap, onEditTask }: Ti
   return (
     <div className="flex-1 flex flex-col overflow-hidden gantt-wrapper">
       {/* Controls */}
-      <div className="shrink-0 px-4 py-2 flex items-center gap-1.5 border-b border-border/50">
-        <Button variant="outline" size="sm" className="h-7 px-2.5 text-[11px]" onClick={goBack}>
-          {'\u2190'}
-        </Button>
-        <Button variant="outline" size="sm" className="h-7 px-2.5 text-[11px]" onClick={goToday}>
-          Today
-        </Button>
-        <Button variant="outline" size="sm" className="h-7 px-2.5 text-[11px]" onClick={goForward}>
-          {'\u2192'}
-        </Button>
-        <div className="w-px h-5 bg-border mx-2" />
-        {RANGE_LABELS.map(r => (
-          <Button
-            key={r.key}
-            variant={range === r.key ? 'default' : 'ghost'}
-            size="sm"
-            className={`h-7 px-2.5 text-[11px] ${range === r.key ? '' : 'text-muted-foreground'}`}
-            onClick={() => setRange(r.key)}
+      <div className="shrink-0 px-4 py-2 flex items-center gap-2 border-b border-border/50">
+        {/* Navigation: <<  <  Today  >  >> */}
+        <div className="flex items-center border border-border rounded-md overflow-hidden">
+          <button
+            onClick={goBackFar}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition"
+            title="Back 3 months"
           >
-            {r.label}
-          </Button>
-        ))}
+            <ChevronsLeft className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={goBack}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition border-l border-border"
+            title="Back 4 weeks"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={goToday}
+            className={`px-2 py-1.5 transition border-x border-border
+              ${isAtToday
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+            title="Jump to today"
+          >
+            <CalendarDays className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={goForward}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition border-r border-border"
+            title="Forward 4 weeks"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={goForwardFar}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition"
+            title="Forward 3 months"
+          >
+            <ChevronsRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* Range label */}
+        <span className="text-xs font-medium text-foreground">{rangeLabel}</span>
+
+        <div className="flex-1" />
+
+        {/* Quarter quick-jumps */}
+        <div className="flex items-center gap-0.5">
+          <span className="text-[10px] text-muted-foreground/60 mr-1">{currentYear}</span>
+          {[1, 2, 3, 4].map(q => (
+            <Button
+              key={q}
+              variant={activeQuarter === q ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-6 px-2 text-[11px] text-muted-foreground"
+              onClick={() => goToQuarter(q)}
+              title={`Q${q} ${currentYear}`}
+            >
+              Q{q}
+            </Button>
+          ))}
+        </div>
       </div>
 
-      {/* Gantt chart */}
-      <div className="flex-1 overflow-auto">
-        <Gantt
-          tasks={ganttTasks}
-          viewMode={rangeToViewMode(range)}
-          viewDate={viewDate}
-          onClick={handleClick}
-          onExpanderClick={handleExpanderClick}
-          columnWidth={rangeToColumnWidth(range)}
-          listCellWidth=""
-          rowHeight={40}
-          headerHeight={52}
-          barCornerRadius={6}
-          barFill={65}
-          todayColor="rgba(59, 130, 246, 0.06)"
-          arrowColor="#a1a1aa"
-          fontSize="11px"
-          TooltipContent={CustomTooltip}
+      {/* Gantt chart with today overlay */}
+      <div className="flex-1 relative overflow-hidden">
+        <div className="absolute inset-0 overflow-auto" ref={scrollRef}>
+          <Gantt
+            tasks={ganttTasks}
+            viewMode={ViewMode.Week}
+            viewDate={viewDate}
+            preStepsCount={PAD_WEEKS}
+            onClick={handleClick}
+            onExpanderClick={handleExpanderClick}
+            columnWidth={COL_WIDTH}
+            listCellWidth=""
+            rowHeight={40}
+            headerHeight={HEADER_HEIGHT}
+            barCornerRadius={6}
+            barFill={65}
+            todayColor="rgba(59, 130, 246, 0.04)"
+            arrowColor="#a1a1aa"
+            fontSize="11px"
+            TooltipContent={CustomTooltip}
+          />
+        </div>
+
+        {/* Today line + past shade overlay */}
+        <TodayOverlay
+          chartStartDate={chartStartDate}
+          scrollLeft={scrollLeft}
+          containerWidth={containerSize.w}
+          containerHeight={containerSize.h}
         />
       </div>
 
-      {/* Style overrides for the library */}
+      {/* Style overrides */}
       <style>{`
         .gantt-wrapper svg {
           background: transparent !important;

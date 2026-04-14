@@ -9,7 +9,7 @@ export function Dropdown({ value, placeholder, options, onChange, width }: {
 }) {
   return (
     <Select value={value || undefined} onValueChange={onChange}>
-      <SelectTrigger className={`${width} h-6 text-[11px] border-input bg-transparent px-1.5 shrink-0`}>
+      <SelectTrigger className={`${width} h-7 text-xs border-input bg-transparent px-2 shrink-0`}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
