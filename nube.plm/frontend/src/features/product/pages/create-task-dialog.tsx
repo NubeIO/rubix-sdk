@@ -9,7 +9,7 @@ import { Button, Input, Textarea, Select } from '@rubix-sdk/frontend/common/ui';
 import { UserPicker, type SelectedUser } from '@rubix-sdk/frontend/common/ui/user-picker';
 import type { Product } from '@features/product/types/product.types';
 import type { CreateTaskInput } from '@features/task/types/task.types';
-import { getDefaultTaskDueDate } from '@features/task/utils/task-date';
+import { getDefaultTaskDueDate } from '@shared/utils/task-date';
 
 interface CreateTaskDialogProps {
   products: Product[];

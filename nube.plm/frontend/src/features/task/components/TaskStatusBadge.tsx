@@ -2,7 +2,7 @@
  * Task status badge component
  */
 
-import { normalizeTaskStatus } from '@features/task/utils/task-status';
+import { normalizeTaskStatus } from '@shared/utils/task-status';
 
 interface TaskStatusBadgeProps {
   status?: string;

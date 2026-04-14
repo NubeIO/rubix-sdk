@@ -14,7 +14,7 @@ import {
   listNodeTypeSchemas,
   listNodeSchemas
 } from '@rubix-sdk/frontend/plugin-client/schema';
-import { getDefaultTaskDueDate } from '@features/task/utils/task-date';
+import { getDefaultTaskDueDate } from '@shared/utils/task-date';
 import { createCommentsNode } from '@features/comments/utils/comment-helpers';
 
 interface TaskDialogProps {

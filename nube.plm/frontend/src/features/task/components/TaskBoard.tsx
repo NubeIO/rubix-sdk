@@ -19,7 +19,7 @@ import type { PluginClient } from '@rubix-sdk/frontend/plugin-client';
 import type { Task } from '../types/task.types';
 import { TaskCard } from './TaskCard';
 import { DroppableColumn } from './DroppableColumn';
-import { normalizeTaskStatus, type TaskStatusValue } from '../utils/task-status';
+import { normalizeTaskStatus, type TaskStatusValue } from '@shared/utils/task-status';
 
 const COLUMNS: {
   id: TaskStatusValue;

@@ -8,7 +8,7 @@ import { StatCard } from '../components/StatCard';
 import { RecentTasks } from '../widgets/RecentTasks';
 import { QuickActions } from '../widgets/QuickActions';
 import type { Product } from '../../types/product.types';
-import { normalizeTaskStatus } from '@features/task/utils/task-status';
+import { normalizeTaskStatus } from '@shared/utils/task-status';
 
 interface OverviewSectionProps {
   product: Product;

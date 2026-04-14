@@ -11,7 +11,7 @@ import { TaskDialog } from '../components/TaskDialog';
 import { DeleteTaskDialog } from '../components/DeleteTaskDialog';
 import { TaskBoard } from '@features/task/components/TaskBoard';
 import { TaskDetailDialog } from '@features/task/components/TaskDetailDialog';
-import { normalizeTaskStatus } from '@features/task/utils/task-status';
+import { normalizeTaskStatus } from '@shared/utils/task-status';
 import type { Task } from '@features/task/types/task.types';
 
 interface TasksSectionV2Props {
