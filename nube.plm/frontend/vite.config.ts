@@ -30,6 +30,8 @@ export default defineConfig({
         './TaskDetail': './src/features/task/pages/TaskDetailPageEntry.tsx',
         './Reports': './src/features/reporting/ReportingPage.tsx',
         './MyWork': './src/features/my-work/MyWorkPage.tsx',
+        './ProgramDashboard': './src/features/program/pages/ProgramDashboardPage.tsx',
+        './ProgramGantt': './src/features/program/pages/ProgramGanttPage.tsx',
       },
       shared: {
         // DON'T share React - let plugin bundle its own

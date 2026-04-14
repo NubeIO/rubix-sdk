@@ -9,7 +9,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { useState } from 'react';
 
 // ✅ THE EXACT SAME IMPORT AS THE HOST
-import { DeleteDialog } from '@rubix-sdk/frontend';
+import { DeleteDialog } from '@rubix-sdk/frontend/components/delete';
 
 // Also import the Button from SDK to be consistent
 import { Button } from '@rubix-sdk/frontend/common/ui';

@@ -322,6 +322,34 @@
       }
     },
     {
+      "pageId": "program-dashboard",
+      "title": "Program Dashboard",
+      "icon": "gantt-chart",
+      "description": "Portfolio-level overview of all products with gate progress",
+      "nodeTypes": ["plm.service", "plm.products"],
+      "enabled": true,
+      "isDefault": false,
+      "order": 6,
+      "props": {
+        "exposedPath": "./ProgramDashboard",
+        "useMountPattern": true
+      }
+    },
+    {
+      "pageId": "program-gantt",
+      "title": "Delivery Gantt",
+      "icon": "gantt-chart",
+      "description": "Category-based Gantt chart with gate markers",
+      "nodeTypes": ["plm.product"],
+      "enabled": true,
+      "isDefault": false,
+      "order": 13,
+      "props": {
+        "exposedPath": "./ProgramGantt",
+        "useMountPattern": true
+      }
+    },
+    {
       "pageId": "reports",
       "title": "Reporting Dashboard",
       "icon": "bar-chart-3",

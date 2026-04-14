@@ -9,7 +9,7 @@
 
 import { Package, Cpu, HardDrive, FolderKanban } from 'lucide-react';
 // @ts-ignore - SDK types are resolved at build time
-import { FilteredTableWithTabs, type FilteredTab } from '@rubix-sdk/frontend/components';
+import { FilteredTableWithTabs, type FilteredTab } from '@rubix-sdk/frontend/components/filtered-table';
 import type { PluginClient } from '@rubix-sdk/frontend/plugin-client';
 
 import type { Product } from '@features/product/types/product.types';
