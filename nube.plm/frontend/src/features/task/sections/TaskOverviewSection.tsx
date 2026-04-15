@@ -11,7 +11,7 @@ import { StatCard } from '@features/product/v2/components/StatCard';
 import type { Task } from '../types/task.types';
 import type { Ticket } from '@features/ticket/types/ticket.types';
 import { normalizeTicketStatus } from '@features/ticket/utils/ticket-helpers';
-import { formatTaskDate } from '../utils/task-date';
+import { formatTaskDate } from '@shared/utils/task-date';
 
 interface TaskOverviewSectionProps {
   task: Task;

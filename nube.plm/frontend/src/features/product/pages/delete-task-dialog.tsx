@@ -2,7 +2,7 @@
  * Delete Task Dialog - Using SHARED SDK Component
  */
 
-import { DeleteDialog } from '@rubix-sdk/frontend';
+import { DeleteDialog } from '@rubix-sdk/frontend/components/delete';
 
 interface DeleteTaskDialogProps {
   open: boolean;

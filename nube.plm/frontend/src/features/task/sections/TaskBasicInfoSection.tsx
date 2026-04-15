@@ -14,7 +14,7 @@ import { Button } from '@rubix-sdk/frontend/common/ui/button';
 // @ts-ignore - SDK user picker
 import { UserPicker, type SelectedUser } from '@rubix-sdk/frontend/common/ui/user-picker';
 import type { Task } from '../types/task.types';
-import { TASK_STATUS_VALUES, type TaskStatusValue } from '../utils/task-status';
+import { TASK_STATUS_VALUES, type TaskStatusValue } from '@shared/utils/task-status';
 
 interface TaskBasicInfoSectionProps {
   task: Task;

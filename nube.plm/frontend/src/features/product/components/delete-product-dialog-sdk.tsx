@@ -5,7 +5,7 @@
  * ONE import from @rubix-sdk/frontend - truly shared!
  */
 
-import { DeleteDialog } from '@rubix-sdk/frontend';
+import { DeleteDialog } from '@rubix-sdk/frontend/components/delete';
 
 interface DeleteProductDialogProps {
   open: boolean;

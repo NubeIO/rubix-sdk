@@ -7,8 +7,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@rubix-sdk/frontend/common/ui/button';
 import { Calendar, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatTaskDate } from '@features/task/utils/task-date';
-import type { TaskStatusValue } from '@features/task/utils/task-status';
+import { formatTaskDate } from '@shared/utils/task-date';
+import type { TaskStatusValue } from '@shared/utils/task-status';
 
 interface Task {
   id: string;

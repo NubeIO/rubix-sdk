@@ -5,11 +5,9 @@
 import { useEffect, useState } from 'react';
 
 // @ts-ignore - SDK types are resolved at build time
-import {
-  Button,
-  RightClickMenu,
-  RightClickMenuItem,
-} from '@rubix-sdk/frontend';
+import { Button } from '@rubix-sdk/frontend/common/ui';
+// @ts-ignore
+import { RightClickMenu, RightClickMenuItem } from '@rubix-sdk/frontend/components/context-menu';
 import { Product } from '@features/product/types/product.types';
 import { formatPrice, formatProductCode } from '@features/product/utils/product-formatters';
 import { EditIcon, TrashIcon } from '@shared/components/icons';

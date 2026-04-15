@@ -6,7 +6,7 @@
 import { useState } from 'react';
 
 // @ts-ignore - SDK types
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '@rubix-sdk/frontend';
+import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '@rubix-sdk/frontend/common/ui';
 
 import type { Product } from '@features/product/types/product.types';
 import type { UpdateProductInput } from '@features/product/api/product-api';
