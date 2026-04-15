@@ -116,6 +116,29 @@ export function useDashboardState({ orgId, deviceId, baseUrl, token }: Dashboard
     return tasks;
   }, [selectedProjects, activeGate, filters]);
 
+  // ── Task assignees (loaded from references, not settings) ──
+
+  const [taskAssignees, setTaskAssignees] = useState<Record<string, { id: string; name: string }[]>>({});
+
+  useEffect(() => {
+    if (visibleTasks.length === 0) return;
+    let cancelled = false;
+    const load = async () => {
+      const result: Record<string, { id: string; name: string }[]> = {};
+      await Promise.all(visibleTasks.map(async (t: any) => {
+        try {
+          const refs = await client.getAssignedUsers(t.id);
+          if (refs?.length) {
+            result[t.id] = refs.map((r: any) => ({ id: r.toNodeId, name: r.displayName || '' }));
+          }
+        } catch {}
+      }));
+      if (!cancelled) setTaskAssignees(prev => ({ ...prev, ...result }));
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [visibleTasks, client]);
+
   // ── Gate progress ──
 
   const combinedGateProgress = useMemo(() => {
@@ -126,10 +149,10 @@ export function useDashboardState({ orgId, deviceId, baseUrl, token }: Dashboard
   // ── Ticket loading ──
 
   const [taskTickets, setTaskTickets] = useState<Record<string, any[]>>({});
+  const [ticketAssignees, setTicketAssignees] = useState<Record<string, { id: string; name: string }[]>>({});
 
   const loadTickets = useCallback(async (taskId: string, force = false) => {
     if (!force) {
-      // Skip if already loaded — but use the setter to read current state, avoiding stale closure
       const alreadyLoaded = await new Promise<boolean>(resolve => {
         setTaskTickets(prev => { resolve(!!prev[taskId]); return prev; });
       });
@@ -139,6 +162,18 @@ export function useDashboardState({ orgId, deviceId, baseUrl, token }: Dashboard
       const result = await client.queryNodes({ filter: `type is "plm.ticket" and parent.id is "${taskId}"` });
       const tickets = Array.isArray(result) ? result : (result as any).nodes || [];
       setTaskTickets(prev => ({ ...prev, [taskId]: tickets }));
+
+      // Load assignees for each ticket
+      const assigneeMap: Record<string, { id: string; name: string }[]> = {};
+      await Promise.all(tickets.map(async (ticket: any) => {
+        try {
+          const refs = await client.getAssignedUsers(ticket.id);
+          if (refs?.length) {
+            assigneeMap[ticket.id] = refs.map((r: any) => ({ id: r.toNodeId, name: r.displayName || '' }));
+          }
+        } catch {}
+      }));
+      setTicketAssignees(prev => ({ ...prev, ...assigneeMap }));
     } catch (err) {
       console.error('Failed to load tickets:', err);
     }
@@ -158,8 +193,11 @@ export function useDashboardState({ orgId, deviceId, baseUrl, token }: Dashboard
     if (!task.settings?.autoProgress) return task.settings?.progress || 0;
     const tickets = taskTickets[task.id];
     if (!tickets || tickets.length === 0) return 0;
-    const completed = tickets.filter((t: any) => t.settings?.status === 'completed').length;
-    return Math.round((completed / tickets.length) * 100);
+    // Exclude cancelled tickets from progress calculation
+    const active = tickets.filter((t: any) => t.settings?.status !== 'cancelled');
+    if (active.length === 0) return 0;
+    const completed = active.filter((t: any) => t.settings?.status === 'completed').length;
+    return Math.round((completed / active.length) * 100);
   }, [taskTickets]);
 
   // ── Stats ──
@@ -185,6 +223,23 @@ export function useDashboardState({ orgId, deviceId, baseUrl, token }: Dashboard
   const updateTaskGate = useCallback(async (task: any, gateId: GateId) => {
     await updateTaskField(task.id, 'tags', setTaskGate(task.settings?.tags, gateId));
   }, [updateTaskField]);
+
+  const updateTicketField = useCallback(async (ticketId: string, taskId: string, field: string, value: string) => {
+    try {
+      await client.updateNodeSettings(ticketId, { [field]: value });
+      // Update local ticket state so UI reflects immediately
+      setTaskTickets(prev => {
+        const tickets = prev[taskId];
+        if (!tickets) return prev;
+        return {
+          ...prev,
+          [taskId]: tickets.map((t: any) =>
+            t.id === ticketId ? { ...t, settings: { ...t.settings, [field]: value } } : t
+          ),
+        };
+      });
+    } catch (err) { console.error(`Failed to update ticket ${field}:`, err); }
+  }, [client]);
 
   const deleteTask = useCallback(async (taskId: string) => {
     if (!confirm('Delete this task and all its tickets?')) return;
@@ -337,17 +392,23 @@ export function useDashboardState({ orgId, deviceId, baseUrl, token }: Dashboard
     } catch (err) { console.error('Failed to delete project:', err); }
   }, [client, refetch]);
 
-  const saveTicket = useCallback(async (data: { name: string; settings: Record<string, any> }) => {
+  const saveTicket = useCallback(async (data: { name: string; settings: Record<string, any>; assignees?: SelectedUser[] }) => {
     if (!showTicketDialog) return;
     setSaving(true);
     try {
+      let nodeId: string;
       if (showTicketDialog.ticket) {
-        await client.updateNode(showTicketDialog.ticket.id, { name: data.name });
-        await client.updateNodeSettings(showTicketDialog.ticket.id, data.settings);
+        nodeId = showTicketDialog.ticket.id;
+        await client.updateNode(nodeId, { name: data.name });
+        await client.updateNodeSettings(nodeId, data.settings);
       } else {
-        await client.createNode(showTicketDialog.taskId, {
+        const node = await client.createNode(showTicketDialog.taskId, {
           type: 'plm.ticket', name: data.name, identity: ['ticket', 'plm'], settings: data.settings,
         });
+        nodeId = (node as any)?.id;
+      }
+      if (nodeId && data.assignees) {
+        await client.replaceAssignedUsers(nodeId, data.assignees);
       }
       loadTickets(showTicketDialog.taskId, true);
       setShowTicketDialog(null);
@@ -365,10 +426,10 @@ export function useDashboardState({ orgId, deviceId, baseUrl, token }: Dashboard
     // Gate / filters
     activeGate, setActiveGate, filters, setFilters, allAssignees,
     // Tasks
-    visibleTasks, combinedGateProgress, expandedTasks, taskTickets,
+    visibleTasks, combinedGateProgress, expandedTasks, taskTickets, taskAssignees, ticketAssignees,
     getTaskProgress, toggleTask,
     // Task CRUD
-    updateTaskField, updateTaskGate, deleteTask, deleteTicket,
+    updateTaskField, updateTaskGate, updateTicketField, deleteTask, deleteTicket,
     // Bulk
     selectedTaskIds, setSelectedTaskIds, toggleTaskSelection,
     bulkUpdateStatus, bulkUpdateGate, bulkDelete,

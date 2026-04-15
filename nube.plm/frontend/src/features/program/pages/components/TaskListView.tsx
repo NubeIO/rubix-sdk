@@ -10,6 +10,8 @@ interface TaskListViewProps {
   showProject: boolean;
   expandedTasks: Set<string>;
   taskTickets: Record<string, any[]>;
+  taskAssignees: Record<string, { id: string; name: string }[]>;
+  ticketAssignees: Record<string, { id: string; name: string }[]>;
   selectedTaskIds: Set<string>;
   projectColorMap: Record<string, string>;
   client: any;
@@ -29,6 +31,7 @@ interface TaskListViewProps {
   onAddTicket: (task: any) => void;
   onEditTicket: (task: any, ticket: any) => void;
   onDeleteTicket: (ticketId: string, taskId: string) => void;
+  onUpdateTicketField: (ticketId: string, taskId: string, field: string, value: string) => void;
   onCreateFirst: () => void;
 }
 
@@ -41,12 +44,12 @@ interface ProjectGroup {
 
 export function TaskListView({
   visibleTasks, activeGate, showProject,
-  expandedTasks, taskTickets, selectedTaskIds, projectColorMap, client,
+  expandedTasks, taskTickets, taskAssignees, ticketAssignees, selectedTaskIds, projectColorMap, client,
   getTaskProgress, onToggleTask, onSelectTask,
   onClearSelection, onBulkStatus, onBulkGate, onBulkDelete,
   onUpdateStatus, onUpdateGate, onUpdateCategory, onUpdateDueDate,
   onEditTask, onDeleteTask, onAddTicket, onEditTicket, onDeleteTicket,
-  onCreateFirst,
+  onUpdateTicketField, onCreateFirst,
 }: TaskListViewProps) {
   // Group tasks by project when multiple projects shown
   const groupedTasks = useMemo((): ProjectGroup[] => {
@@ -81,6 +84,8 @@ export function TaskListView({
         showGate={activeGate === 'all'}
         isExpanded={expandedTasks.has(task.id)}
         tickets={taskTickets[task.id]}
+        assignees={taskAssignees[task.id]}
+        ticketAssignees={ticketAssignees}
         isSelected={selectedTaskIds.has(task.id)}
         projectColor={projectColorMap[task.parentId]}
         onSelect={onSelectTask}
@@ -95,6 +100,7 @@ export function TaskListView({
         onAddTicket={() => onAddTicket(task)}
         onEditTicket={(ticket) => onEditTicket(task, ticket)}
         onDeleteTicket={(ticketId) => onDeleteTicket(ticketId, task.id)}
+        onUpdateTicketField={(ticketId, field, value) => onUpdateTicketField(ticketId, task.id, field, value)}
       />
     );
   };
@@ -120,7 +126,7 @@ export function TaskListView({
           <span className="w-[110px]">Status</span>
           <span className="w-[110px] text-center">Due</span>
           <span className="w-[65px] text-center">Progress</span>
-          <span className="w-[80px] text-center">Assignee</span>
+          <span className="w-[100px] text-center">Assignee</span>
           <span className="w-[100px]" />
         </div>
 

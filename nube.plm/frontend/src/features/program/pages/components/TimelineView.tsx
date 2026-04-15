@@ -421,6 +421,7 @@ export function TimelineView({ tasks, tickets, projectColorMap, onEditTask }: Ti
             viewMode={ViewMode.Week}
             viewDate={viewDate}
             preStepsCount={PAD_WEEKS}
+            ganttHeight={Math.max(containerSize.h - HEADER_HEIGHT, ganttTasks.length * 40)}
             onClick={handleClick}
             onExpanderClick={handleExpanderClick}
             columnWidth={COL_WIDTH}

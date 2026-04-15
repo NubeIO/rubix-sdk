@@ -106,6 +106,8 @@ function ProgramDashboard({ orgId, deviceId, baseUrl, token }: Props) {
                   showProject={d.selectedProjects.length > 1}
                   expandedTasks={d.expandedTasks}
                   taskTickets={d.taskTickets}
+                  taskAssignees={d.taskAssignees}
+                  ticketAssignees={d.ticketAssignees}
                   selectedTaskIds={d.selectedTaskIds}
                   projectColorMap={d.projectColorMap}
                   client={d.client}
@@ -125,6 +127,7 @@ function ProgramDashboard({ orgId, deviceId, baseUrl, token }: Props) {
                   onAddTicket={(task) => d.setShowTicketDialog({ taskId: task.id, taskName: task.name })}
                   onEditTicket={(task, ticket) => d.setShowTicketDialog({ taskId: task.id, taskName: task.name, ticket })}
                   onDeleteTicket={d.deleteTicket}
+                  onUpdateTicketField={d.updateTicketField}
                   onCreateFirst={() => d.selectedProjects.length > 0 && d.setShowTaskDialog({ productId: d.selectedProjects[0].product.id, gate: d.activeGate !== 'all' ? d.activeGate : undefined })}
                 />
               ) : (
@@ -168,6 +171,7 @@ function ProgramDashboard({ orgId, deviceId, baseUrl, token }: Props) {
         <TicketFormDialog
           taskName={d.showTicketDialog.taskName}
           editTicket={d.showTicketDialog.ticket}
+          client={d.client}
           saving={d.saving}
           onSave={d.saveTicket}
           onClose={() => d.setShowTicketDialog(null)}

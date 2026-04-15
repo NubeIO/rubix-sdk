@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+// @ts-ignore
+import { UserPicker, type SelectedUser } from '@rubix-sdk/frontend/common/ui/user-picker';
 import { STATUSES } from '../constants';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -15,11 +17,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function TicketFormDialog({ taskName, editTicket, saving, onSave, onClose }: {
+export function TicketFormDialog({ taskName, editTicket, client, saving, onSave, onClose }: {
   taskName: string;
   editTicket?: any;
+  client: any;
   saving: boolean;
-  onSave: (data: { name: string; settings: Record<string, any> }) => void;
+  onSave: (data: { name: string; settings: Record<string, any>; assignees: SelectedUser[] }) => void;
   onClose: () => void;
 }) {
   const isEdit = !!editTicket;
@@ -27,6 +30,18 @@ export function TicketFormDialog({ taskName, editTicket, saving, onSave, onClose
   const [ticketType, setTicketType] = useState(editTicket?.settings?.ticketType || 'task');
   const [status, setStatus] = useState(editTicket?.settings?.status || 'pending');
   const [priority, setPriority] = useState(editTicket?.settings?.priority || 'Medium');
+  const [assignees, setAssignees] = useState<SelectedUser[]>([]);
+
+  // Load existing assignees when editing
+  useEffect(() => {
+    if (editTicket?.id && client) {
+      client.getAssignedUsers(editTicket.id).then((refs: any[]) => {
+        if (refs?.length) {
+          setAssignees(refs.map((r: any) => ({ userId: r.toNodeId, userName: r.displayName || '' })));
+        }
+      }).catch(() => {});
+    }
+  }, [editTicket?.id, client]);
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -59,11 +74,14 @@ export function TicketFormDialog({ taskName, editTicket, saving, onSave, onClose
               </Select>
             </Field>
           </div>
+          <Field label="Assignee(s)">
+            <UserPicker client={client} value={assignees} onChange={setAssignees} />
+          </Field>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
             <Button
               size="sm"
-              onClick={() => { if (!name.trim()) return; onSave({ name: name.trim(), settings: { ticketType, status, priority } }); }}
+              onClick={() => { if (!name.trim()) return; onSave({ name: name.trim(), settings: { ticketType, status, priority }, assignees }); }}
               disabled={!name.trim() || saving}
             >
               {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Ticket'}
